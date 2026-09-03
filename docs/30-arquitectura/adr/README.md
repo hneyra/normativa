@@ -1,0 +1,62 @@
+# Decisiones de arquitectura (ADR)
+
+Las decisiones de los **valores normativos**: que se sella, cuando, con que doble firma y con que redondeo.
+
+Las cuatro son de aqui porque aqui vive el dato: `catastro` y `rentas` **consumen** un conjunto sellado, no deciden como se sella.
+
+Un ADR registra una decision con su contexto y sus consecuencias. **No se editan una vez
+aceptados**: si una decision cambia, se escribe otro ADR que declare obsoleto al anterior. El
+historial de por que se hizo algo vale mas que la coherencia del documento.
+
+## Los de este repositorio
+
+| # | Decision | Estado |
+|---|---|---|
+| [0007](ADR-0007-parametros-versionados.md) | Parámetros tributarios versionados y sellados por ejercicio | Aceptado |
+| [0017](ADR-0017-tablas-de-valuacion-nacionales.md) | Las tres tablas de valuación son nacionales | Aceptado |
+| [0018](ADR-0018-el-redondeo-decidido.md) | El redondeo, decidido: escala ratificada, `HALF_UP`, y ningún SRTM que imitar | Aceptado |
+| [0025](ADR-0025-normativa-servicio-y-libreria.md) | La normativa es un servicio de datos y una libreria de reglas, y no está en el camino caliente | Propuesto |
+
+## Los que enlaza, y no copia
+
+Viven en el repositorio de quien toma la decision. **Aqui solo esta el enlace**: una
+copia seria un segundo ADR el dia que alguien edite uno de los dos.
+
+| # | Decision | Vive en | Por que le importa a este repositorio |
+|---|---|---|---|
+| [0001](https://github.com/hneyra/infrastructure/blob/main/docs/30-arquitectura/adr/ADR-0001-plataforma-backend.md) | Plataforma del backend: Spring Boot 4 sobre Java 25 | `infrastructure` | la plataforma del backend que corre |
+| [0002](https://github.com/hneyra/infrastructure/blob/main/docs/30-arquitectura/adr/ADR-0002-estrategia-multi-tenant.md) | Esquema compartido con Row Level Security | `infrastructure` | el aislamiento, que es el riesgo numero uno |
+| [0004](https://github.com/hneyra/infrastructure/blob/main/docs/30-arquitectura/adr/ADR-0004-almacenamiento-de-datos.md) | PostgreSQL, con particionado por ejercicio | `infrastructure` | el motor |
+| [0008](https://github.com/hneyra/infrastructure/blob/main/docs/30-arquitectura/adr/ADR-0008-auditoria-heredada-del-manual.md) | Auditoría con observación obligatoria, como en el sistema original | `infrastructure` | la observacion obligatoria (regla 10) |
+| [0028](https://github.com/hneyra/infrastructure/blob/main/docs/30-arquitectura/adr/ADR-0028-el-tenant-no-cruza-por-http.md) | El contexto de municipalidad no cruza por HTTP: token delegado, jamás una cabecera | `infrastructure` | el tenant no cruza por HTTP |
+| [0029](https://github.com/hneyra/infrastructure/blob/main/docs/30-arquitectura/adr/ADR-0029-cuatro-sistemas-separados.md) | Cuatro sistemas separados: `catastro`, `rentas`, `normativa` y `caja` | `infrastructure` | por que hay cuatro sistemas |
+| [0030](https://github.com/hneyra/infrastructure/blob/main/docs/30-arquitectura/adr/ADR-0030-cuatro-interfaces-una-sesion.md) | Cuatro interfaces, una sesión, y las librerias comunes que impiden que sean cuatro productos | `infrastructure` | su frontend |
+| [0032](https://github.com/hneyra/infrastructure/blob/main/docs/30-arquitectura/adr/ADR-0032-el-esquema-nace-en-baseline.md) | El esquema de cada sistema nace en un baseline; la historia se queda en `sgtm` | `infrastructure` | su baseline |
+
+El reparto entero, con su criterio, esta en [GOB-05 §4](https://github.com/hneyra/sgtm/blob/migracion-a-microservicios/docs/00-gobierno/inventario-del-corte.md).
+
+Decisiones **pendientes**: [GOB-02](https://github.com/hneyra/sgtm/blob/migracion-a-microservicios/docs/00-gobierno/decisiones-abiertas.md).
+
+## Plantilla
+
+```markdown
+# ADR-000X — Titulo
+
+**Estado:** Propuesto | Aceptado | Obsoleto (reemplazado por ADR-000Y)
+**Fecha:** AAAA-MM-DD
+
+## Contexto
+## Decision
+## Consecuencias
+## Alternativas consideradas
+```
+
+El estado tambien puede ir como fila de una tabla de metadatos (`| Estado | Aceptado |`), que es
+la forma de ADR-0017 en adelante; lo que no cambia es el vocabulario: **Propuesto**, **Aceptado**
+u **Obsoleto**, siempre con esa letra.
+
+## La numeracion NO se reinicia
+
+El ADR nuevo de este repositorio es el **0033**, no el 0001. Los treinta y dos existen y estan
+repartidos; empezar de nuevo daria dos `ADR-0001` distintos en el mismo producto, y el dia que
+alguien cite «ADR-0004» habria que preguntar de cual habla.
