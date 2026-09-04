@@ -14,16 +14,17 @@ qué tabla fue a qué repositorio y por qué, [GOB-05](https://github.com/hneyra
 | Pieza | Estado |
 |---|---|
 | `infrastructure/` — el descriptor de despliegue | **Existe.** `yarn verificar` en verde, sin Pulumi, sin token y sin clúster |
-| `backend/kamayuk-esquema` | **Existe el módulo y su prueba de aislamiento (9 pruebas). Cero migraciones**: el baseline es [ADR-0032](https://github.com/hneyra/infrastructure/blob/main/docs/30-arquitectura/adr/ADR-0032-el-esquema-nace-en-baseline.md) y todavía no está aquí |
-| `backend/kamayuk-verificaciones` | **Existe.** `verificarArquitectura` corre **79 pruebas** contra las muestras de la librería común, con cero clases de negocio |
+| `backend/kamayuk-normativa-esquema` | **Existe, con su baseline puesto** (`V1__baseline.sql`, 19 tablas) y 36 pruebas de aislamiento contra PostgreSQL real |
+| `backend/kamayuk-normativa-parametros` | **Existe.** El contexto acotado: ediciones, conjuntos sellados, los tres cuadros y el snapshot descargable de ADR-0025 §1. 102 pruebas |
+| `backend/kamayuk-normativa-reglas` | **Existe.** La mitad de ADR-0025 que viaja como CÓDIGO: motor, reglas, redondeo sellado. Sin Spring y sin base de datos. 48 pruebas |
+| `backend/kamayuk-normativa-{dominio-compartido, plataforma}` | **Existen**, copiados de `rentas` en P5B. Es una duplicación declarada: ver `docs/00-gobierno/P5B-extraccion.md` §7.1 |
+| `backend/kamayuk-normativa-aplicacion` | **Existe.** Ensambla el artefacto y aloja las barreras: 81 pruebas |
 | `docs/30-arquitectura/adr/` | **Existe**, 4 ADR propios más los que enlaza |
-| **Código de negocio** | **NO existe. Ni una clase.** Llega en la etapa 5 |
-| Su esquema (`V1__baseline.sql`) | **NO está aquí.** Vive en `sgtm/docs/40-datos/baselines/normativa/` hasta que la extracción lo traiga |
-| **El corpus normativo** | **NO está aquí todavía.** Los archivos `VERIFICADO` y los guiones de publicación siguen en `sgtm/docs/10-negocio/valores-normativos/` |
+| **El corpus normativo** | **Está aquí desde P5B** (ADR-0025 §5): los 60 archivos, los seis verificadores y el flujo `Documentación` que los corre |
 | Su frontend (`normativa-web`) e imagen | **NO existen** |
 
-**Las barreras se construyeron primero, a propósito.** Hoy este repositorio es exactamente eso:
-dos verificaciones bloqueantes esperando al negocio que van a vigilar.
+**Las barreras se construyeron primero, a propósito**, y el negocio entró después, por encima de
+ellas. Hoy este repositorio tiene **598 pruebas** y los tres verificadores bloqueantes en verde.
 
 ## Lo que este repositorio NO hace
 
@@ -43,11 +44,16 @@ dos verificaciones bloqueantes esperando al negocio que van a vigilar.
 ## Estructura
 
 ```
-backend/                Gradle. Java 25, Spring Boot 4 cuando llegue el negocio
-  kamayuk-esquema/      migraciones (hoy ninguna) y la prueba de aislamiento
-  kamayuk-verificaciones/  donde corren las barreras. Ve a todos los demás módulos
-infrastructure/         el descriptor de despliegue en TypeScript, con yarn
-docs/                   ADR propios, hallazgos de RLS y esta guía de desarrollo
+backend/                          Gradle. Java 25, Spring Boot 4
+  kamayuk-normativa-dominio-compartido/  objetos de valor y contexto de tenant
+  kamayuk-normativa-esquema/             el baseline y la prueba de aislamiento
+  kamayuk-normativa-plataforma/          el contexto de tenant hasta la transaccion
+  kamayuk-normativa-reglas/              ADR-0025: lo que viaja como CODIGO
+  kamayuk-normativa-parametros/          el unico contexto acotado (ARQ-01 §3.4)
+  kamayuk-normativa-aplicacion/          ensambla, y donde corren las barreras
+infrastructure/                   el descriptor de despliegue en TypeScript, con yarn
+docs/10-negocio/valores-normativos/  el corpus verificado a doble firma, y sus verificadores
+docs/                             ADR propios, hallazgos de RLS y la guia de desarrollo
 ```
 
 El backend **no compila sin `infrastructure` clonado al lado**: las barreras se consumen como
@@ -192,4 +198,9 @@ real y las cifras cuadren— no lo puede leer una máquina: eso lo lee la revisi
 
 | Verificación | Cómo se demostró que puede fallar | Resultado |
 |---|---|---|
-| — | — | — |
+| **P5B — el ámbito de cada regla (ADR-0024)** | Construir el motor con un catálogo de reglas de `OBLIGACION` pasándole `Ambito.VALUACION`; y, aparte, quitarle el `ambito()` a una regla | Rojo, nombrando los dos ámbitos. **Y lo segundo no lo caza una prueba sino el COMPILADOR**: el método no tiene cuerpo, así que las tres reglas anónimas de `MotorDeReglasTest` dejaron de compilar. Una omisión que se descubre al compilar no llega a ninguna emisión. Y la comprobación va **al construir** el motor y no en `aplicarA`: dentro del cálculo, el fallo saldría con medio padrón ya escrito |
+| **P5B AC 1 — `rentas` calcula con `normativa` apagado** (7 pruebas contra PostgreSQL real, con el cliente HTTP de verdad y un puerto que nadie escucha) | Tres roturas, cada una sola y restaurada por copia comparada con `diff -r`: que el recálculo vuelva a llamar por red —quitando la comprobación de caché en las **dos** capas—; que el cliente no verifique la huella antes de cachear; y que el repliegue diga `EjercicioSinSellar` en vez de `NormativaInalcanzable` | **5 de 7**, 1 y 1 en rojo. **La tercera es la que más dice**: las dos se arreglan de manera distinta —una levantando un despliegue, otra sellando un ejercicio— y decir la segunda cuando pasa la primera manda a quien atiende a buscar una ordenanza que sí existe. Y lo que **no** sujeta ninguna prueba queda escrito: que no haya una consulta por parámetro dentro de un bucle lo sostiene que `PublicadorDeNormativa` tenga **dos** métodos y ninguno sepa contestar por partida |
+| **P5B AC 2 — el mismo céntimo, comparado como archivos** | La misma clase corrida en un *worktree* del árbol anterior a P5B. Y tres roturas sobre el de después: quitar la resolución de vigencia de #659; hacer que `rigeEn` devuelva siempre cierto; y recortar la precisión del valor leído a dos decimales | **Los dos archivos, idénticos**: mismo `sha256`. Las dos primeras roturas **ni llegan a escribir el archivo** —la prueba falla con `VigenciasQueSeSolapan` porque las cinco filas de `UIT` colisionan—, que es mejor que un diff: el sistema se **niega** en vez de elegir. La tercera da un diff de seis líneas, con `uit` pasando de `5500.000000` a `5500.00` |
+| **P5B AC 3 — el corpus y sus nueve prohibiciones, aquí** | Neutralizando en `verificar-valores-normativos.mjs` la regla de las dos firmas distintas | Rojo, nombrando la muestra: «La muestra «transcriptor-igual-a-verificador» NO se detecta: la comprobación pasó en verde». Va **antes** que la comprobación real en el flujo, a propósito: si las muestras no muerden, que la real pase en verde no dice nada |
+| **P5B — el baseline de P0B traía cinco funciones de otros sistemas** | No hubo que provocarlo: **lo encontró el escáner de frontera de sistema** | `verificar_participacion_no_excede` consulta `participacion_comun`, que es de `catastro`: un cruce de frontera escrito dentro del propio esquema. Con ella se fueron `verificar_titularidad_no_excede` y `nombre_normalizado` (catastro), `declaracion_jurada_estado_es_terminal` (rentas) y `valuacion_de_conjunto_sellado_es_inmutable` (cuelga de `arancel`, D-N4). Ninguna tenía aquí un disparador que la usara; el baseline pasa de 836 a 748 líneas |
+| **P5B — el snapshot del conjunto sellado** (7 pruebas contra PostgreSQL real) | Pedir dos veces el mismo conjunto y comparar; y pedir los dos ámbitos y comparar su identidad | Dos composiciones son **iguales fila a fila y en orden** —si dependiera del plan, el `ETag` cambiaría sin que cambiara el conjunto, que es lo que ADR-0025 §Consecuencias manda probar—, y la identidad es la misma en los dos ámbitos aunque las filas no, que es lo que las dos corridas comparan |

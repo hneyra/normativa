@@ -1,0 +1,99 @@
+# Verificación del corpus normativo, que se comprueba solo.
+#
+# Llegó aquí en P5B: ADR-0025 §5 lo dice con todas las letras —«el corpus de
+# `docs/10-negocio/valores-normativos/` y su verificador se mudan con el servicio,
+# porque la doble verificación empieza en el documento y no en la fila»—.
+#
+# Son cuatro comprobaciones, y todas van en las dos direcciones:
+#
+#   1. el **mapa normativo** de NEG-02 §2 —qué norma fija cada dato que falta, qué
+#      parte de D-02 lo bloquea y qué issues lo esperan— contra el etiquetado real
+#      del tablero;
+#   2. los **valores normativos transcritos** (E-3, #200) —que cada archivo lleve
+#      norma, artículo, fecha de publicación y **dos firmas distintas**, que cierre
+#      filas del mapa que existen y que nadie más cierra, y que ninguna cifra haya
+#      acabado cargada en una migración: cargar depende de D-13, no de E-3—;
+#   3. el **derivado publicable** (#188, #247 §4) —que cada cifra de
+#      `valores-normativos/publicacion/` esté letra por letra en el archivo
+#      VERIFICADO del corpus que su fila nombra, y que las dos firmas que van a
+#      `usuario_carga` y `usuario_aprueba` sean las que ese archivo declara—;
+#   4. los **cuadros normativos** (#188) —el hermano del anterior para lo que no
+#      cabe en una fila: archivo VERIFICADO, dos firmas, documento fuente, y el
+#      **sha256** del archivo de filas recalculado y contrastado contra el que el
+#      corpus firmó—.
+#
+# La segunda pasa en verde con el directorio vacío, y debe hacerlo: la barrera
+# llega antes que la transcripción. Por eso corren además **las muestras**, que es
+# lo que distingue «no hay nada que rechazar» de «no rechaza nada» — y es el
+# criterio de aceptación 3 de P5B: `verificar-valores-normativos.mjs` corre aquí y
+# sigue poniéndose rojo con sus muestras rotas a propósito.
+#
+# Va en su propio flujo y no dentro del del backend porque no necesita Gradle ni
+# base de datos: es Node pelado sobre archivos de `docs/`.
+name: Documentación
+
+on:
+  pull_request:
+    paths: &rutas
+      - 'docs/10-negocio/**'
+      - 'docs/00-gobierno/**'
+      - '.github/workflows/documentacion.yml'
+      # La comprobación de valores normativos LEE las migraciones, para que una
+      # cifra cargada por SQL no se escape del filtro de rutas.
+      - 'backend/kamayuk-normativa-esquema/src/main/resources/db/migration/**'
+      # Y la del derivado LEE `UnidadDePlazo` (#192): las unidades de plazo no se
+      # copian en el verificador, se leen del enumerado, así que una unidad nueva
+      # sin esta ruta cambiaría sin que corriese quien la mira.
+      - 'backend/kamayuk-normativa-dominio-compartido/src/main/java/kamayuk/normativa/dominio/UnidadDePlazo.java'
+  push:
+    branches: [main]
+    paths: *rutas
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verificar:
+    name: El corpus normativo se comprueba solo
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: El mapa normativo y el tablero dicen lo mismo
+        run: node docs/10-negocio/verificar-mapa-normativo.mjs
+
+      # AC 3 de P5B: las nueve prohibiciones tienen que seguir mordiendo. Va ANTES
+      # que la comprobación real a propósito — si las muestras no muerden, que la
+      # real pase en verde no dice nada.
+      - name: Las prohibiciones de los valores normativos muerden
+        run: node docs/10-negocio/verificar-las-muestras-de-valores.mjs
+
+      - name: Los valores normativos transcritos están en regla
+        run: node docs/10-negocio/verificar-valores-normativos.mjs
+
+      # El derivado desde el que `PublicarParametros` publica: cada cifra suya
+      # tiene que estar letra por letra en el archivo VERIFICADO del corpus que la
+      # fila nombra, con las dos firmas de ADR-0007 que ese archivo declara.
+      - name: Las prohibiciones del derivado publicable muerden
+        run: node docs/10-negocio/verificar-las-muestras-de-publicacion.mjs
+
+      - name: Lo publicable es lo que el corpus dice
+        run: node docs/10-negocio/verificar-publicacion.mjs
+
+      - name: Los cuadros normativos son los que el corpus firmó
+        run: node docs/10-negocio/verificar-cuadros.mjs
+
+      # No escribe el archivo: lo regenera desde `depreciacion.md` y exige que sea
+      # el mismo, byte a byte. Es lo que impide que el derivado y su transcripción
+      # firmada se separen — el derivado no se edita, se regenera.
+      - name: El derivado de la depreciación es el que su generador produce
+        run: >-
+          node docs/10-negocio/valores-normativos/fuentes/depreciacion-rnt-2016/derivar-depreciacion.mjs
+          --comprobar
