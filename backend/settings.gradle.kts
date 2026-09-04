@@ -1,5 +1,4 @@
-// Backend de `normativa`. Un modulo de esquema y uno de verificaciones; los contextos acotados
-// llegan en P5.
+// Backend de `normativa`: el servicio de datos normativos y la libreria de reglas (ADR-0025).
 //
 // Las barreras —ArchUnit, el escaner de fuentes, el de aserciones y la frontera de sistema— viven
 // en `infrastructure/librerias-backend` y las comparten los cinco repositorios. Se consumen como
@@ -20,13 +19,25 @@ includeBuild(libreriasComunes)
 
 rootProject.name = "kamayuk-normativa-backend"
 
-// El esquema: las migraciones, el proceso que las aplica y la prueba de aislamiento multi-tenant.
-// Hoy no tiene ni una migracion: el baseline lo genera ADR-0032 y esta etapa no lo inventa.
-include("kamayuk-esquema")
+// Compartido: objetos de valor y contexto de tenant. No depende de ningun contexto acotado.
+include("kamayuk-normativa-dominio-compartido")
 
-// Donde corren las barreras. Es el equivalente de `sgtm-aplicacion` en el monolito: el unico
-// modulo que ve a todos los demas.
-include("kamayuk-verificaciones")
+// El esquema: migraciones Flyway y la prueba de aislamiento multi-tenant.
+include("kamayuk-normativa-esquema")
+
+// Plataforma: lleva el contexto de tenant hasta la transaccion (ARQ-03 §2).
+include("kamayuk-normativa-plataforma")
+
+// `normativa-reglas`: la mitad de ADR-0025 que viaja como CODIGO. Funciones puras, sin Spring y
+// sin base de datos, y por eso es la unica pieza de este repositorio que otro sistema compila
+// dentro del suyo.
+include("kamayuk-normativa-reglas")
+
+// El unico contexto acotado (ARQ-01 §3.4): ediciones, conjuntos sellados y los tres cuadros.
+include("kamayuk-normativa-parametros")
+
+// Ensambla el artefacto unico y aloja las verificaciones.
+include("kamayuk-normativa-aplicacion")
 
 dependencyResolutionManagement {
     repositoriesMode = RepositoriesMode.FAIL_ON_PROJECT_REPOS
