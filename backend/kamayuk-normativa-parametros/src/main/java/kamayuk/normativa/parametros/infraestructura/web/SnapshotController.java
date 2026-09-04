@@ -1,7 +1,5 @@
 package kamayuk.normativa.parametros.infraestructura.web;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -26,6 +24,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * El conjunto sellado, entero y descargable: la mitad de ADR-0025 que viaja como <b>datos</b>.
@@ -69,9 +69,9 @@ import org.springframework.web.bind.annotation.RestController;
 public class SnapshotController {
 
     private final ComponerSnapshot componer;
-    private final ObjectMapper json;
+    private final JsonMapper json;
 
-    public SnapshotController(ComponerSnapshot componer, ObjectMapper json) {
+    public SnapshotController(ComponerSnapshot componer, JsonMapper json) {
         this.componer = componer;
         this.json = json;
     }
@@ -161,7 +161,7 @@ public class SnapshotController {
     private String serializar(SnapshotDelConjunto snapshot) {
         try {
             return json.writeValueAsString(SnapshotResource.de(snapshot));
-        } catch (JsonProcessingException noSePudo) {
+        } catch (JacksonException noSePudo) {
             throw new IllegalStateException(
                     "No se pudo serializar el snapshot del conjunto " + snapshot.conjuntoId(),
                     noSePudo);

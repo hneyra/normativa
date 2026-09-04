@@ -14,7 +14,7 @@ dependencies {
     // El motivo es la huella: el ETag es el sha256 de los bytes servidos, asi que hay que tenerlos
     // en la mano para calcularla. Con el cuerpo devuelto como objeto, los bytes los produce el
     // convertidor despues del controlador y nadie puede firmarlos.
-    implementation("com.fasterxml.jackson.core:jackson-databind")
+    implementation("tools.jackson.core:jackson-databind")
 
     // Las reglas y los tipos que una regla recibe. `api` porque `LectorDeParametros` y
     // `ParametrosSellados` estan en la firma de lo que este modulo publica.
