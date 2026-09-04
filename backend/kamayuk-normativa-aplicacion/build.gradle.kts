@@ -63,6 +63,28 @@ tasks.test {
                 include("*/src/test/java/**/*.java")
             })
         .withPathSensitivity(PathSensitivity.RELATIVE)
+
+    // LOS DOS CONTRATOS DEL CONSUMIDOR VIVEN EN OTRO CLON, y sin declararlos esta tarea se queda
+    // UP-TO-DATE cuando cambian. `ContratoConRentasTest` lee
+    // `../../rentas/docs/50-api/contratos-que-consume/normativa.json` y `ContratoConCatastroTest`
+    // el homonimo de `catastro` —lo que cada uno espera de este backend—, y ninguno de los dos
+    // estaba en una entrada de Gradle: **medido en C-2**, anadirle al contrato de `rentas` un
+    // campo que este sistema no publica daba `BUILD SUCCESSFUL` con la tarea UP-TO-DATE, o sea
+    // **sin que la prueba corriera**. En CI corre fresco y muerde, que es la peor forma de
+    // enterarse. Es la leccion de #192 punto 2, aplicada a la frontera entre repositorios, y el
+    // mismo cierre que C-1 le puso a `catastro`; aqui quedaba declarado como hueco 1 de C-1.
+    //
+    // `optional()` porque el clon hermano puede no estar: si falta, la prueba falla con su propio
+    // mensaje —nombrando el archivo y diciendo que el CI del proveedor tiene que hacer checkout
+    // del consumidor—, que dice mas que un fallo de configuracion de Gradle.
+    inputs
+        .files(
+            rootProject.layout.projectDirectory.file(
+                "../../rentas/docs/50-api/contratos-que-consume/normativa.json"),
+            rootProject.layout.projectDirectory.file(
+                "../../catastro/docs/50-api/contratos-que-consume/normativa.json"))
+        .optional()
+        .withPathSensitivity(PathSensitivity.NONE)
 }
 
 // Nombre fijo del artefacto ejecutable. La imagen lo copia por nombre y no por comodin:
