@@ -44,6 +44,15 @@ dependencies {
 }
 
 tasks.test {
+    // Gradle NO hereda las propiedades del sistema en la JVM de las pruebas: sin esto,
+    // `-Dkamayuk.contratos.regenerar=true` no llega y el contrato que este repositorio
+    // publica para sus proveedores no se puede regenerar. Es la misma linea que
+    // `rentas` tiene desde #400 para las formas de la API.
+    providers
+        .systemProperty("kamayuk.contratos.regenerar")
+        .orNull
+        ?.let { systemProperty("kamayuk.contratos.regenerar", it) }
+
     // El escaner de aserciones (#724) lee `src/test` de TODOS los modulos, y esas fuentes no estan
     // en el classpath de este. Sin declararlas como entrada, editar una prueba de otro modulo
     // dejaria esta tarea en UP-TO-DATE y una asercion que no puede fallar pasaria en verde rancio.
