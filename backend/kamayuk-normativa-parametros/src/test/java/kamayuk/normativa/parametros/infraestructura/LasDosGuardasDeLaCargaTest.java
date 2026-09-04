@@ -330,8 +330,8 @@ class LasDosGuardasDeLaCargaTest {
                                             "prueba de las dos guardas"))
                     .as(
                             "depreciacion no tenia ninguna prueba negativa antes de #435: la unica"
-                                    + " que existia era la de valor_unitario_edificacion, en"
-                                    + " kamayuk-rentas-catastro")
+                                    + " que existia era la de valor_unitario_edificacion, y vivia"
+                                    + " en el modulo de catastro del monolito")
                     .isInstanceOf(org.springframework.dao.DataAccessException.class);
 
             assertThatThrownBy(
