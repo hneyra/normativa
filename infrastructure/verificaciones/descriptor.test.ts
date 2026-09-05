@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { EntornoDelDescriptor } from "@sgtm/infra-contrato";
+import type { Contenedor, EntornoDelDescriptor, Manifiesto } from "@sgtm/infra-contrato";
 import { normativa } from "../src/descriptor";
 
 /**
@@ -21,7 +21,27 @@ const ENTORNO: EntornoDelDescriptor = {
   prioridadDe: (clase) => `kamayuk-stg-prioridad-${clase}`,
   // Del AMBIENTE, no de este sistema (C-7): quien recibe el aviso cuando algo
   // se rompe aqui. `checkInvariants` de `infrastructure` rechaza el relleno.
-  operacion: { responsable: "Guardia de plataforma", canal: "#kamayuk-guardia" },
+  operacion: { responsable: "Guardia de plataforma", canal: "guardia@example.pe" },
+  // La municipalidad que el AMBIENTE implanta (C-14, punto 4). Los cuatro sistemas implantan la
+  // misma, cada uno en su base.
+  implantacion: {
+    ubigeo: "200105",
+    nombre: "Municipalidad Distrital de Catacaos",
+    tipo: "DISTRITAL",
+    administrador: "administrador",
+    nombreDelAdministrador: "Administrador del sistema",
+    esDemostracion: true,
+    // El `id` de la fila que crea el Job de implantacion. En una base recien creada vale 1.
+    municipalidadId: 1,
+  },
+  namespaceDe: (otro) => `kamayuk-${otro}-stg`,
+  // El nombre de un `Job` lleva la version: un `Job` de Kubernetes es INMUTABLE.
+  nombreConVersion: (base) => `${base}-0eee58e43e04`,
+  plataforma: {
+    namespace: "sgtm-stg",
+    emisor: "https://stg.kamayuk.example/keycloak/realms/sgtm",
+    jwks: "http://sgtm-stg-identidad.sgtm-stg:8080/keycloak/realms/sgtm/protocol/openid-connect/certs",
+  },
 };
 
 describe("el descriptor de normativa", () => {
@@ -109,3 +129,98 @@ function destinosDeEgreso(): string[] {
     .filter((c): c is string => c !== undefined && !infra.includes(c))
     .sort();
 }
+
+describe("C-14 — que esto se pueda desplegar", () => {
+  /**
+   * El Job de migracion corre la imagen del MIGRADOR, no la de la aplicacion.
+   *
+   * Hasta C-14 corria la misma que el `Deployment` con `SGTM_DB_USUARIO=sgtm_owner` y sin perfil:
+   * arrancaba el proceso web con las credenciales del unico rol con DDL, y la aplicacion tiene
+   * `spring.flyway.enabled: false` a proposito (ARQ-03 §4). O sea que ese Job **no migraba**.
+   */
+  it("el Job de migracion corre el migrador, con las variables que el migrador lee", () => {
+    const contenedores = contenedoresDe(normativa.migracion(ENTORNO));
+    expect(contenedores).toHaveLength(1);
+    const c = contenedores[0]!;
+    expect(c.image).toBe(ENTORNO.imagenDe(`${"normativa"}-migrador`));
+    expect(valorDe(c, "SGTM_DB_OWNER_USUARIO")).toBe("sgtm_owner");
+    expect(declara(c, "SGTM_DB_OWNER_CLAVE")).toBe(true);
+    // La de la APLICACION. El migrador no la lee, y ponerla es lo que hacia que este Job
+    // pareciera correcto sin migrar nada.
+    expect(declara(c, "SGTM_DB_USUARIO")).toBe(false);
+  });
+
+  it("y las dos imagenes son los dos objetivos del Dockerfile", () => {
+    expect(normativa.imagenes).toEqual(["normativa", `${"normativa"}-migrador`]);
+  });
+
+  /**
+   * El Job de implantacion (C-7 §2.3): la fila de `municipalidad` en SU base.
+   *
+   * Con el migrador de contenedor de inicializacion: un `Deployment` no sabe esperar a un `Job`,
+   * y la salida del monolito —un contenedor con `psql`— no vale aqui, porque un descriptor solo
+   * puede nombrar SUS imagenes (prohibicion (b)).
+   */
+  it("implanta la municipalidad del ambiente, detras del esquema", () => {
+    const jobs = normativa.implantacion(ENTORNO).filter((m) => m.kind === "Job");
+    expect(jobs).toHaveLength(1);
+    const job = jobs[0]!;
+    expect(job.metadata.name).toContain("0eee58e43e04");
+    const pod = job.spec.template.spec;
+    expect((pod.initContainers ?? []).map((c) => c.image)).toEqual([
+      ENTORNO.imagenDe(`${"normativa"}-migrador`),
+    ]);
+    const c = pod.containers[0]!;
+    expect(c.image).toBe(ENTORNO.imagenDe("normativa"));
+    expect(valorDe(c, "SPRING_PROFILES_ACTIVE")).toBe("batch");
+    expect(valorDe(c, "KAMAYUK_IMPLANTACION_UBIGEO")).toBe("200105");
+    expect(valorDe(c, "KAMAYUK_IMPLANTACION_ESDEMOSTRACION")).toBe("true");
+  });
+
+  /**
+   * Un `podSelector` sin `namespaceSelector` selecciona pods **del mismo namespace**, y desde
+   * ADR-0031 cada sistema tiene el suyo. Una regla escrita asi no abre nada: el sintoma es
+   * trafico denegado con una politica que dice permitirlo.
+   */
+  it("toda regla de egreso nombra el namespace de su destino", () => {
+    const destinos = normativa.egreso(ENTORNO)
+      .flatMap((p) => p.spec.egress ?? [])
+      .flatMap((r) => r.to ?? []);
+    expect(destinos.length).toBeGreaterThan(0);
+    for (const destino of destinos) {
+      expect(destino.namespaceSelector, JSON.stringify(destino)).toBeDefined();
+    }
+  });
+});
+
+/** Los contenedores de una lista de manifiestos, los de inicializacion aparte. */
+function contenedoresDe(manifiestos: readonly Manifiesto[]) {
+  return manifiestos.flatMap((m) =>
+    m.kind === "Deployment"
+      ? m.spec.template.spec.containers
+      : m.kind === "Job"
+        ? m.spec.template.spec.containers
+        : m.kind === "CronJob"
+          ? m.spec.jobTemplate.spec.template.spec.containers
+          : [],
+  );
+}
+
+function valorDe(c: Contenedor, nombre: string): string | undefined {
+  return (c.env ?? []).find((e) => e.name === nombre)?.value;
+}
+
+function declara(c: Contenedor, nombre: string): boolean {
+  return (c.env ?? []).some((e) => e.name === nombre);
+}
+
+describe("C-14 §3 — normativa no corre nada de madrugada", () => {
+  /**
+   * Vacio es una respuesta legitima, y no es lo mismo que un `CronJob` suspendido: lo primero
+   * dice «este sistema no corre nada» y lo segundo «corre esto, y hoy no puede». `normativa`
+   * publica y no consulta a nadie; sellar es un acto con dos firmas, no una tarea programada.
+   */
+  it("no declara ningun proceso por lotes, y es una afirmacion", () => {
+    expect(normativa.lotes(ENTORNO)).toEqual([]);
+  });
+});
