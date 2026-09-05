@@ -131,6 +131,11 @@ public final class ConfiguracionDeNormativa implements ConfiguracionDeLasVerific
                     "colindante_rural",
                     "construccion",
                     "ficha_catastral",
+                    // V6: el frente del predio. Se nombra aunque este sistema no la tenga —y por
+                    // eso
+                    // mismo—: sin la entrada, el reparto la da por «replicada» y el escaner de la
+                    // regla 11 DEJA DE MIRAR un cruce contra ella, en verde (la leccion de R-N).
+                    "frente_predio",
                     "inquilino",
                     "manzana",
                     "otra_instalacion",
