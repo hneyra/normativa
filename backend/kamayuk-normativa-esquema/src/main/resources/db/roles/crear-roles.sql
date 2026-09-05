@@ -41,38 +41,39 @@ GRANT USAGE           ON SCHEMA public TO sgtm_app, sgtm_readonly, rol_carga_par
 -- propias tablas sin necesitarla, y ser miembro de sgtm_app le permitiria un
 -- SET ROLE que borra la separacion.
 
--- ---------- Extensiones ----------
--- Van aqui por el mismo motivo que los roles: sgtm_owner no puede instalarlas
--- —no tiene CREATE sobre la base y no queremos darselo—, y la migracion que las
--- usa necesita que ya existan. Instalar una extension es provisionar el ambiente,
--- no versionar el esquema.
+-- ---------- Extensiones: NINGUNA (C-13) ----------
+-- Este esquema no crea ni una. No es limpieza: es que `normativa` guarda valores
+-- normativos versionados y sellados, y ninguna de las cuatro que este archivo
+-- declaraba tiene nada que hacer aqui. Medido migracion por migracion sobre su
+-- unico `V1__baseline.sql`, y vigilado desde `infrastructure` por
+-- `extensiones-de-las-migraciones.ts`, que lo comprueba en las DOS direcciones:
 --
---   pg_trgm   busqueda de contribuyentes por aproximacion de nombre (RF-014).
---             Sin ella, un nombre mal escrito en ventanilla no encuentra a nadie
---             y se da de alta al mismo contribuyente por segunda vez.
---   unaccent  para que «PEÑA» y «PENA» sean el mismo nombre.
+--   pg_trgm     la busqueda por aproximacion de nombre es del PADRON de
+--               contribuyentes (RF-014), que es de `rentas`. Aqui no hay una sola
+--               llamada a similarity() ni un indice con gin_trgm_ops.
+--   unaccent    lo que la obligaria es la funcion `nombre_normalizado(text)`,
+--               cuyo cuerpo la llama — y P5B la retiro de este baseline por ser
+--               de `catastro`, dicho en su propia seccion 2. No queda ninguna
+--               llamada a unaccent() en el esquema.
+--   postgis     la geometria del predio es de `catastro` (ADR-0021). Era la mas
+--               cara de las cuatro: NO es trusted —medido: `SELECT trusted FROM
+--               pg_available_extension_versions WHERE name='postgis'` da `f`—,
+--               asi que obligaba a un superusuario y a la imagen postgis/postgis
+--               para provisionar una base que no dibuja nada. Y no se quedaba
+--               quieta: su tabla `spatial_ref_sys` obligaba a una exencion en el
+--               AislamientoMultiTenantTest de este modulo, o sea que una
+--               declaracion de mas se propagaba a la lista de excepciones de la
+--               barrera numero uno. Esa exencion se fue con ella.
+--   btree_gist  la exclusion de vigencias que no se pisan es de `catastro`
+--               (#669, V72). Este baseline no tiene un solo EXCLUDE USING gist.
 --
--- Las dos son trusted desde PostgreSQL 13, asi que en un ambiente donde
--- sgtm_owner sea dueño de la base tampoco harian falta privilegios especiales.
---   postgis   la geometria del predio (ADR-0021, V61). A diferencia de las dos
---             anteriores NO es trusted, asi que hace falta un superusuario: no
---             hay forma de que la instale la migracion, que corre como
---             sgtm_owner. Trae consigo la tabla `spatial_ref_sys`, un catalogo
---             de sistemas de coordenadas sin dato municipal, que por eso figura
---             entre las TABLAS_EXENTAS de la prueba de aislamiento.
---   btree_gist  compara bigint y varchar con `=` DENTRO de un indice GiST, que es
---             lo que `EXCLUDE USING gist` necesita para decir «dos vigencias del
---             mismo predio no se pisan» (#669, V72). Es *trusted* —medido:
---             `SELECT trusted FROM pg_available_extension_versions WHERE
---             name='btree_gist'` da `t`— y aun asi va AQUI y no en la migracion,
---             porque una extension trusted la crea quien tiene CREATE sobre la
---             BASE, y `sgtm_owner` no es su dueño: intentarlo desde la migracion
---             da «permission denied to create extension "btree_gist"». Medido
---             ejecutando, no supuesto.
-CREATE EXTENSION IF NOT EXISTS pg_trgm;
-CREATE EXTENSION IF NOT EXISTS unaccent;
-CREATE EXTENSION IF NOT EXISTS postgis;
-CREATE EXTENSION IF NOT EXISTS btree_gist;
+-- Las cuatro venian del archivo que P3 copio del monolito, que P5D si podo en
+-- `caja` y P5E en `rentas`, y que aqui no se habia decidido. Retirarlas no toca
+-- ningun ambiente ya provisionado —no hay ningun DROP EXTENSION—: lo que cambia
+-- es que una base NUEVA no las recibe, y que `05-crear-bases.sh` deja de crearlas
+-- en la base de este sistema (C-10). El dia que una migracion de aqui necesite
+-- una, la guarda de `infrastructure` se pone roja nombrando la migracion y la
+-- extension, antes de que llegue a ningun motor.
 
 -- ---------- CONNECT sobre esta base ----------
 --  PostgreSQL concede `CONNECT` a PUBLIC al crear una base, asi que TODO rol del cluster puede

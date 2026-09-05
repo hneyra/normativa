@@ -309,7 +309,8 @@ public final class BaseDeDatosDePrueba implements AutoCloseable {
      * <p>Se pregunta al motor en vez de derivarlo de la URL porque {@code localhost} y {@code
      * 127.0.0.1} son la misma maquina escrita de dos formas, y dos tareas que la escriban distinto
      * volverian a pisarse. Lo entrega {@code pg_control_system()}, que pide superusuario: el mismo
-     * que este arnes ya exige para {@code CREATE ROLE} y para {@code CREATE EXTENSION postgis}.
+     * que este arnes ya exige para {@code CREATE ROLE}. (Y ya no para ninguna extension: desde C-13
+     * este esquema no declara ninguna, asi que {@code CREATE ROLE} es lo unico que lo pide.)
      */
     private static long identidadDelCluster(Connection admin) throws SQLException {
         try (Statement sentencia = admin.createStatement();
