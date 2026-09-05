@@ -5,8 +5,8 @@
 // ADR-0025 §1, nunca por SQL.
 
 plugins {
-    id("sgtm.modulo")
-    id("sgtm.pruebas-postgres")
+    id("kamayuk.modulo")
+    id("kamayuk.pruebas-postgres")
 }
 
 dependencies {
