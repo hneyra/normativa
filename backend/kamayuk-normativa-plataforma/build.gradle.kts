@@ -8,8 +8,8 @@
 // que es un renombrado de 938 archivos en `rentas` y no cabe en esta etapa.
 
 plugins {
-    id("sgtm.java-base")
-    id("sgtm.pruebas-postgres")
+    id("kamayuk.java-base")
+    id("kamayuk.pruebas-postgres")
 }
 
 dependencies {

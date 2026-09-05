@@ -13,8 +13,8 @@
 // ver `docs/00-gobierno/P5B-extraccion.md` §7.
 
 plugins {
-    id("sgtm.java-base")
-    id("sgtm.pruebas")
+    id("kamayuk.java-base")
+    id("kamayuk.pruebas")
 }
 
 dependencies {
