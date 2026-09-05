@@ -36,6 +36,35 @@ vehicular ([`tvr-2026/`](tvr-2026/README.md), 1,5 MB) sigue en git —`publicar-
 detiene nombrando los dos pasos que faltan si algún día hay que correrlo contra un ambiente real
 sin haberlo migrado antes—.
 
+## Los bytes que se firman son los que viajan (C-15)
+
+El sha256 que el corpus firma es el de **unos bytes concretos**, y git no los conserva por
+omisión. Con `core.autocrlf=input` —un ajuste de la máquina de cada quien, no del repositorio—
+el filtro `clean` le quita el CR a todo archivo que git considere texto **al commitear**, así
+que el blob no es lo que había en el disco.
+
+Se pagó al publicar los repositorios. `tvr-2026.csv` tiene 18 044 finales CRLF —uno por línea—
+y el corpus firma el sha256 de esos 1 552 103 bytes; el blob que llegó a `normativa` tenía
+1 534 059 y otro sha. La verificación pasaba en la máquina donde se extrajo el archivo y fallaba
+en cualquier clon, que es donde corre el CI. Y el síntoma es el peor posible: la guarda que
+existe para distinguir un cuadro de otro acusando de manipulación a un archivo intacto.
+
+El arreglo es [`.gitattributes`](../../../../.gitattributes) en la raíz del repositorio:
+
+```
+docs/10-negocio/valores-normativos/** -text
+```
+
+**Y no la otra salida.** Normalizar el corpus a LF y recalcular el sha256 también deja la cadena
+consistente, pero *toca la cadena de firmas*: la huella que dos personas verificaron a mano
+(ADR-0007) dejaría de ser la del archivo, y volver a firmarla no es un acto mecánico. Aquí lo que
+estaba mal no era el archivo: era que git no lo conservara.
+
+Lo comprueba [`verificar-bytes-del-corpus.mjs`](../../verificar-bytes-del-corpus.mjs) en cada PR,
+y exige **las dos cosas**: que el archivo esté declarado —sin eso, un derivado nuevo sin ningún CR
+pasa hoy por casualidad y se rompe el día que se regenere en otra máquina— y que los bytes del
+disco sean los que git guarda, que es lo único que vale en la máquina donde el archivo nace.
+
 ## Lote del 2026-08-28
 
 Los 30 documentos que la investigación de D-11 (#188), el punto 2 de #192 y el cotejo del TUO LTM

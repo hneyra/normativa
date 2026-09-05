@@ -1,0 +1,23 @@
+# Los archivos del corpus normativo viajan BYTE A BYTE.
+#
+# Un cuadro normativo no se transcribe a mano: se extrae mecanicamente de la fuente
+# oficial y lo que se firma —a doble firma, ADR-0007— es el **sha256 de sus bytes**.
+# `verificar-cuadros.mjs` y `PublicarCuadros` recalculan esa huella antes de publicar
+# una sola fila, y su promesa es literal: «un byte distinto en un cuadro normativo se
+# investiga, no se publica».
+#
+# Por omision git NO conserva los bytes. Con `core.autocrlf=input` —que es un ajuste de
+# la maquina de cada quien, no del repositorio— el filtro `clean` quita el CR de todo
+# archivo que git considere texto AL COMMITEAR, asi que el blob no es lo que habia en el
+# disco. Eso se pago en C-15: `tvr-2026.csv` tiene 18 044 finales CRLF, el corpus firma
+# el sha256 de esos 1 552 103 bytes, y el blob que llego a `normativa` tenia 1 534 059 y
+# otro sha. La verificacion pasaba en la maquina donde se extrajo y fallaba en cualquier
+# clon —que es donde corre el CI—, y el sintoma es el peor posible: la guarda que
+# distingue un cuadro de otro acusando de manipulacion a un archivo intacto.
+#
+# `-text` desactiva toda conversion de fin de linea, en las dos direcciones. No es
+# `binary`: el diff sigue siendo legible, que es lo que hace revisable una edicion nueva.
+#
+# Lo comprueba `docs/10-negocio/verificar-bytes-del-corpus.mjs`, que exige las dos cosas:
+# que el archivo este declarado aqui y que los bytes del disco sean los que git guarda.
+docs/10-negocio/valores-normativos/** -text

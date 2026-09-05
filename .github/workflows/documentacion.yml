@@ -87,6 +87,19 @@ jobs:
       - name: Lo publicable es lo que el corpus dice
         run: node docs/10-negocio/verificar-publicacion.mjs
 
+      # C-15. Va ANTES que la comprobación de los cuadros, y el orden es el hallazgo:
+      # `verificar-cuadros.mjs` recalcula el sha256 del archivo de filas, y ese sha256 no
+      # dice nada si los bytes del disco no son los que git conserva. Con
+      # `core.autocrlf=input` —un ajuste de la máquina de cada quien— el filtro `clean` le
+      # quitaba los 18 044 CR a `tvr-2026.csv` al commitear, así que la verificación pasaba
+      # donde se extrajo el archivo y fallaba en cualquier clon. Primero las muestras: si no
+      # muerden, que la real pase en verde no dice nada.
+      - name: Las muestras de los bytes del corpus muerden
+        run: node docs/10-negocio/verificar-las-muestras-de-bytes.mjs
+
+      - name: Los bytes del corpus son los que git conserva
+        run: node docs/10-negocio/verificar-bytes-del-corpus.mjs
+
       - name: Los cuadros normativos son los que el corpus firmó
         run: node docs/10-negocio/verificar-cuadros.mjs
 
