@@ -34,7 +34,7 @@
 --
 --  ANTES DE ESTE ARCHIVO hay que haber corrido `crear-roles.sql`: los roles y
 --  las extensiones se provisionan con una conexion de superusuario, porque las
---  politicas de §5 NOMBRAN roles que deben existir, y `sgtm_owner` no puede
+--  politicas de §5 NOMBRAN roles que deben existir, y `kamayuk_owner` no puede
 --  instalar una extension ni crearse a si mismo.
 
 --  ----------------------------------------------------------------------------
@@ -614,7 +614,7 @@ CREATE POLICY modulo_sistema_tenant ON modulo_sistema FOR ALL TO PUBLIC
     WITH CHECK ((municipalidad_id = (current_setting('app.municipalidad_id'::text))::bigint));
 ALTER TABLE municipalidad ENABLE ROW LEVEL SECURITY;
 ALTER TABLE municipalidad FORCE ROW LEVEL SECURITY;
-CREATE POLICY municipalidad_escritura ON municipalidad FOR ALL TO sgtm_owner
+CREATE POLICY municipalidad_escritura ON municipalidad FOR ALL TO kamayuk_owner
     USING (true)
     WITH CHECK (true);
 CREATE POLICY municipalidad_lectura ON municipalidad FOR SELECT TO PUBLIC
@@ -633,7 +633,7 @@ CREATE POLICY permiso_tenant ON permiso FOR ALL TO PUBLIC
     WITH CHECK ((municipalidad_id = (current_setting('app.municipalidad_id'::text))::bigint));
 ALTER TABLE respaldo ENABLE ROW LEVEL SECURITY;
 ALTER TABLE respaldo FORCE ROW LEVEL SECURITY;
-CREATE POLICY respaldo_escritura ON respaldo FOR ALL TO sgtm_owner
+CREATE POLICY respaldo_escritura ON respaldo FOR ALL TO kamayuk_owner
     USING (true)
     WITH CHECK (true);
 CREATE POLICY respaldo_lectura ON respaldo FOR SELECT TO PUBLIC
@@ -671,44 +671,44 @@ CREATE POLICY valor_unitario_lectura ON valor_unitario_edificacion FOR SELECT TO
 --  un volcado descuidado los devuelve enteros.
 -- ==========================================================================
 
-GRANT INSERT, SELECT, UPDATE ON acceso TO sgtm_app;
-GRANT SELECT ON acceso TO sgtm_readonly;
-GRANT INSERT, SELECT ON auditoria TO sgtm_app;
-GRANT SELECT ON auditoria TO sgtm_readonly;
-GRANT INSERT, SELECT, UPDATE ON conjunto_parametro_detalle TO sgtm_app;
-GRANT SELECT ON conjunto_parametro_detalle TO sgtm_readonly;
-GRANT INSERT, SELECT, UPDATE ON conjunto_parametros TO sgtm_app;
-GRANT SELECT ON conjunto_parametros TO sgtm_readonly;
+GRANT INSERT, SELECT, UPDATE ON acceso TO kamayuk_app;
+GRANT SELECT ON acceso TO kamayuk_readonly;
+GRANT INSERT, SELECT ON auditoria TO kamayuk_app;
+GRANT SELECT ON auditoria TO kamayuk_readonly;
+GRANT INSERT, SELECT, UPDATE ON conjunto_parametro_detalle TO kamayuk_app;
+GRANT SELECT ON conjunto_parametro_detalle TO kamayuk_readonly;
+GRANT INSERT, SELECT, UPDATE ON conjunto_parametros TO kamayuk_app;
+GRANT SELECT ON conjunto_parametros TO kamayuk_readonly;
 GRANT INSERT, SELECT, UPDATE ON depreciacion TO rol_carga_parametros;
-GRANT SELECT ON depreciacion TO sgtm_app;
-GRANT SELECT ON depreciacion TO sgtm_readonly;
-GRANT INSERT, SELECT, UPDATE ON documento_emitido TO sgtm_app;
-GRANT SELECT ON documento_emitido TO sgtm_readonly;
-GRANT INSERT, SELECT, UPDATE ON grupo TO sgtm_app;
-GRANT SELECT ON grupo TO sgtm_readonly;
-GRANT INSERT, SELECT, UPDATE ON miembro TO sgtm_app;
-GRANT SELECT ON miembro TO sgtm_readonly;
-GRANT INSERT, SELECT, UPDATE ON modulo_sistema TO sgtm_app;
-GRANT SELECT ON modulo_sistema TO sgtm_readonly;
-GRANT SELECT ON municipalidad TO sgtm_app;
-GRANT SELECT ON municipalidad TO sgtm_readonly;
+GRANT SELECT ON depreciacion TO kamayuk_app;
+GRANT SELECT ON depreciacion TO kamayuk_readonly;
+GRANT INSERT, SELECT, UPDATE ON documento_emitido TO kamayuk_app;
+GRANT SELECT ON documento_emitido TO kamayuk_readonly;
+GRANT INSERT, SELECT, UPDATE ON grupo TO kamayuk_app;
+GRANT SELECT ON grupo TO kamayuk_readonly;
+GRANT INSERT, SELECT, UPDATE ON miembro TO kamayuk_app;
+GRANT SELECT ON miembro TO kamayuk_readonly;
+GRANT INSERT, SELECT, UPDATE ON modulo_sistema TO kamayuk_app;
+GRANT SELECT ON modulo_sistema TO kamayuk_readonly;
+GRANT SELECT ON municipalidad TO kamayuk_app;
+GRANT SELECT ON municipalidad TO kamayuk_readonly;
 GRANT INSERT, SELECT, UPDATE ON parametro_tributario TO rol_carga_parametros;
-GRANT SELECT ON parametro_tributario TO sgtm_app;
-GRANT SELECT ON parametro_tributario TO sgtm_readonly;
-GRANT INSERT, SELECT, UPDATE ON permiso TO sgtm_app;
-GRANT SELECT ON permiso TO sgtm_readonly;
-GRANT SELECT ON respaldo TO sgtm_app;
-GRANT SELECT ON respaldo TO sgtm_readonly;
-GRANT INSERT, SELECT, UPDATE ON sesion TO sgtm_app;
-GRANT SELECT ON sesion TO sgtm_readonly;
-GRANT INSERT, SELECT, UPDATE ON usuario TO sgtm_app;
-GRANT SELECT ON usuario TO sgtm_readonly;
+GRANT SELECT ON parametro_tributario TO kamayuk_app;
+GRANT SELECT ON parametro_tributario TO kamayuk_readonly;
+GRANT INSERT, SELECT, UPDATE ON permiso TO kamayuk_app;
+GRANT SELECT ON permiso TO kamayuk_readonly;
+GRANT SELECT ON respaldo TO kamayuk_app;
+GRANT SELECT ON respaldo TO kamayuk_readonly;
+GRANT INSERT, SELECT, UPDATE ON sesion TO kamayuk_app;
+GRANT SELECT ON sesion TO kamayuk_readonly;
+GRANT INSERT, SELECT, UPDATE ON usuario TO kamayuk_app;
+GRANT SELECT ON usuario TO kamayuk_readonly;
 GRANT INSERT, SELECT, UPDATE ON valor_referencial_vehiculo TO rol_carga_parametros;
-GRANT SELECT ON valor_referencial_vehiculo TO sgtm_app;
-GRANT SELECT ON valor_referencial_vehiculo TO sgtm_readonly;
+GRANT SELECT ON valor_referencial_vehiculo TO kamayuk_app;
+GRANT SELECT ON valor_referencial_vehiculo TO kamayuk_readonly;
 GRANT INSERT, SELECT, UPDATE ON valor_unitario_edificacion TO rol_carga_parametros;
-GRANT SELECT ON valor_unitario_edificacion TO sgtm_app;
-GRANT SELECT ON valor_unitario_edificacion TO sgtm_readonly;
+GRANT SELECT ON valor_unitario_edificacion TO kamayuk_app;
+GRANT SELECT ON valor_unitario_edificacion TO kamayuk_readonly;
 
 -- ==========================================================================
 --  8. DISPARADORES DE INMUTABILIDAD Y DE INVARIANTE
@@ -732,9 +732,9 @@ COMMENT ON COLUMN depreciacion.antiguedad_hasta IS 'Extremo superior del tramo d
 COMMENT ON COLUMN depreciacion.publicacion_id IS 'La edicion a la que pertenece esta fila (ver valor_unitario_edificacion.publicacion_id).';
 COMMENT ON COLUMN depreciacion.uso IS 'La tabla del Anexo I del Reglamento Nacional de Tasaciones a la que pertenece la fila (01 vivienda, 02 tiendas y depositos, 03 oficinas, 04 salud/industria/educacion), con el numero que usa la propia norma. Su titulo verbatim esta en depreciacion.md §1. Que tabla le toca a un predio es criterio y no vive aqui: RT-004 todavia no esta escrita.';
 COMMENT ON TABLE documento_emitido IS 'Documentos emitidos con los datos que los generaron, para reimprimirlos identicos (RF-132).';
-COMMENT ON TABLE municipalidad IS 'Registro de tenants. No es tabla de tenant: la aplicacion la lee entera porque los procesos masivos iteran municipalidad por municipalidad. Solo sgtm_owner escribe.';
-COMMENT ON COLUMN municipalidad.es_demostracion IS 'Instalacion de demostracion: todo documento emitido bajo este tenant sale marcado, en los tres formatos. Lo lee la capa de documentos, no cada emisor. Solo sgtm_owner la escribe, como el alta de la municipalidad.';
-COMMENT ON TABLE respaldo IS 'Estado de las copias de seguridad (RF-126). La aplicacion solo lee: quien hace la copia y escribe aqui es el proceso de despliegue, como sgtm_owner.';
+COMMENT ON TABLE municipalidad IS 'Registro de tenants. No es tabla de tenant: la aplicacion la lee entera porque los procesos masivos iteran municipalidad por municipalidad. Solo kamayuk_owner escribe.';
+COMMENT ON COLUMN municipalidad.es_demostracion IS 'Instalacion de demostracion: todo documento emitido bajo este tenant sale marcado, en los tres formatos. Lo lee la capa de documentos, no cada emisor. Solo kamayuk_owner la escribe, como el alta de la municipalidad.';
+COMMENT ON TABLE respaldo IS 'Estado de las copias de seguridad (RF-126). La aplicacion solo lee: quien hace la copia y escribe aqui es el proceso de despliegue, como kamayuk_owner.';
 COMMENT ON COLUMN respaldo.ultima_restauracion_verificada IS 'Instante en que se comprobo, restaurandola de verdad, que esta copia se puede restaurar (RNF-079). NULO significa «nunca se probo», nunca «hoy».';
 COMMENT ON COLUMN respaldo.ultima_restauracion_verificada_por IS 'Que proceso lo comprobo: el simulacro de restauracion y el ambiente contra el que corrio. No es un usuario de la aplicacion: la aplicacion no restaura.';
 COMMENT ON COLUMN valor_referencial_vehiculo.municipalidad_id IS 'Siempre nulo: la tabla de valores referenciales la aprueba el MEF (ARQ-09 §2.1, D-13).';

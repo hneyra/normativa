@@ -221,7 +221,7 @@ public final class ConfiguracionDeNormativa implements ConfiguracionDeLasVerific
     /**
      * RNF-051: de aqui no se borra. Las seis tablas de este sistema mas la auditoria.
      *
-     * <p>Las tres de valuacion y las dos del conjunto entran aunque {@code sgtm_app} ya no tenga
+     * <p>Las tres de valuacion y las dos del conjunto entran aunque {@code kamayuk_app} ya no tenga
      * {@code DELETE} sobre ellas, y no es redundancia: son <b>dos guardas independientes</b> y
      * basta una para parar la escritura, pero solo el escaner dice <i>cual</i> —el privilegio y la
      * politica dan el mismo {@code 42501} y el sintoma no los distingue (#435)—. Que la lista este

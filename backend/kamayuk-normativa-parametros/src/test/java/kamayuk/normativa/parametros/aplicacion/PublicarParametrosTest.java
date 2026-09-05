@@ -60,7 +60,7 @@ import org.springframework.transaction.interceptor.TransactionInterceptor;
  *
  * <h2>Dos conexiones, y esa es la prueba mas importante de aqui</h2>
  *
- * <p>La publicacion va por {@code rol_carga_parametros} y la composicion por {@code sgtm_app},
+ * <p>La publicacion va por {@code rol_carga_parametros} y la composicion por {@code kamayuk_app},
  * porque asi estan repartidos los privilegios (V7) y porque asi lo exige la separacion de funciones
  * de REQ-03. La prueba lo hace con dos {@code DataSource} distintos, no con uno de administrador:
  * con un superusuario todo esto pasaria en verde sin verificar nada.
@@ -110,7 +110,7 @@ class PublicarParametrosTest {
         carga.setPassword(base.clave(BaseDeDatosDePrueba.CARGA_PARAMETROS));
         publicacion = new PublicacionDeParametrosJdbc(JdbcClient.create(carga));
 
-        // El que compone y sella: sgtm_app, que sobre parametro_tributario solo tiene SELECT.
+        // El que compone y sella: kamayuk_app, que sobre parametro_tributario solo tiene SELECT.
         DriverManagerDataSource pool = new DriverManagerDataSource();
         pool.setUrl(base.url());
         pool.setUsername(BaseDeDatosDePrueba.APP);
@@ -149,7 +149,7 @@ class PublicarParametrosTest {
 
     /**
      * Los dos contextos que en una peticion salen del token, para los pasos que corren como {@code
-     * sgtm_app}. La publicacion NO los necesita: no es de ninguna municipalidad y no escribe
+     * kamayuk_app}. La publicacion NO los necesita: no es de ninguna municipalidad y no escribe
      * auditoria.
      */
     private static void comoLaAplicacion() {
@@ -409,7 +409,8 @@ class PublicarParametrosTest {
         }
 
         @Test
-        @DisplayName("sgtm_app no puede publicar: por eso este proceso no corre con su credencial")
+        @DisplayName(
+                "kamayuk_app no puede publicar: por eso este proceso no corre con su credencial")
         void laAplicacionNoPuedePublicar() {
             DriverManagerDataSource pool = new DriverManagerDataSource();
             pool.setUrl(base.url());
@@ -460,7 +461,7 @@ class PublicarParametrosTest {
             // 1. Publicar, con rol_carga_parametros.
             proceso(archivo).run(null);
 
-            // 2. Componer y sellar, con sgtm_app y EL MISMO ARCHIVO: sus tres primeras columnas
+            // 2. Componer y sellar, con kamayuk_app y EL MISMO ARCHIVO: sus tres primeras columnas
             //    son las que ImportarParametrosDelConjunto lee, y las demas las ignora.
             comoLaAplicacion();
             Observacion porque = Observacion.de("Se parametriza el ejercicio de la cadena");

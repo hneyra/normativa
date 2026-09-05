@@ -33,8 +33,8 @@ import org.springframework.jdbc.datasource.DriverManagerDataSource;
  * <h2>Por que hace falta una prueba propia, teniendo ya las negativas</h2>
  *
  * <p>Cuando #380 midio la guarda salio el matiz que este archivo existe para conservar: devolverle
- * el {@code INSERT} a {@code sgtm_app} deja las pruebas <b>en verde</b>, porque quien lo para no es
- * el privilegio sino que la politica de RLS nombra solo a {@code rol_carga_parametros}. RLS y
+ * el {@code INSERT} a {@code kamayuk_app} deja las pruebas <b>en verde</b>, porque quien lo para no
+ * es el privilegio sino que la politica de RLS nombra solo a {@code rol_carga_parametros}. RLS y
  * {@code GRANT} son dos guardas independientes, <b>basta una</b>, y <b>las dos dan {@code
  * 42501}</b>: el sintoma no distingue cual actuo.
  *
@@ -161,7 +161,7 @@ class LasDosGuardasDeLaCargaTest {
     class PorElCatalogo {
 
         @Test
-        @DisplayName("sgtm_app no tiene INSERT, UPDATE ni DELETE sobre ninguna de las cuatro")
+        @DisplayName("kamayuk_app no tiene INSERT, UPDATE ni DELETE sobre ninguna de las cuatro")
         void laAplicacionNoTienePrivilegioDeEscritura() throws SQLException {
             List<String> conPrivilegioDeMas = new ArrayList<>();
             for (String tabla : TABLAS) {
@@ -182,7 +182,7 @@ class LasDosGuardasDeLaCargaTest {
             }
             assertThat(conPrivilegioDeMas)
                     .as(
-                            "la primera guarda es el GRANT. V55 se lo retiro a sgtm_app sobre las"
+                            "la primera guarda es el GRANT. V55 se lo retiro a kamayuk_app sobre las"
                                     + " tres tablas de valuacion, y V7 nunca se lo dio sobre"
                                     + " parametro_tributario: una peticion HTTP no puede tener el"
                                     + " camino mas corto hasta el cuadro de valores unitarios de todas"
@@ -226,7 +226,7 @@ class LasDosGuardasDeLaCargaTest {
                                         + "'");
                 assertThat(estado)
                         .as(
-                                "%s sin FORCE: sgtm_owner —que es su dueno— escribiria saltandose la"
+                                "%s sin FORCE: kamayuk_owner —que es su dueno— escribiria saltandose la"
                                         + " politica, y el GRANT solo no lo impide",
                                 tabla)
                         .isEqualTo("true true");
@@ -250,7 +250,7 @@ class LasDosGuardasDeLaCargaTest {
                                     + "', c.oid, 'DELETE'))");
             assertThat(List.of(escribibles.split(",")))
                     .as(
-                            "la leccion de sgtm_respaldo (#155) aplicada al otro rol privilegiado:"
+                            "la leccion de kamayuk_respaldo (#155) aplicada al otro rol privilegiado:"
                                     + " sus privilegios son los minimos que la carga necesita, y se"
                                     + " comprueban ENUMERANDOLOS. Ni el conjunto, ni su detalle, ni la"
                                     + " auditoria: es la separacion de funciones SoD-1 de REQ-03"
@@ -300,7 +300,7 @@ class LasDosGuardasDeLaCargaTest {
     class PorElSintoma {
 
         @Test
-        @DisplayName("sgtm_app no puede escribir parametro_tributario")
+        @DisplayName("kamayuk_app no puede escribir parametro_tributario")
         void laAplicacionNoPuedeEscribirElCatalogoDeParametros() throws SQLException {
             try (Connection conexion = base.conexion(BaseDeDatosDePrueba.APP)) {
                 assertThatThrownBy(() -> insertar(conexion, "app-sin-nada"))
@@ -391,7 +391,7 @@ class LasDosGuardasDeLaCargaTest {
             try (Connection conexion = base.conexion(BaseDeDatosDePrueba.APP)) {
                 assertThatCode(() -> insertar(conexion, "app-con-las-dos-fuera"))
                         .as(
-                                "con el GRANT y una politica que nombre a sgtm_app, la aplicacion"
+                                "con el GRANT y una politica que nombre a kamayuk_app, la aplicacion"
                                         + " publica un valor normativo. Es el estado que las dos guardas"
                                         + " existen para impedir, y la unica forma de demostrar que las"
                                         + " dos hacen falta")
@@ -405,7 +405,7 @@ class LasDosGuardasDeLaCargaTest {
         }
 
         @Test
-        @DisplayName("el rol de carga si escribe: lo que para a sgtm_app no es un CHECK")
+        @DisplayName("el rol de carga si escribe: lo que para a kamayuk_app no es un CHECK")
         void elRolDeCargaSiEscribe() throws SQLException {
             try (Connection conexion = base.conexion(BaseDeDatosDePrueba.CARGA_PARAMETROS)) {
                 assertThatCode(() -> insertar(conexion, "carga-si-entra"))

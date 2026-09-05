@@ -23,7 +23,7 @@ import java.util.List;
  * <h2>Que no hace</h2>
  *
  * <p>No compone ningun conjunto y no sella nada. Publicar y componer son dos actos de dos roles
- * distintos: el segundo es {@code AbrirConjuntoDeParametros}, que corre como {@code sgtm_app}.
+ * distintos: el segundo es {@code AbrirConjuntoDeParametros}, que corre como {@code kamayuk_app}.
  */
 public interface PublicacionDeParametros {
 

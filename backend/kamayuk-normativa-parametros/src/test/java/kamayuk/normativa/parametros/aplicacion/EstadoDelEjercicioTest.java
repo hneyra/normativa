@@ -47,13 +47,14 @@ import org.springframework.transaction.interceptor.TransactionInterceptor;
  *
  * <h2>Como esta montada</h2>
  *
- * <p>Contra PostgreSQL de verdad y conectada como {@code sgtm_app} —nunca como {@code sgtm_owner},
- * que con {@code FORCE ROW LEVEL SECURITY} tambien queda sujeto a la politica y dejaria pasar la
- * rotura de aislamiento (#537, #545); quien la omite es el superusuario del cluster—. El caso de
- * uso se envuelve con {@link AnnotationTransactionAttributeSource}, que <b>obedece a la
- * anotacion</b> igual que el contenedor: un {@code TransactionTemplate} incondicional dejaria pasar
- * la rotura de quitarle el {@code @Transactional}, que es el defecto de clase de #486 —sin
- * transaccion no hay {@code SET LOCAL} y la politica RLS no devuelve vacio, revienta—.
+ * <p>Contra PostgreSQL de verdad y conectada como {@code kamayuk_app} —nunca como {@code
+ * kamayuk_owner}, que con {@code FORCE ROW LEVEL SECURITY} tambien queda sujeto a la politica y
+ * dejaria pasar la rotura de aislamiento (#537, #545); quien la omite es el superusuario del
+ * cluster—. El caso de uso se envuelve con {@link AnnotationTransactionAttributeSource}, que
+ * <b>obedece a la anotacion</b> igual que el contenedor: un {@code TransactionTemplate}
+ * incondicional dejaria pasar la rotura de quitarle el {@code @Transactional}, que es el defecto de
+ * clase de #486 —sin transaccion no hay {@code SET LOCAL} y la politica RLS no devuelve vacio,
+ * revienta—.
  *
  * <p>Los ejercicios se reparten para que cada caso tenga el suyo: {@code conjunto_uq} impide dos
  * versiones con el mismo numero, y sembrar el abierto y el sellado en el mismo ano dejaria de medir
@@ -89,7 +90,7 @@ class EstadoDelEjercicioTest {
 
         DriverManagerDataSource pool = new DriverManagerDataSource();
         pool.setUrl(base.url());
-        // sgtm_app, y no el dueno: con FORCE ROW LEVEL SECURITY el dueno tambien queda
+        // kamayuk_app, y no el dueno: con FORCE ROW LEVEL SECURITY el dueno tambien queda
         // sujeto a la politica, asi que una prueba de aislamiento escrita con `OWNER`
         // pasaria en verde con la fuga dentro (#537).
         pool.setUsername(BaseDeDatosDePrueba.APP);
@@ -280,9 +281,9 @@ class EstadoDelEjercicioTest {
     }
 
     @Test
-    @DisplayName("y el centinela: la prueba habla con la base como sgtm_app, no como su dueno")
-    void seConectaComoSgtmApp() {
-        // Medido, no supuesto (#537, #545): cambiar el pool a `sgtm_owner` —la rotura de
+    @DisplayName("y el centinela: la prueba habla con la base como kamayuk_app, no como su dueno")
+    void seConectaComoKamayukApp() {
+        // Medido, no supuesto (#537, #545): cambiar el pool a `kamayuk_owner` —la rotura de
         // aislamiento que uno teclea por costumbre— deja las nueve pruebas en VERDE, porque el
         // esquema declara FORCE ROW LEVEL SECURITY y con el el dueno de la tabla tambien queda
         // sujeto a la politica. Quien la omite es el superusuario del cluster, y esa si pone en

@@ -39,8 +39,8 @@ import org.springframework.stereotype.Component;
  * <p>Corre en el perfil {@code batch} por la misma razon que los otros procesos de arranque (#202):
  * uno sin perfil correria tambien en el proceso web, y entonces el contenedor que atiende
  * peticiones tendria dentro el camino mas corto entre una peticion HTTP y el sellado de un
- * ejercicio. No hace falta {@code sgtm_owner}: {@code conjunto_parametros} y {@code
- * conjunto_parametro_detalle} son tablas que {@code sgtm_app} escribe (V7).
+ * ejercicio. No hace falta {@code kamayuk_owner}: {@code conjunto_parametros} y {@code
+ * conjunto_parametro_detalle} son tablas que {@code kamayuk_app} escribe (V7).
  *
  * <p>El perfil {@code batch} no tiene filtros HTTP, asi que los dos contextos que en una peticion
  * salen del token se fijan aqui a mano, igual que hacen la implantacion y las cargas de catastro.

@@ -61,7 +61,7 @@ public final class DatosDePrueba {
      * se cargan una vez para todas y llevan {@code municipalidad_id} nulo (ARQ-09 §2.1). Se
      * siembran <b>una sola vez para las dos municipalidades</b>, que es exactamente lo que la
      * decision afirma: una copia nacional no puede divergir de si misma. Y se siembran como {@code
-     * rol_carga_parametros}, porque {@code sgtm_app} no tiene {@code INSERT} sobre ellas.
+     * rol_carga_parametros}, porque {@code kamayuk_app} no tiene {@code INSERT} sobre ellas.
      *
      * @return el identificador del parametro de relleno que las tablas de tenant componen
      */
@@ -124,7 +124,7 @@ public final class DatosDePrueba {
     }
 
     /**
-     * Siembra todas las tablas de tenant como {@code sgtm_app} y con el contexto de la
+     * Siembra todas las tablas de tenant como {@code kamayuk_app} y con el contexto de la
      * municipalidad fijado. Sembrar con el rol de la aplicacion, y no con el owner, verifica de
      * paso que la clausula {@code WITH CHECK} deja pasar lo que debe dejar pasar.
      */

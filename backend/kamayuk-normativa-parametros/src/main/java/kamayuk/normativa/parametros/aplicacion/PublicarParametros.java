@@ -56,8 +56,8 @@ import org.springframework.stereotype.Component;
  *
  * <h2>La credencial</h2>
  *
- * <p>Corre como {@code rol_carga_parametros} —no como {@code sgtm_app}, que solo tiene {@code
- * SELECT} sobre esta tabla, y no como {@code sgtm_owner}, que tampoco puede escribirla: {@code
+ * <p>Corre como {@code rol_carga_parametros} —no como {@code kamayuk_app}, que solo tiene {@code
+ * SELECT} sobre esta tabla, y no como {@code kamayuk_owner}, que tampoco puede escribirla: {@code
  * parametro_tributario} lleva {@code FORCE ROW LEVEL SECURITY} y la unica politica de escritura de
  * V6 nombra a {@code rol_carga_parametros}—. Ese rol <b>solo</b> alcanza esta tabla: ni el
  * conjunto, ni su detalle, ni la auditoria (V7). Por eso este proceso publica y no compone:
