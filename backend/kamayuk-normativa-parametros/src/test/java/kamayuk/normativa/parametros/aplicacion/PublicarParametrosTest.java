@@ -673,7 +673,7 @@ class PublicarParametrosTest {
         void sinArchivoNoArranca() {
             assertThatThrownBy(() -> new DatosDeLaPublicacion("  ", "x"))
                     .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("sgtm.publicacion-parametros.archivo");
+                    .hasMessageContaining("kamayuk.publicacion-parametros.archivo");
         }
     }
 

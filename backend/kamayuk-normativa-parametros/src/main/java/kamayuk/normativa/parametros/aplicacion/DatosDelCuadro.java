@@ -19,13 +19,13 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *     docs/10-negocio/valores-normativos/publicacion/README.md})
  * @param usuarioDelProceso con que nombre aparece este proceso en el registro. No firma nada
  */
-@ConfigurationProperties("sgtm.publicacion-cuadros")
+@ConfigurationProperties("kamayuk.publicacion-cuadros")
 public record DatosDelCuadro(String archivo, String usuarioDelProceso) {
 
     public DatosDelCuadro {
         if (archivo == null || archivo.isBlank()) {
             throw new IllegalArgumentException(
-                    "Falta sgtm.publicacion-cuadros.archivo: sin el manifiesto no hay ninguna"
+                    "Falta kamayuk.publicacion-cuadros.archivo: sin el manifiesto no hay ninguna"
                             + " edicion que publicar, y publicar un cuadro de otra parte es lo que"
                             + " ADR-0007 impide");
         }

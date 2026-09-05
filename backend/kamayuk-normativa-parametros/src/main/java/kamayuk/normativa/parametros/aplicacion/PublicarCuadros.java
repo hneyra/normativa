@@ -81,7 +81,7 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @Profile("batch")
-@ConditionalOnProperty("sgtm.publicacion-cuadros.archivo")
+@ConditionalOnProperty("kamayuk.publicacion-cuadros.archivo")
 @EnableConfigurationProperties(DatosDelCuadro.class)
 public class PublicarCuadros implements ApplicationRunner {
 

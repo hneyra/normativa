@@ -53,7 +53,7 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @Profile("batch")
-@ConditionalOnProperty("sgtm.conjunto-parametros.municipalidad-id")
+@ConditionalOnProperty("kamayuk.conjunto-parametros.municipalidad-id")
 @EnableConfigurationProperties(DatosDelConjunto.class)
 public class AbrirConjuntoDeParametros implements ApplicationRunner {
 

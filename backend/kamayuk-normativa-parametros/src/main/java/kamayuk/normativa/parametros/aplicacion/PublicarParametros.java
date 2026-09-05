@@ -84,7 +84,7 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @Profile("batch")
-@ConditionalOnProperty("sgtm.publicacion-parametros.archivo")
+@ConditionalOnProperty("kamayuk.publicacion-parametros.archivo")
 @EnableConfigurationProperties(DatosDeLaPublicacion.class)
 public class PublicarParametros implements ApplicationRunner {
 

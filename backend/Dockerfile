@@ -78,7 +78,7 @@ FROM eclipse-temurin:25-jre AS aplicacion
 
 # Usuario sin privilegios y sin shell. Un proceso que solo tiene que escuchar en
 # un puerto no necesita ser root dentro del contenedor.
-RUN useradd --system --uid 10001 --shell /usr/sbin/nologin sgtm
+RUN useradd --system --uid 10001 --shell /usr/sbin/nologin kamayuk
 
 # curl entra por una sola razon: la sonda de vida del orquestador se ejecuta
 # DENTRO del contenedor, y la imagen base no trae ningun cliente HTTP. La
@@ -89,27 +89,28 @@ RUN apt-get update \
     && apt-get install --yes --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
 
-# `normativa.jar`, y NO `sgtm.jar`: este modulo declara
-# `archiveFileName.set("normativa.jar")` en su `build.gradle.kts`, mientras `rentas`,
-# `catastro` y `caja` conservan el `sgtm.jar` heredado del monolito. Este `COPY` pedia
-# el nombre de los otros tres, asi que la imagen NO SE PODIA CONSTRUIR: `docker build`
-# compilaba entero —Gradle en verde, el jar producido— y se caia en el ultimo paso con
-# «stat .../sgtm.jar: file does not exist». Nadie lo veia porque ningun CI construye
-# todavia esta imagen, y desde el cluster el sintoma es `ImagePullBackOff`, que se lee
-# como «el registro aun no la publico» y no como «no existe forma de publicarla».
+# `normativa.jar` en `/opt/kamayuk/normativa.jar`: cada sistema produce el jar con SU
+# nombre y lo deja bajo el directorio del producto (R-A/B, etapa A punto 3).
 #
-# Se arregla aqui y no renombrando el jar a `sgtm.jar`: el nombre del artefacto lo
-# decide el modulo, y cambiarlo para que cuadre con un `COPY` es mover el dato hacia
-# el sitio equivocado. El destino si se queda en `/opt/sgtm/sgtm.jar`, que es lo que
-# nombra el `ENTRYPOINT` de las cuatro imagenes.
-COPY --from=construccion /origen/backend/kamayuk-normativa-aplicacion/build/libs/normativa.jar /opt/sgtm/sgtm.jar
+# Antes de R-A/B los cuatro no decian lo mismo: `rentas`, `catastro` y `caja` producian
+# `sgtm.jar` —el nombre heredado del monolito— y este modulo `normativa.jar`, y ese
+# desajuste ya costo que la imagen de `normativa` NO SE PUDIERA CONSTRUIR (C-17, arreglo
+# B): `docker build` compilaba entero —Gradle en verde, el jar producido— y se caia en el
+# ultimo `COPY` con «stat .../sgtm.jar: file does not exist». Desde el cluster el sintoma
+# es `ImagePullBackOff`, que se lee como «el registro aun no la publico».
+#
+# Lo que ata las dos mitades son dos guardas de `infrastructure`, no este comentario: el
+# `COPY` contra el `archiveFileName` del modulo (C-17), y el `ENTRYPOINT` contra el
+# destino del `COPY` (R-A/B) — un destino que no cuadre con el `ENTRYPOINT` construye la
+# imagen sin protestar y muere al arrancar con «Unable to access jarfile».
+COPY --from=construccion /origen/backend/kamayuk-normativa-aplicacion/build/libs/normativa.jar /opt/kamayuk/normativa.jar
 USER 10001
 EXPOSE 8080
 
 # Sin CMD con argumentos: la configuracion entra por variables de entorno
-# (SGTM_DB_URL, SGTM_DB_USUARIO, SGTM_DB_CLAVE) y por SPRING_PROFILES_ACTIVE,
+# (KAMAYUK_DB_URL, KAMAYUK_DB_USUARIO, KAMAYUK_DB_CLAVE) y por SPRING_PROFILES_ACTIVE,
 # que es lo unico que distingue el perfil web del batch.
-ENTRYPOINT ["java", "-jar", "/opt/sgtm/sgtm.jar"]
+ENTRYPOINT ["java", "-jar", "/opt/kamayuk/normativa.jar"]
 
 # ---------------------------------------------------------------------------
 FROM eclipse-temurin:25-jre AS migrador

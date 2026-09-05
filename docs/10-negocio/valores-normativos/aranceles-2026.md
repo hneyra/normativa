@@ -159,7 +159,7 @@ cualquier municipalidad calcule un predial con estas cifras hace falta, en este 
    archivados junto al gpkg, bajo `…/2026-08-25T19-24-59Z__derivados/`.
 3. Alguien abre un conjunto de parámetros del ejercicio (`AdministrarParametros.abrirVersion`) y
    solo entonces se cargan estas filas contra ese conjunto, con `ImportarArancel` (backend,
-   `pe.gob.sgtm.catastro.aplicacion`) — nunca contra uno ya sellado: el disparador de `V18` lo
+   `kamayuk.catastro.catastro.aplicacion`) — nunca contra uno ya sellado: el disparador de `V18` lo
    rechaza fila a fila.
 
 Ver §3 para lo que este archivo todavía no resuelve.
@@ -168,7 +168,7 @@ Ver §3 para lo que este archivo todavía no resuelve.
 
 | Qué | Dónde |
 |---|---|
-| Tipo | `parametro_tributario` (tipo `ARANCEL_RUSTICO`, una fila por combinación grupo de tierra × calidad agrológica; `ARANCEL_CENTRO_POBLADO_MENOR`, una fila por combinación calzada × ancho × infraestructura); la tabla dedicada `arancel` (vía + tramo, backend `pe.gob.sgtm.catastro.dominio.Arancel`) para el plano urbano de la ciudad de Catacaos (§1.3/§1.4), poblada por `ImportarArancel` a partir del CSV que produce el importador GIS |
+| Tipo | `parametro_tributario` (tipo `ARANCEL_RUSTICO`, una fila por combinación grupo de tierra × calidad agrológica; `ARANCEL_CENTRO_POBLADO_MENOR`, una fila por combinación calzada × ancho × infraestructura); la tabla dedicada `arancel` (vía + tramo, backend `kamayuk.catastro.catastro.dominio.Arancel`) para el plano urbano de la ciudad de Catacaos (§1.3/§1.4), poblada por `ImportarArancel` a partir del CSV que produce el importador GIS |
 | Clave | `ARANCEL_RUSTICO` + grupo (`A`/`C`/`P`/`ERIAZO`) + calidad (`1`/`2`/`3` donde aplique), con el ejercicio como parte de la clave compuesta; `ARANCEL_CENTRO_POBLADO_MENOR` + tipo de calzada + tramo de ancho + columna A-H; `arancel` se identifica por `(municipalidad_id, conjunto_id, via_id, tramo)` —**no** por ejercicio suelto: cuelga de un conjunto de parámetros sellado (#17), igual que el valor referencial vehicular, para que dos versiones selladas del mismo ejercicio no se confundan |
 | Ámbito | nacional (rústico y centros poblados menores, código 200105); municipal para el plano urbano de Catacaos —`arancel.via_id` referencia el catálogo vial de esa municipalidad— |
 | Vigencia | 2026 (rústico y centros poblados menores); 2023-2026 disponibles en el gpkg para el plano urbano, ver §1.4 |

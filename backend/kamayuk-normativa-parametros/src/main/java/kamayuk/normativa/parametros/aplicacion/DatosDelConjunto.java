@@ -30,7 +30,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *     el que queda como {@code usuario_sellado}
  * @param observacion el «por que» del acto (regla 10, ADR-0008)
  */
-@ConfigurationProperties("sgtm.conjunto-parametros")
+@ConfigurationProperties("kamayuk.conjunto-parametros")
 public record DatosDelConjunto(
         long municipalidadId,
         int ejercicio,
@@ -43,15 +43,15 @@ public record DatosDelConjunto(
     public DatosDelConjunto {
         if (municipalidadId < 1) {
             throw new IllegalArgumentException(
-                    "Falta sgtm.conjunto-parametros.municipalidad-id, o no es un identificador"
+                    "Falta kamayuk.conjunto-parametros.municipalidad-id, o no es un identificador"
                             + " valido");
         }
         boolean abre = ejercicio > 0;
         boolean opera = conjuntoId > 0;
         if (abre == opera) {
             throw new IllegalArgumentException(
-                    "Hay que dar sgtm.conjunto-parametros.ejercicio —para abrir una version— o"
-                            + " sgtm.conjunto-parametros.conjunto-id —para operar sobre una ya"
+                    "Hay que dar kamayuk.conjunto-parametros.ejercicio —para abrir una version— o"
+                            + " kamayuk.conjunto-parametros.conjunto-id —para operar sobre una ya"
                             + " abierta—, y exactamente uno de los dos");
         }
         archivo = archivo == null || archivo.isBlank() ? null : archivo.strip();

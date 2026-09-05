@@ -23,13 +23,13 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param usuarioDelProceso con que nombre aparece este proceso en el registro. No firma nada: las
  *     dos firmas que llegan a la base son las del corpus, columna por columna del archivo
  */
-@ConfigurationProperties("sgtm.publicacion-parametros")
+@ConfigurationProperties("kamayuk.publicacion-parametros")
 public record DatosDeLaPublicacion(String archivo, String usuarioDelProceso) {
 
     public DatosDeLaPublicacion {
         if (archivo == null || archivo.isBlank()) {
             throw new IllegalArgumentException(
-                    "Falta sgtm.publicacion-parametros.archivo: sin el derivado del corpus no hay"
+                    "Falta kamayuk.publicacion-parametros.archivo: sin el derivado del corpus no hay"
                             + " nada que publicar, y publicar cifras de otra parte es lo que"
                             + " ADR-0007 impide");
         }
