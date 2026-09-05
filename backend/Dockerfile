@@ -89,7 +89,20 @@ RUN apt-get update \
     && apt-get install --yes --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=construccion /origen/backend/kamayuk-normativa-aplicacion/build/libs/sgtm.jar /opt/sgtm/sgtm.jar
+# `normativa.jar`, y NO `sgtm.jar`: este modulo declara
+# `archiveFileName.set("normativa.jar")` en su `build.gradle.kts`, mientras `rentas`,
+# `catastro` y `caja` conservan el `sgtm.jar` heredado del monolito. Este `COPY` pedia
+# el nombre de los otros tres, asi que la imagen NO SE PODIA CONSTRUIR: `docker build`
+# compilaba entero —Gradle en verde, el jar producido— y se caia en el ultimo paso con
+# «stat .../sgtm.jar: file does not exist». Nadie lo veia porque ningun CI construye
+# todavia esta imagen, y desde el cluster el sintoma es `ImagePullBackOff`, que se lee
+# como «el registro aun no la publico» y no como «no existe forma de publicarla».
+#
+# Se arregla aqui y no renombrando el jar a `sgtm.jar`: el nombre del artefacto lo
+# decide el modulo, y cambiarlo para que cuadre con un `COPY` es mover el dato hacia
+# el sitio equivocado. El destino si se queda en `/opt/sgtm/sgtm.jar`, que es lo que
+# nombra el `ENTRYPOINT` de las cuatro imagenes.
+COPY --from=construccion /origen/backend/kamayuk-normativa-aplicacion/build/libs/normativa.jar /opt/sgtm/sgtm.jar
 USER 10001
 EXPOSE 8080
 
