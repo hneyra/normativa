@@ -110,3 +110,11 @@ jobs:
         run: >-
           node docs/10-negocio/valores-normativos/fuentes/depreciacion-rnt-2016/derivar-depreciacion.mjs
           --comprobar
+
+      # Lo mismo para el Cuadro de Valores Unitarios (H-14, catastro#8). Es un paso
+      # aparte y no una línea más del anterior a propósito: si fallan los dos, el
+      # registro tiene que decir cuál de los dos derivados se separó de su corpus.
+      - name: El derivado de los valores unitarios es el que su generador produce
+        run: >-
+          node docs/10-negocio/valores-normativos/fuentes/valores-unitarios-2026/derivar-valores-unitarios.mjs
+          --comprobar

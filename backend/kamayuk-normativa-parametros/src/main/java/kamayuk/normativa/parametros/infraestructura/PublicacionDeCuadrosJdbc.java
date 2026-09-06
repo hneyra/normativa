@@ -106,6 +106,32 @@ public class PublicacionDeCuadrosJdbc implements PublicacionDeCuadros {
     }
 
     @Override
+    public void agregarValorUnitario(
+            long edicion,
+            String partida,
+            String categoria,
+            int anioConstruccionDesde,
+            @Nullable Integer anioConstruccionHasta,
+            ValorNormativo valorM2,
+            String documentoFuente) {
+        jdbc.sql(
+                        "INSERT INTO valor_unitario_edificacion (publicacion_id, partida,"
+                                + " categoria, anio_construccion_desde, anio_construccion_hasta,"
+                                + " valor_m2, documento_fuente)"
+                                + " VALUES (:edicion, :partida, :categoria, :desde, :hasta,"
+                                + " :valor, :fuente)")
+                .param("edicion", edicion)
+                .param("partida", partida)
+                .param("categoria", categoria)
+                .param("desde", anioConstruccionDesde)
+                // Nulo es el tramo abierto y entra tal cual, igual que en la depreciacion.
+                .param("hasta", anioConstruccionHasta)
+                .param("valor", valorM2.valor())
+                .param("fuente", documentoFuente)
+                .update();
+    }
+
+    @Override
     public void agregarValorReferencial(
             long edicion,
             int ejercicio,

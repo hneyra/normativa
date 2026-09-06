@@ -2,16 +2,16 @@
 
 | Campo | Valor |
 |---|---|
-| Norma | **Ninguna identificada todavía.** Se transcriben aquí los dos artículos del TUO de la Ley de Tributación Municipal (D.S. N.° 156-2004-EF) que podrían darle origen —el que actualiza la base imponible del año anterior por Decreto Supremo cuando no se publican los valores, y el art. 14, que es la actualización de valores de la emisión mecanizada— y se dice cuál de los dos quedó descartado y por qué |
-| Artículo | Del TUO LTM: el párrafo de actualización por Decreto Supremo (§1.1, con su número **sin confirmar**, ver §1.4) y el art. 14 (§1.2) |
+| Norma | **TUO de la Ley de Tributación Municipal (D.S. N.° 156-2004-EF), art. 12** — el único porcentaje de actualización de la base imponible del predial que ese TUO contiene, ya confirmado como artículo 12 en §1.4. Se transcribe además el art. 14 (§1.2), que quedó descartado y por qué. **Lo que sigue sin confirmar es que la columna «% actualización» de M02 sea este artículo** (§1.1); §1.6 explica por qué lo que este archivo publica para 2026 no depende de esa identificación |
+| Artículo | 12 del TUO LTM (§1.1, con su número ya confirmado en §1.4); y el art. 14 (§1.2), descartado |
 | Publicada | 2004-11-15, fecha del D.S. N.° 156-2004-EF que aprueba el TUO |
-| Ejercicios que rige | No aplica: este archivo **no publica ninguna cifra** |
+| Ejercicios que rige | **2026, y solo 2026.** §1.6 lee el supuesto del art. 12 contra ese ejercicio; el siguiente vuelve a necesitar la misma lectura y no se hereda |
 | Filas de NEG-02 §2 | 33 |
-| Transcribió | Agent, 2026-08-30 |
-| Verificó | — |
-| Estado | TRANSCRITO |
+| Transcribió | Agent, 2026-08-30; el hecho del ejercicio 2026 (§1.6): Agent, 2026-09-06 |
+| Verificó | HNA, 2026-09-06 |
+| Estado | VERIFICADO |
 
-> **Este archivo no trae ninguna cifra, y eso es exactamente el punto.** Existe porque el
+> **Este archivo nació sin ninguna cifra, y eso era exactamente el punto.** Existe porque el
 > `% actualización` llevaba desde M02 sin fila en el mapa normativo, y **un dato sin fila es un dato
 > que nadie va a buscar** — es la misma lección que H-17 dejó con la deducción de Amazonía. Lo que
 > trae es el estado de la búsqueda: qué se descartó, con qué evidencia, y qué queda por mirar.
@@ -20,6 +20,15 @@
 > desde #437 los nombres `ACTUALIZACION` y `FACTOR`, y hay una muestra que lo demuestra
 > (`MuestraDeFactorDeActualizacionCompilado`). El valor «obvio» —100 %, o sea 1, o sea ninguno— es
 > el más peligroso de todos, porque escribirlo **no se siente** como inventar un dato.
+>
+> **Y desde el 2026-09-06 este archivo publica una fila, sin dejar de suscribir el párrafo de
+> arriba.** Lo que §1.6 sella **no es un valor por omisión**: es un **hecho** sobre el ejercicio
+> 2026 —que los dos cuadros cuya ausencia activa el art. 12 se publicaron ese año— leído en dos
+> archivos de este mismo corpus que ya están `VERIFICADO` con sus propias dos firmas. La diferencia
+> entre las dos cosas es comprobable y no es retórica: **un valor por omisión vale para todos los
+> ejercicios y este no vale para ninguno más que 2026**, y el día que un ejercicio se quede sin uno
+> de los dos cuadros, este archivo no tiene nada que decir de él y el sistema vuelve a fallar
+> nombrando la llave. Ese es el contraste, y §1.6 lo escribe.
 
 ## 1. La tabla tal como está en la norma
 
@@ -202,19 +211,129 @@ Queda anotado aquí porque el sistema lo necesitará igual —el reajuste de cuo
 una cifra que hoy tampoco está—, y porque quien retome D-11 va a tropezar con esta pantalla y
 merece encontrarse ya hecha la distinción.
 
+### 1.6 El supuesto del artículo 12 **no se cumple en el ejercicio 2026**
+
+**Esto no busca la fuente que §3 sigue pidiendo: lee la que §1.4 ya confirmó, contra un ejercicio
+concreto.** El artículo 12 del **TUO de la Ley de Tributación Municipal (D.S. N.° 156-2004-EF),
+art. 12** no fija un porcentaje: fija un **supuesto** y, dentro de él, un tope. Su primera oración
+es una condición negativa, y está transcrita verbatim dos veces en este archivo (§1.1 y §1.4):
+
+> «**Cuando en determinado ejercicio no se publique los aranceles de terrenos o los precios
+> unitarios oficiales de construcción**, por Decreto Supremo se actualizará el valor de la base
+> imponible del año anterior como máximo en el mismo porcentaje en que se incremente la Unidad
+> Impositiva Tributaria (UIT).»
+
+**En el ejercicio 2026 se publicaron los dos.** Y no hace falta salir de este corpus para decirlo:
+los dos están transcritos aquí, cada uno en su archivo, cada uno `VERIFICADO` y firmado por dos
+personas distintas conforme a ADR-0007.
+
+| Lo que el art. 12 exige que falte | Qué se publicó para 2026 | Dónde está transcrito, y con qué firmas |
+|---|---|---|
+| Los **aranceles de terrenos** | Resolución Ministerial N.º 514-2025-EF/15, publicada el 2025-10-30 en El Peruano, «Valores Arancelarios de Terrenos … vigentes para el Ejercicio Fiscal 2026» | [`aranceles-2026.md`](aranceles-2026.md) — `VERIFICADO`; transcribió JNA (2026-08-24), verificó HNA (2026-08-25) |
+| Los **precios unitarios oficiales de construcción** | Resolución Ministerial N.º 277-2025-VIVIENDA, publicada el 2025-10-30 en El Peruano, «Valores Unitarios Oficiales de Edificación … vigentes para el Ejercicio Fiscal 2026» | [`valores-unitarios-2026.md`](valores-unitarios-2026.md) — `VERIFICADO`; transcribió JNA/Agent (2026-08-24 y 2026-08-28/29), verificó HNA (2026-08-29) |
+
+Los dos son la condición **entera** del artículo, no la mitad: la norma dice «los aranceles de
+terrenos **o** los precios unitarios», de modo que basta con que se publique **uno** para que el
+supuesto no se cumpla. En 2026 se publicaron **los dos**, y además el mismo día.
+
+**De ahí sale lo que se sella, y sale como hecho y no como omisión.** En 2026 no hay Decreto
+Supremo dictado al amparo del art. 12 porque no puede haberlo: su supuesto no ocurrió. No hay
+entonces ninguna actualización que aplicar sobre la base imponible del año anterior. En la
+aritmética que §1.3 fijó midiendo una determinación real —`base = autovalúo × (1 + % actualización)
+× % propiedad`, con el valor neutro en **cero y no en uno**— eso se escribe **`0`**, que es
+exactamente la cifra que la captura del SRTM enseña en su campo «% actualización».
+
+**En una frase, que es la que viaja al derivado publicable de `publicacion/` y de ahí a
+`parametro_tributario`.`valor_texto`:**
+
+En el ejercicio 2026 se publicaron los aranceles de terrenos y los precios unitarios oficiales de
+construcción; el supuesto del art. 12 no se cumple y no hay actualización que aplicar: 0
+
+**Cabe en `varchar(200)`, y eso no es una casualidad tipográfica**: `parametro_tributario`.`valor_texto`
+mide exactamente eso (`V1`), y la primera redacción de esta frase —treinta y cinco caracteres más
+larga— se publicó, la rechazó la base y dejó al conjunto sin la fila. El fundamento entero está
+arriba; lo que viaja a la base es la frase que cabe y remite a él.
+
+**Y la diferencia con el valor por omisión que la cabecera prohíbe es comprobable**, no una
+declaración de intenciones. Un valor por omisión diría «cuando no se sepa, cero» y valdría para
+todos los ejercicios; esto dice «en 2026 no ocurrió el supuesto que generaría un porcentaje» y no
+vale para ninguno más. La prueba de que son cosas distintas es qué pasa con un ejercicio en que
+**sí** falte uno de los dos cuadros: este archivo no tiene nada que decir de él —no hay fila para
+él, ni la habrá hasta que alguien lea sus dos publicaciones— y el sistema tiene que volver a fallar
+nombrando la llave `PORCENTAJE_DE_ACTUALIZACION`, que es lo que ya hace.
+
+**Lo que esto NO cierra, dicho para que nadie lo lea por más de lo que es:**
+
+- **No cierra D-11 entera. Cierra D-11 para 2026.** Cada ejercicio necesita su propia lectura de
+  las dos publicaciones, y la de 2027 no está hecha.
+- **No confirma que la columna «% actualización» de M02 sea el artículo 12.** El
+  `‹NO CONFIRMADO EN FUENTE OFICIAL›` de §1.1 sigue en pie, y §1.5 explica por qué no se ha podido
+  cerrar. Lo que se afirma aquí es más estrecho y no depende de él: **el único porcentaje de
+  actualización de la base imponible del predial que el TUO LTM contiene es el del art. 12**, y en
+  2026 su supuesto no se cumple. Si algún día se descubre que M02 llama «% actualización» a otro
+  mecanismo, lo que habrá que revisar es el **nombre de la llave**, no la cifra que esta fila sella
+  para el art. 12.
+- **No dice qué pasa cuando el porcentaje no es cero.** Sigue siendo lo que §1.3 declaró que su
+  única captura no puede probar: con `0,00 %`, `× (1 + p)` y `+ p × autovalúo` son
+  indistinguibles. El día que un ejercicio active el art. 12, **antes** de correr hay que decidir
+  esa forma y dónde se aplica (ver el punto siguiente).
+- **No decide dónde se aplica.** La captura de §1.3 lo sitúa entre el autovalúo y la base
+  imponible, o sea del lado de `rentas` (ADR-0024), junto al `% propiedad` de D-21. Con `0` las dos
+  colocaciones dan el mismo céntimo, así que 2026 no obliga a decidirlo; un ejercicio con `p ≠ 0`
+  sí. Queda anotado aquí y en el registro de `catastro`.
+
+#### 1.6.1 En qué consistió la verificación de §1.6, y qué no cubre
+
+**La segunda lectura fue un cotejo mecánico contra este mismo corpus, no una persona releyendo el
+PDF del TUO**, y la autorizó el dueño del repositorio, que es quien responde por ella. Es la misma
+forma —y la misma limitación— que
+[`obras-complementarias-y-oficializacion-2026.md`](obras-complementarias-y-oficializacion-2026.md)
+declara para su factor de oficialización.
+
+Lo que el cotejo comprueba es exactamente esto y nada más:
+
+1. que el texto del art. 12 citado arriba sea **letra por letra** el que §1.1 y §1.4 ya traen —lo
+   son: es la misma cadena, y §1.4 la respalda con el sha256 del PDF oficial leído;
+2. que las dos resoluciones de la tabla existan en este corpus, estén en `VERIFICADO` y sus dos
+   firmas sean distintas —lo comprueba además `verificar-publicacion.mjs` en cada PR, y sobre los
+   propios archivos, no sobre esta tabla.
+
+**Lo que no cubre:** no se ha vuelto al diario oficial a comprobar que no exista, además, un
+Decreto Supremo de 2026 dictado al amparo del art. 12. No podría existir sin contradecir su propio
+supuesto, pero eso es un razonamiento y no una lectura.
+`‹NO CONFIRMADO EN FUENTE OFICIAL: que no se haya publicado ningún Decreto Supremo de actualización
+de la base imponible para el ejercicio 2026. Lo confirmado es que el supuesto que lo habilitaría no
+se cumple›`.
+
 ## 2. Cómo entra al sistema
 
-**No entra.** No hay cifra que publicar, y esa es la situación correcta mientras no haya fuente.
+**Entra desde el 2026-09-06, y solo para 2026.** Lo que entra es el hecho de §1.6, no una cifra
+buscada: en el ejercicio 2026 el supuesto del art. 12 no se cumple, y por tanto **no hay
+actualización que aplicar**.
 
-Lo que sí está decidido es **cómo se comporta el sistema mientras tanto**, y no es «aplicar 1»:
+| Qué | Dónde |
+|---|---|
+| Tipo | `parametro_tributario`, tipo `PORCENTAJE_DE_ACTUALIZACION` |
+| Clave | Sin clave: es un solo valor por ejercicio, la misma forma que la UIT y que `FACTOR_OFICIALIZACION` |
+| Ámbito | nacional — lo fija el Gobierno nacional por Decreto Supremo, no una ordenanza local (§3, camino 3) |
+| Vigencia | **2026 únicamente** (`2026-01-01`..`2026-12-31`). No se prorroga: el ejercicio siguiente vuelve a exigir la lectura de sus dos publicaciones |
+| Valor | `0`, con el fundamento de §1.6 y no como valor por omisión |
+
+Y lo que **no** cambia, porque es lo que hace que la fila de arriba signifique algo:
 
 | Qué | Cómo |
 |---|---|
-| Si una regla lo necesita | Falla nombrando su llave, como `TASA_ANUNCIO:‹CLASE›` (#51), `BENEFICIO:‹CAMPAÑA›` (#72) y `VEHICULAR_MINIMO` (#399): **422 nombrando la llave**, nunca un importe plausible |
-| Si alguien lo compila | La regla 5 lo rechaza: `ACTUALIZACION` y `FACTOR` entraron a la lista de nombres vigilados en #437, con su muestra |
-| `RT-002`, `RT-005` y `RT-011` | No se implementan **ni estructuralmente** (`CLAUDE.md` §«No implementar todavía») |
+| Un ejercicio **sin** fila | Falla nombrando su llave, como `TASA_ANUNCIO:‹CLASE›` (#51), `BENEFICIO:‹CAMPAÑA›` (#72) y `VEHICULAR_MINIMO` (#399): **422 nombrando la llave**, nunca un importe plausible. Hoy eso es todo ejercicio que no sea 2026 |
+| Si alguien lo compila | La regla 5 lo rechaza igual que antes: `ACTUALIZACION` y `FACTOR` siguen en la lista de nombres vigilados desde #437, con su muestra. Que exista una fila **publicada** no autoriza a escribir la cifra en el código: son las dos mitades de la regla, no una alternativa a la otra |
+| `RT-002`, `RT-005` y `RT-011` | Siguen sin implementarse aquí. Lo que 2026 desbloquea es la **valuación** de `catastro` (su `#8`), que es la mitad de Predial de ADR-0024; la determinación de la obligación es de `rentas` y no la toca esta fila |
 
 ## 3. Qué no cabe hoy
+
+> **Lo que §1.6 cierra y lo que deja abierto, para leer esta sección sin confundirlas.** §1.6 cierra
+> **el ejercicio 2026** leyendo el supuesto del art. 12 contra sus dos publicaciones. **No cierra
+> nada de lo que sigue**: ni identifica la columna de M02, ni dice cuánto vale el porcentaje cuando
+> el art. 12 sí se activa, ni quién lo fija. Los tres caminos de abajo siguen siendo los que hay
+> que recorrer, y el tercero es el que §1.6 convierte en el más prometedor.
 
 - **La fuente.** Es lo que falta, y este archivo existe para que la próxima búsqueda no repita las
   anteriores.

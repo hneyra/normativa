@@ -51,31 +51,40 @@ record FilaDelManifiesto(
     /** Las cuatro tablas del Anexo I del Reglamento Nacional de Tasaciones (V57, H-15). */
     static final String DEPRECIACION = "DEPRECIACION";
 
+    /** El Cuadro de Valores Unitarios Oficiales de Edificacion, una region por edicion (H-14). */
+    static final String VALOR_UNITARIO = "VALOR_UNITARIO";
+
     /**
-     * Los cuadros que este proceso sabe publicar hoy, y por que falta el tercero.
+     * Los cuadros que este proceso sabe publicar hoy, y cuando entro cada uno.
      *
-     * <p>{@code VALOR_UNITARIO} <b>no</b> esta, y no es que falte escribir el codigo. La R.M. anual
-     * del MVCS publica <b>un cuadro por region</b> —Costa, Lima/Callao, Sierra y Selva— y {@code
-     * valores-unitarios-2026.md} solo trae Costa. El archivo volvio a {@code TRANSCRITO} el
-     * 2026-08-28, cuando el cotejo contra el Anexo I.2 real devolvio tres partidas donde se habian
-     * transcrito siete, y esta {@code VERIFICADO} otra vez desde el 2026-08-29, con la segunda
-     * firma de ADR-0007 puesta sobre la matriz sustituida. <b>Lo que falta ya no es una firma</b>:
-     * no hay archivo de filas con su sha256, y esas tres partidas conviven con las <b>siete</b> que
-     * declaran {@code valor_unitario_edificacion.partida} (V1), {@code
-     * edificacion_estructura.partida} (V43) y las columnas {@code categoria_*} de {@code
-     * construccion}, de modo que publicar tres dejaria cuatro sin ninguna fila —y una edicion
-     * incompleta no se distingue de una completa hasta que alguien valoriza un predio (GOB-03,
-     * H-14).
+     * <p>Los tres estan desde {@code catastro#8}, y ninguno entro por decision: cada uno entro el
+     * dia que dejo de faltarle algo, y lo que faltaba esta escrito para que nadie lo repita.
      *
-     * <p>{@code DEPRECIACION} si esta desde V57, y hasta entonces estuvo fuera por lo mismo que
-     * ahora deja de estarlo: {@code depreciacion} no tenia columna de uso, y el Anexo I publica
-     * cuatro tablas —una por uso de la edificacion—, de modo que cargarlas habria dejado que la
-     * unicidad se quedara con la primera y descartara tres en silencio.
+     * <p>{@code DEPRECIACION} estuvo fuera hasta V57: {@code depreciacion} no tenia columna de uso,
+     * y el Anexo I publica cuatro tablas —una por uso de la edificacion—, de modo que cargarlas
+     * habria dejado que la unicidad se quedara con la primera y descartara tres en silencio.
+     *
+     * <p>{@code VALOR_UNITARIO} estuvo fuera por <b>dos</b> motivos, y los dos se cerraron antes de
+     * este cambio. (1) La segunda firma: {@code valores-unitarios-2026.md} volvio a {@code
+     * TRANSCRITO} el 2026-08-28, cuando el cotejo contra el Anexo I.2 real devolvio tres partidas
+     * donde se habian transcrito siete, y esta {@code VERIFICADO} otra vez desde el 2026-08-29. (2)
+     * El vocabulario: este javadoc decia que las tres partidas del anexo «conviven con las SIETE
+     * que declara {@code valor_unitario_edificacion.partida} (V1)», y <b>medido contra el baseline
+     * de hoy eso ya no es cierto</b> — la columna admite exactamente {@code MUROS}, {@code TECHOS}
+     * y {@code PUERTAS}, y {@code categoria} admite {@code ^[A-J]$}, porque V58 y V59 separaron los
+     * dos vocabularios (#436). Lo que quedaba era el archivo de filas con su sha256, y es lo que
+     * {@code catastro#8} anade.
+     *
+     * <p><b>Una region por edicion.</b> La R.M. anual del MVCS publica un cuadro por region —Lima
+     * Metropolitana/Callao, Costa, Sierra y Selva— y {@code valor_unitario_edificacion} no tiene
+     * columna de region: las cuatro chocarian en {@code valor_unitario_uq}. Con ADR-0017 eso no es
+     * una limitacion sino la forma correcta, y la region viaja en la CLAVE de la edicion ({@code
+     * ANEXO-I.2-COSTA}), que es la region del piloto.
      *
      * <p>Por eso el manifiesto que nombre un cuadro que no este aqui se rechaza <b>nombrando el
      * motivo</b>, en vez de publicar un cuadro incompleto que nadie distinguiria de uno completo.
      */
-    static final List<String> CUADROS = List.of(DEPRECIACION, VEHICULAR);
+    static final List<String> CUADROS = List.of(DEPRECIACION, VEHICULAR, VALOR_UNITARIO);
 
     LlaveDeParametro llave() {
         return new LlaveDeParametro(

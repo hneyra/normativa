@@ -17,6 +17,7 @@ import kamayuk.normativa.carga.LectorDeFilasCsv;
 import kamayuk.normativa.carga.LectorDeFilasCsv.FilaCsv;
 import kamayuk.normativa.dominio.Alicuota;
 import kamayuk.normativa.dominio.Dinero;
+import kamayuk.normativa.dominio.ValorNormativo;
 import kamayuk.normativa.parametros.dominio.PublicacionDeCuadros;
 import kamayuk.normativa.parametros.dominio.PublicacionDeCuadros.Edicion;
 import org.slf4j.Logger;
@@ -86,6 +87,14 @@ import org.springframework.stereotype.Component;
 public class PublicarCuadros implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(PublicarCuadros.class);
+
+    /**
+     * Las tres partidas de apreciacion exterior que el Cuadro de Valores Unitarios publica (V59).
+     *
+     * <p>No es una cifra normativa —es un vocabulario— y por eso vive aqui: lo que la regla 5
+     * prohibe es el numero, no el nombre de la columna que lo lleva.
+     */
+    private static final List<String> PARTIDAS = List.of("MUROS", "TECHOS", "PUERTAS");
 
     private final PublicacionDeCuadros publicacion;
     private final DatosDelCuadro datos;
@@ -207,6 +216,8 @@ public class PublicarCuadros implements ApplicationRunner {
                     poblarVehicular(edicion, manifiesto, filas, rechazadas);
             case FilaDelManifiesto.DEPRECIACION ->
                     poblarDepreciacion(edicion, manifiesto, filas, rechazadas);
+            case FilaDelManifiesto.VALOR_UNITARIO ->
+                    poblarValorUnitario(edicion, manifiesto, filas, rechazadas);
             default ->
                     throw new IllegalStateException(
                             "El manifiesto admite el cuadro "
@@ -269,6 +280,61 @@ public class PublicarCuadros implements ApplicationRunner {
                                         + delCuadro.estadoConservacion()
                                         + ": revise que la edicion siga abierta y que este proceso"
                                         + " corra como rol_carga_parametros"));
+            }
+        }
+        return new Recuento(leidas, publicadas);
+    }
+
+    private Recuento poblarValorUnitario(
+            long edicion,
+            FilaDelManifiesto manifiesto,
+            List<FilaCsv> filas,
+            List<FilaRechazada> rechazadas) {
+        int publicadas = 0;
+        int leidas = 0;
+        for (FilaCsv fila : filas) {
+            FilaDelCuadroDeValoresUnitarios delCuadro;
+            try {
+                delCuadro = FilaDelCuadroDeValoresUnitarios.de(fila.campos());
+            } catch (IllegalArgumentException e) {
+                rechazadas.add(FilaRechazada.de(fila.numeroDeLinea(), e));
+                continue;
+            }
+            leidas++;
+            try {
+                publicacion.agregarValorUnitario(
+                        edicion,
+                        delCuadro.partida(),
+                        delCuadro.categoria(),
+                        delCuadro.anioConstruccionDesde(),
+                        delCuadro.anioConstruccionHasta(),
+                        delCuadro.valorM2(),
+                        manifiesto.documentoFuente());
+                publicadas++;
+            } catch (DuplicateKeyException e) {
+                rechazadas.add(
+                        new FilaRechazada(
+                                fila.numeroDeLinea(),
+                                "Ya estaba publicada en esta edicion: "
+                                        + delCuadro.partida()
+                                        + " / categoria "
+                                        + delCuadro.categoria()
+                                        + " / "
+                                        + delCuadro.tramo()));
+            } catch (DataAccessResourceFailureException e) {
+                throw sinConexion(e);
+            } catch (DataAccessException e) {
+                // Sin repetir el mensaje crudo de la base (ARQ-04 §5), igual que los otros dos.
+                rechazadas.add(
+                        new FilaRechazada(
+                                fila.numeroDeLinea(),
+                                "La base rechazo la celda "
+                                        + delCuadro.partida()
+                                        + " / categoria "
+                                        + delCuadro.categoria()
+                                        + ": revise que la edicion siga abierta, que este proceso"
+                                        + " corra como rol_carga_parametros, y que la partida y la"
+                                        + " categoria esten en el vocabulario de V58/V59"));
             }
         }
         return new Recuento(leidas, publicadas);
@@ -455,6 +521,111 @@ public class PublicarCuadros implements ApplicationRunner {
                         "La columna " + columna + " del cuadro de depreciacion no puede ir vacia");
             }
             return valor;
+        }
+    }
+
+    /**
+     * Una celda del Cuadro de Valores Unitarios Oficiales de Edificacion, ya analizada (H-14).
+     *
+     * <p>Sus columnas son las del derivado que {@code derivar-valores-unitarios.mjs} proyecta desde
+     * {@code valores-unitarios-2026.md} §1.1, sin reordenar: {@code partida, categoria,
+     * anio_construccion_desde, anio_construccion_hasta, valor_m2}.
+     *
+     * <p><b>El derivado no trae ninguna celda de puntos suspensivos</b>, y por eso este analizador
+     * no las conoce. El cuadro distingue tres cosas —una cifra, un {@code 0.00} explicito y una
+     * celda con puntos— y §1.1 del corpus lo dice: los puntos «no son un dato que falte en esta
+     * transcripcion ni un cero». La fila no existe; que llegue una celda vacia en el valor es una
+     * fila mal derivada y se rechaza (#48).
+     *
+     * <p><b>La region no esta aqui, y no es un olvido</b>: viaja en la clave de la edicion, porque
+     * la tabla no tiene columna de region y las cuatro del Anexo I chocarian dentro de una misma
+     * (ADR-0017).
+     */
+    record FilaDelCuadroDeValoresUnitarios(
+            String partida,
+            String categoria,
+            int anioConstruccionDesde,
+            @org.jspecify.annotations.Nullable Integer anioConstruccionHasta,
+            ValorNormativo valorM2) {
+
+        /** Columnas del derivado: partida, categoria, los dos extremos del tramo y el valor. */
+        private static final int COLUMNAS = 5;
+
+        /** Como se nombra el tramo en un informe, con el tope abierto dicho y no callado. */
+        String tramo() {
+            return anioConstruccionHasta == null
+                    ? "desde " + anioConstruccionDesde + " y sin tope"
+                    : "de " + anioConstruccionDesde + " a " + anioConstruccionHasta;
+        }
+
+        static FilaDelCuadroDeValoresUnitarios de(List<String> campos) {
+            if (campos.size() < COLUMNAS) {
+                throw new IllegalArgumentException(
+                        "La fila del cuadro de valores unitarios trae "
+                                + campos.size()
+                                + " columna(s) y hacen falta "
+                                + COLUMNAS
+                                + ": partida, categoria, anio_construccion_desde,"
+                                + " anio_construccion_hasta, valor_m2");
+            }
+            String partida = campos.get(0).strip();
+            // Las TRES partidas de apreciacion exterior del anexo (V59). No son las siete de
+            // `construccion.categoria_*`, que describen la edificacion y no le ponen precio.
+            if (!PARTIDAS.contains(partida)) {
+                throw new IllegalArgumentException(
+                        "«"
+                                + partida
+                                + "» no es una de las tres partidas de apreciacion exterior del"
+                                + " Cuadro de Valores Unitarios ("
+                                + String.join(", ", PARTIDAS)
+                                + "). Las siete de la ficha catastral describen una edificacion y"
+                                + " no le ponen precio (V59)");
+            }
+            String categoria = campos.get(1).strip();
+            if (!categoria.matches("[A-J]")) {
+                throw new IllegalArgumentException(
+                        "«"
+                                + categoria
+                                + "» no es una categoria del cuadro (A..J). La J existe solo en el"
+                                + " Anexo I.4, de la Selva, y solo en muros y columnas (V58)");
+            }
+            return new FilaDelCuadroDeValoresUnitarios(
+                    partida,
+                    categoria,
+                    anio(campos.get(2), "anio_construccion_desde"),
+                    anioOpcional(campos.get(3)),
+                    valorPorMetroCuadrado(campos.get(4)));
+        }
+
+        private static int anio(String celda, String columna) {
+            String limpio = celda.strip();
+            try {
+                return Integer.parseInt(limpio);
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException(
+                        "«" + celda + "» no es un ano de construccion en " + columna, e);
+            }
+        }
+
+        /** El tope del tramo. La celda vacia es el tramo abierto; no es un dato que falte. */
+        private static @org.jspecify.annotations.Nullable Integer anioOpcional(String celda) {
+            String limpio = celda.strip();
+            return limpio.isEmpty() ? null : anio(limpio, "anio_construccion_hasta");
+        }
+
+        private static ValorNormativo valorPorMetroCuadrado(String celda) {
+            String limpio = celda.strip();
+            if (limpio.isEmpty()) {
+                throw new IllegalArgumentException(
+                        "La celda del cuadro de valores unitarios viene vacia; una celda de puntos"
+                                + " suspensivos no se publica con cero, no se publica (#48)");
+            }
+            try {
+                return new ValorNormativo(new BigDecimal(limpio));
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException(
+                        "«" + celda + "» no es un valor por metro cuadrado del cuadro", e);
+            }
         }
     }
 

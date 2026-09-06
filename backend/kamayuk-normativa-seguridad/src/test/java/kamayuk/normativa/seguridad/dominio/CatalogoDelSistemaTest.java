@@ -94,9 +94,19 @@ class CatalogoDelSistemaTest {
         assertThat(codigos).doesNotHaveDuplicates();
     }
 
+    /**
+     * La raiz del clon, subiendo hasta encontrar {@code .git}.
+     *
+     * <p><b>{@code Files.exists} y no {@code Files.isDirectory}</b>: en un {@code git worktree} el
+     * {@code .git} de la raiz es un <b>archivo</b> con una linea {@code gitdir:} dentro, asi que
+     * con {@code isDirectory} el recorrido sube hasta {@code /} y esta prueba muere sin poder
+     * hablar de lo que vigila. No es un rojo util —es «no se pudo comprobar», que es peor que un
+     * rojo porque deja el build inejecutable—, y es el mismo defecto que {@code catastro} cerro en
+     * sus dos ayudantes al medir la linea base de su #5.
+     */
     private static Path raizDelRepositorio() {
         Path candidato = Path.of("").toAbsolutePath();
-        while (candidato != null && !Files.isDirectory(candidato.resolve(".git"))) {
+        while (candidato != null && !Files.exists(candidato.resolve(".git"))) {
             candidato = candidato.getParent();
         }
         if (candidato == null) {
