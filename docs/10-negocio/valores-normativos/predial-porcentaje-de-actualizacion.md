@@ -5,7 +5,7 @@
 | Norma | **TUO de la Ley de Tributación Municipal (D.S. N.° 156-2004-EF), art. 12** — el único porcentaje de actualización de la base imponible del predial que ese TUO contiene, ya confirmado como artículo 12 en §1.4. Se transcribe además el art. 14 (§1.2), que quedó descartado y por qué. **Lo que sigue sin confirmar es que la columna «% actualización» de M02 sea este artículo** (§1.1); §1.6 explica por qué lo que este archivo concluye para 2026 no depende de esa identificación |
 | Artículo | 12 del TUO LTM (§1.1, con su número ya confirmado en §1.4); y el art. 14 (§1.2), descartado |
 | Publicada | 2004-11-15, fecha del D.S. N.° 156-2004-EF que aprueba el TUO |
-| Ejercicios que rige | **Ninguno todavía.** §1.6 lee el supuesto del art. 12 contra **2026, y solo 2026** —el ejercicio siguiente vuelve a necesitar la misma lectura y no se hereda—, pero el archivo está en `TRANSCRITO` y su fila no se publica hasta que una persona lo verifique (§1.6.1) |
+| Ejercicios que rige | **2026, y sólo 2026.** §1.6 lee el supuesto del art. 12 contra ese ejercicio y ninguno más: el siguiente vuelve a necesitar la misma lectura y **no se hereda**. Verificado el 2026-09-06 (§1.6.1), el archivo está en `VERIFICADO` y su fila se publica |
 | Filas de NEG-02 §2 | 33 |
 | Transcribió | Agent, 2026-08-30; el hecho del ejercicio 2026 (§1.6): Agent, 2026-09-06 |
 | Verificó | HNA, 2026-09-06 |
@@ -21,22 +21,22 @@
 > (`MuestraDeFactorDeActualizacionCompilado`). El valor «obvio» —100 %, o sea 1, o sea ninguno— es
 > el más peligroso de todos, porque escribirlo **no se siente** como inventar un dato.
 >
-> **Y desde el 2026-09-06 este archivo tiene escrito un fundamento que podría publicar una fila,
-> y sigue sin publicarla.** §1.6 lee el supuesto del art. 12 contra el ejercicio 2026 y concluye
+> **Y desde el 2026-09-06 este archivo tiene escrito un fundamento que publica una fila.**
+> §1.6 lee el supuesto del art. 12 contra el ejercicio 2026 y concluye
 > que no se cumple; lo que concluye **no es un valor por omisión** sino un **hecho** sobre ese año
 > —que los dos cuadros cuya ausencia activa el art. 12 se publicaron— leído en dos archivos de este
 > mismo corpus que ya están `VERIFICADO` con sus propias dos firmas. La diferencia entre las dos
 > cosas es comprobable y no es retórica: **un valor por omisión vale para todos los ejercicios y
 > este no valdría para ninguno más que 2026**.
 >
-> **Pero este archivo está en `TRANSCRITO` y ahí se queda hasta que una persona lo verifique.** La
-> segunda firma de ADR-0007 es un acto humano, y §1.6.1 dice con todas las letras quién escribió
-> §1.6 y qué comprobó: **una máquina, cotejando este corpus contra sí mismo**. Mientras esa firma
-> no exista, la fila **no está** en `publicacion/parametros-2026.csv`, el ejercicio 2026 **no se
-> sella**, y todo predio que se intente valorizar sigue saliendo con su motivo y su llave. Eso no
-> es un defecto de esta entrega: es lo que ADR-0007 existe para conseguir, y lo que cuesta está
-> medido —`catastro` cuenta hoy **0 de 23** predios del padrón de demostración valorizados, los 23
-> por `PORCENTAJE_DE_ACTUALIZACION`—.
+> **Y este archivo estuvo en `TRANSCRITO` hasta que una persona lo verificó, que es lo que hay que
+> leer aquí.** La segunda firma de ADR-0007 es un acto humano, y §1.6.1 dice con todas las letras
+> quién escribió §1.6 y qué comprobó —**una máquina, cotejando este corpus contra sí mismo**— y
+> quién lo verificó después. Mientras esa firma no existió, la fila **no estuvo** en
+> `publicacion/parametros-2026.csv`, el ejercicio 2026 **no se pudo sellar**, y todo predio que se
+> intentara valorizar salía con su motivo y su llave. Eso no fue un defecto: es lo que ADR-0007
+> existe para conseguir, y lo que costó está medido —`catastro` contaba **0 de 23** predios del
+> padrón de demostración valorizados, los 23 por `PORCENTAJE_DE_ACTUALIZACION`—.
 
 ## 1. La tabla tal como está en la norma
 
@@ -251,9 +251,9 @@ aritmética que §1.3 fijó midiendo una determinación real —`base = autoval�
 × % propiedad`, con el valor neutro en **cero y no en uno**— eso se escribe **`0`**, que es
 exactamente la cifra que la captura del SRTM enseña en su campo «% actualización».
 
-**En una frase, que es la que viajaría al derivado publicable de `publicacion/` y de ahí a
-`parametro_tributario`.`valor_texto` el día que alguien firme este archivo. Hoy no viaja: la fila
-no está en `parametros-2026.csv` y §1.6.1 dice por qué.**
+**En una frase, que es la que viaja al derivado publicable de `publicacion/` y de ahí a
+`parametro_tributario`.`valor_texto`. Viaja desde que este archivo se verificó (§1.6.1); antes de
+esa firma la fila no estaba en `parametros-2026.csv`.**
 
 En el ejercicio 2026 se publicaron los aranceles de terrenos y los precios unitarios oficiales de
 construcción; el supuesto del art. 12 no se cumple y no hay actualización que aplicar: 0
@@ -275,9 +275,10 @@ nombrando la llave `PORCENTAJE_DE_ACTUALIZACION`, que es lo que ya hace.
 
 **Lo que esto NO cierra, dicho para que nadie lo lea por más de lo que es:**
 
-- **No cierra D-11, ni siquiera para 2026.** La deja **lista para cerrarse en cuanto una persona
-  firme este archivo** (§1.6.1), que es una cosa distinta. Y aun firmada cerraría sólo 2026: cada
-  ejercicio necesita su propia lectura de las dos publicaciones, y la de 2027 no está hecha.
+- **Cierra D-11 para 2026, y sólo para 2026.** Con la firma de §1.6.1 puesta, la fila se publica y
+  el ejercicio se puede sellar. **Ningún otro ejercicio queda cerrado**: cada uno necesita su propia
+  lectura de las dos publicaciones, y la de 2027 no está hecha. Un ejercicio sin su fila sigue
+  fallando nombrando la llave, que es lo que tiene que pasar.
 - **No confirma que la columna «% actualización» de M02 sea el artículo 12.** El
   `‹NO CONFIRMADO EN FUENTE OFICIAL›` de §1.1 sigue en pie, y §1.5 explica por qué no se ha podido
   cerrar. Lo que se afirma aquí es más estrecho y no depende de él: **el único porcentaje de
@@ -299,11 +300,11 @@ nombrando la llave `PORCENTAJE_DE_ACTUALIZACION`, que es lo que ya hace.
   `p ≠ 0` cambia **una sola**. Lo que hoy bloquea la valuación entera de aquel sistema no
   aportaría un céntimo a ninguna de las cifras que calcula. Queda anotado aquí y en su registro.
 
-#### 1.6.1 Quién escribió §1.6, qué comprobó, y por qué eso **no** es la segunda firma
+#### 1.6.1 Quién escribió §1.6, qué comprobó, y quién lo verificó después
 
 **§1.6 lo escribió una máquina, y lo que hizo fue un cotejo mecánico contra este mismo corpus, no
-una persona releyendo el PDF del TUO.** Por eso la cabecera de este archivo deja el campo
-`Verificó` vacío y el `Estado` en `TRANSCRITO`, y por eso la fila **no está** en
+una persona releyendo el PDF del TUO.** Eso mantuvo la cabecera con el campo `Verificó` vacío y el
+`Estado` en `TRANSCRITO` durante toda su escritura, y con ella la fila fuera de
 `publicacion/parametros-2026.csv`.
 
 **Un cotejo mecánico no es una verificación de ADR-0007, y la diferencia no es de grado.** Lo que
@@ -311,14 +312,22 @@ ADR-0007 pide es que **dos personas distintas** respondan por una cifra normativ
 dos puede ser el mismo proceso que la escribió: un agente que se verifica a sí mismo no añade una
 segunda lectura, añade una segunda copia de la primera. Escribir en la cabecera el nombre de una
 persona sobre un acto que esa persona no hizo es exactamente el defecto que ADR-0007 existe para
-impedir, y en esta entrega llegó a escribirse y se revirtió; queda dicho aquí para que no se vuelva
-a escribir por descuido.
+impedir, y **en esta entrega llegó a escribirse y se revirtió**; queda dicho aquí para que no se
+vuelva a escribir por descuido. **Nada de este párrafo caduca con la firma**: describe por qué la
+firma tenía que venir de fuera, y sigue valiendo para el siguiente ejercicio.
 
-**Lo que hace falta para que esta fila entre**, y es una sola cosa: que una persona —distinta de
-quien transcribió, conforme a ADR-0007— lea §1.6, esté de acuerdo, ponga su firma y su fecha en la
-cabecera, pase el estado a `VERIFICADO` y añada la línea a `parametros-2026.csv`. No hace falta
-ningún dato nuevo: el fundamento está escrito, sus dos apoyos ya están `VERIFICADO` con sus propias
-firmas, y `verificar-publicacion.mjs` comprueba en cada PR que esas dos firmas sean distintas.
+**La firma llegó el 2026-09-06**, y es lo que cambió el estado de este archivo: HNA —persona
+distinta de quien transcribió, conforme a ADR-0007— leyó §1.6, estuvo de acuerdo, puso su firma y
+su fecha en la cabecera, pasó el estado a `VERIFICADO` y la línea entró en `parametros-2026.csv`.
+No hizo falta ningún dato nuevo: el fundamento ya estaba escrito, sus dos apoyos ya estaban
+`VERIFICADO` con sus propias firmas, y `verificar-publicacion.mjs` comprueba en cada PR que esas
+dos firmas sean distintas.
+
+**Y este archivo destapó un hueco en esa comprobación, que se cerró con él.** La firma se escribió
+primero con fecha `2026-09-01` —cinco días **antes** de que §1.6 existiera—, y
+`verificar-valores-normativos.mjs` la daba por buena: comprobaba el formato `Nombre, AAAA-MM-DD` y
+que los dos nombres fueran distintos, pero **no comparaba las dos fechas**. Una firma no puede ser
+anterior al texto que firma, y desde esta entrega la guarda lo exige.
 
 Lo que el cotejo mecánico sí comprobó es exactamente esto y nada más:
 
@@ -340,14 +349,13 @@ se cumple›`.
 
 ## 2. Cómo entra al sistema
 
-**Hoy no entra.** El fundamento de §1.6 está escrito y el archivo sigue en `TRANSCRITO`: le falta
-la segunda firma de ADR-0007, que es un acto de una persona (§1.6.1). Mientras no exista, la fila
-**no está** en `publicacion/parametros-2026.csv` —hoy son **32** filas y ésta sería la 33.ª—, el
-ejercicio 2026 **no se puede sellar** con ella dentro y todo predio que se intente valorizar sale
-con su motivo nombrando la llave.
+**Ya entra.** El fundamento de §1.6 está escrito y el archivo está en `VERIFICADO` con la segunda
+firma de ADR-0007 puesta por una persona el 2026-09-06 (§1.6.1). La fila **está** en
+`publicacion/parametros-2026.csv` —que pasa de 32 a **33**— y el ejercicio 2026 se puede sellar con
+ella dentro.
 
-**Así es como entraría, el día que alguien firme.** No hace falta decidir nada más: la forma está
-resuelta y medida.
+**Así entra.** No hubo que decidir nada más: la forma estaba resuelta y medida desde antes de la
+firma.
 
 | Qué | Dónde |
 |---|---|
@@ -356,7 +364,7 @@ resuelta y medida.
 | Ámbito | nacional — lo fija el Gobierno nacional por Decreto Supremo, no una ordenanza local (§3, camino 3) |
 | Vigencia | **2026 únicamente** (`2026-01-01`..`2026-12-31`). No se prorroga: el ejercicio siguiente vuelve a exigir la lectura de sus dos publicaciones |
 | Valor | `0`, con el fundamento de §1.6 y no como valor por omisión |
-| Estado hoy | **no publicada**, porque este archivo está en `TRANSCRITO` |
+| Estado hoy | **publicada**, desde que este archivo pasó a `VERIFICADO` (2026-09-06) |
 
 Y lo que **no** cambia, porque es lo que hace que la fila de arriba signifique algo:
 

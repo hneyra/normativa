@@ -157,6 +157,20 @@ function cabecera(markdown) {
   return new Map(tabla.filas.filter((f) => f.length === 2).map((f) => [f[0], f[1]]));
 }
 
+/**
+ * La fecha MAS RECIENTE de un campo de firma, o null si no trae ninguna.
+ *
+ * `Transcribio` puede traer varias —«Agent, 2026-08-30; el hecho del ejercicio 2026 (§1.6): Agent,
+ * 2026-09-06»— porque un archivo se escribe por partes. Compararlas contra la ULTIMA es lo unico
+ * que sirve: contra la primera, anadir una seccion nueva a un archivo ya firmado pasaria en verde
+ * con la firma vieja cubriendo texto que nadie leyo, que es exactamente el caso que motivo esta
+ * comprobacion.
+ */
+function fechaMasReciente(valor) {
+  const fechas = String(valor).match(/\d{4}-\d{2}-\d{2}/g);
+  return fechas === null ? null : fechas.sort().at(-1);
+}
+
 /** `Nombre, AAAA-MM-DD` → {nombre, fecha}; null si no tiene esa forma. */
 function firma(valor) {
   const coma = valor.lastIndexOf(',');
@@ -231,6 +245,20 @@ for (const archivo of archivos) {
     señalar(
       `${donde}: «${transcribio.nombre}» transcribió y verificó. Releerse a uno mismo no es` +
         ' verificar (ADR-0007).',
+    );
+  }
+  // 2. Una firma no puede ser anterior al texto que firma.
+  //
+  // Lo destapo `predial-porcentaje-de-actualizacion.md`: su §1.6 se escribio el 2026-09-06 y la
+  // firma entro con fecha 2026-09-01, cinco dias ANTES. Pasaba en verde —esta comprobacion
+  // miraba el formato y que los dos nombres fueran distintos, y nunca las fechas—, y una firma
+  // que precede a su texto no responde por el: dice que alguien leyo algo que aun no existia.
+  const ultimaTranscripcion = fechaMasReciente(campos.get('Transcribió') ?? '');
+  if (verifico && ultimaTranscripcion && verifico.fecha < ultimaTranscripcion) {
+    señalar(
+      `${donde}: lo verificó ${verifico.nombre} el ${verifico.fecha} y lo ultimo que se` +
+        ` transcribió es del ${ultimaTranscripcion}. Una firma no puede ser anterior al texto` +
+        ' que firma (ADR-0007).',
     );
   }
 
