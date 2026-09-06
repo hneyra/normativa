@@ -275,29 +275,36 @@ nombrando la llave `PORCENTAJE_DE_ACTUALIZACION`, que es lo que ya hace.
 
 **Lo que esto NO cierra, dicho para que nadie lo lea por más de lo que es:**
 
-- **No cierra D-11 entera. Cierra D-11 para 2026.** Cada ejercicio necesita su propia lectura de
-  las dos publicaciones, y la de 2027 no está hecha.
+- **No cierra D-11, ni siquiera para 2026.** La deja **lista para cerrarse en cuanto una persona
+  firme este archivo** (§1.6.1), que es una cosa distinta. Y aun firmada cerraría sólo 2026: cada
+  ejercicio necesita su propia lectura de las dos publicaciones, y la de 2027 no está hecha.
 - **No confirma que la columna «% actualización» de M02 sea el artículo 12.** El
   `‹NO CONFIRMADO EN FUENTE OFICIAL›` de §1.1 sigue en pie, y §1.5 explica por qué no se ha podido
   cerrar. Lo que se afirma aquí es más estrecho y no depende de él: **el único porcentaje de
   actualización de la base imponible del predial que el TUO LTM contiene es el del art. 12**, y en
   2026 su supuesto no se cumple. Si algún día se descubre que M02 llama «% actualización» a otro
-  mecanismo, lo que habrá que revisar es el **nombre de la llave**, no la cifra que esta fila sella
-  para el art. 12.
+  mecanismo, lo que habrá que revisar es el **nombre de la llave**, no la cifra que esta fila
+  sellaría para el art. 12.
 - **No dice qué pasa cuando el porcentaje no es cero.** Sigue siendo lo que §1.3 declaró que su
   única captura no puede probar: con `0,00 %`, `× (1 + p)` y `+ p × autovalúo` son
   indistinguibles. El día que un ejercicio active el art. 12, **antes** de correr hay que decidir
   esa forma y dónde se aplica (ver el punto siguiente).
-- **No decide dónde se aplica.** La captura de §1.3 lo sitúa entre el autovalúo y la base
-  imponible, o sea del lado de `rentas` (ADR-0024), junto al `% propiedad` de D-21. Con `0` las dos
-  colocaciones dan el mismo céntimo, así que 2026 no obliga a decidirlo; un ejercicio con `p ≠ 0`
-  sí. Queda anotado aquí y en el registro de `catastro`.
+- **No decide dónde se aplica, y `catastro` lo midió.** La captura de §1.3 lo sitúa entre el
+  autovalúo y la base imponible, o sea del lado de `rentas` (ADR-0024), junto al `% propiedad` de
+  D-21. Con `0` las dos colocaciones dan el mismo céntimo, así que 2026 no obligaría a decidirlo;
+  un ejercicio con `p ≠ 0` sí. **Y la medida es más fuerte de lo que este archivo podía decir**:
+  en `catastro` la llave se pide como **precondición** de la valuación y se usa en **un solo
+  sitio**, el incremento del autovalúo, que sólo se aplica si el porcentaje no es cero — de modo
+  que con `p = 0` **ninguna de las cuatro cifras del hecho sellado depende de ella**, y con
+  `p ≠ 0` cambia **una sola**. Lo que hoy bloquea la valuación entera de aquel sistema no
+  aportaría un céntimo a ninguna de las cifras que calcula. Queda anotado aquí y en su registro.
 
 #### 1.6.1 Quién escribió §1.6, qué comprobó, y por qué eso **no** es la segunda firma
 
 **§1.6 lo escribió una máquina, y lo que hizo fue un cotejo mecánico contra este mismo corpus, no
-una persona releyendo el PDF del TUO.** Por eso la cabecera de este archivo dice `Verificó | —` y
-`Estado | TRANSCRITO`, y por eso la fila **no está** en `publicacion/parametros-2026.csv`.
+una persona releyendo el PDF del TUO.** Por eso la cabecera de este archivo deja el campo
+`Verificó` vacío y el `Estado` en `TRANSCRITO`, y por eso la fila **no está** en
+`publicacion/parametros-2026.csv`.
 
 **Un cotejo mecánico no es una verificación de ADR-0007, y la diferencia no es de grado.** Lo que
 ADR-0007 pide es que **dos personas distintas** respondan por una cifra normativa, y ninguna de las
