@@ -8,8 +8,8 @@
 | Ejercicios que rige | **2026, y solo 2026.** §1.6 lee el supuesto del art. 12 contra ese ejercicio; el siguiente vuelve a necesitar la misma lectura y no se hereda |
 | Filas de NEG-02 §2 | 33 |
 | Transcribió | Agent, 2026-08-30; el hecho del ejercicio 2026 (§1.6): Agent, 2026-09-06 |
-| Verificó | HNA, 2026-09-06 |
-| Estado | VERIFICADO |
+| Verificó | — |
+| Estado | TRANSCRITO |
 
 > **Este archivo nació sin ninguna cifra, y eso era exactamente el punto.** Existe porque el
 > `% actualización` llevaba desde M02 sin fila en el mapa normativo, y **un dato sin fila es un dato
