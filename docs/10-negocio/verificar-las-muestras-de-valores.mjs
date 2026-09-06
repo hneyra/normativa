@@ -33,6 +33,7 @@ const CASOS = [
   ['sin-fecha-de-publicacion', 'no lleva fecha AAAA-MM-DD'],
   ['sin-articulo', '«Artículo» sin rellenar'],
   ['verificado-sin-verificador', 'está VERIFICADO y «Verificó» no nombra a nadie'],
+  ['firma-anterior-al-texto', 'no puede ser anterior al texto'],
   ['fila-que-no-existe', 'y esa fila no existe'],
   ['fila-reclamada-dos-veces', 'ya la cierra'],
   ['sin-la-seccion-de-que-no-cabe', 'le falta la sección «3. Qué no cabe hoy»'],

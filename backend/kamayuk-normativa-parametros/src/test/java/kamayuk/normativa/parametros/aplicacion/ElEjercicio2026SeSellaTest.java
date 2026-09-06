@@ -24,11 +24,13 @@ import kamayuk.normativa.dominio.MunicipalidadId;
 import kamayuk.normativa.dominio.Observacion;
 import kamayuk.normativa.esquema.BaseDeDatosDePrueba;
 import kamayuk.normativa.parametros.dominio.ConjuntoDeParametros;
+import kamayuk.normativa.parametros.dominio.SnapshotDelConjunto;
 import kamayuk.normativa.parametros.infraestructura.ParametrosRepositoryJdbc;
 import kamayuk.normativa.parametros.infraestructura.PublicacionDeCuadrosJdbc;
 import kamayuk.normativa.parametros.infraestructura.PublicacionDeParametrosJdbc;
 import kamayuk.normativa.parametros.infraestructura.SnapshotRepositoryJdbc;
 import kamayuk.normativa.plataforma.tenant.TenantTransactionManager;
+import kamayuk.normativa.reglas.Ambito;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
@@ -40,46 +42,60 @@ import org.springframework.transaction.annotation.AnnotationTransactionAttribute
 import org.springframework.transaction.interceptor.TransactionInterceptor;
 
 /**
- * <b>El ejercicio 2026 todavia NO se sella, y esta clase mide exactamente por que</b> (catastro#8).
+ * <b>El ejercicio 2026 se sella, y lo que lo desbloqueo fue una firma y no una linea de codigo.</b>
  *
- * <h2>Que cambio, y por que esta clase se llama al reves de como nacio</h2>
+ * <h2>Esta clase se ha llamado de las dos maneras, y ese vaiven ES el registro</h2>
  *
- * <p>Nacio afirmando que 2026 quedaba sellado. Lo hacia apoyandose en una fila de {@code
- * parametros-2026.csv} —el {@code PORCENTAJE_DE_ACTUALIZACION}— cuyo archivo del corpus se habia
- * marcado {@code VERIFICADO} con una <b>firma humana que nunca ocurrio</b>. La direccion lo rechazo
- * y la firma volvio a {@code —}; con ella se fue la fila, porque {@code verificar-publicacion.mjs}
- * no deja publicar desde {@code TRANSCRITO}: «una transcripcion sin re-verificar no se carga
- * (ADR-0007)». <b>Esa guarda funcionando es el motivo de que esta clase diga hoy lo contrario de lo
- * que decia, y no un fallo de la guarda.</b>
+ * <p>Nacio como {@code ElEjercicio2026SeSellaTest}. Se renombro a {@code
+ * ElEjercicio2026TodaviaNoSeSellaTest} porque la fila de la que dependia —el {@code
+ * PORCENTAJE_DE_ACTUALIZACION} de {@code parametros-2026.csv}— se apoyaba en un archivo del corpus
+ * marcado {@code VERIFICADO} con una <b>segunda firma que nunca ocurrio</b>: la escribio el propio
+ * agente que redacto el razonamiento. La direccion lo rechazo, la cabecera volvio a {@code —} y a
+ * {@code TRANSCRITO}, y con ella se fue la fila —{@code verificar-publicacion.mjs} no publica desde
+ * ese estado—. Vuelve a su nombre original el <b>2026-09-06</b>, cuando una persona leyo §1.6 y
+ * firmo.
  *
- * <h2>Lo que SI esta hecho, y se mide aqui</h2>
+ * <p><b>El intervalo entre los dos renombrados es lo que ADR-0007 compra</b>, y tiene precio
+ * medido: mientras duro, {@code catastro} valorizo <b>0 de 23</b> predios del padron de
+ * demostracion, los 23 nombrando esta misma llave. Ninguna de las dos veces cambio un razonamiento;
+ * cambio quien respondia por el.
  *
- * <p>Los <b>dos cuadros nacionales</b> de los que depende valorizar un predio se publican y se
- * componen en el conjunto de 2026 sin un solo rechazo: el de valores unitarios de edificacion
- * (H-14, que es lo que catastro#8 anadio) y el de depreciacion (H-15). Sus dos archivos del corpus
- * estan {@code VERIFICADO} con firmas humanas <b>de verdad</b> —JNA y HNA, de agosto—, asi que esa
- * mitad no depende de nada pendiente.
+ * <h2>Lo que se compone, y con que credenciales</h2>
  *
- * <h2>Y por que NO se sella</h2>
+ * <p>Las 33 filas del derivado del corpus y los <b>dos cuadros nacionales</b> de los que depende
+ * valorizar un predio: valores unitarios de edificacion (H-14) y depreciacion (H-15), los dos
+ * {@code VERIFICADO} con firmas humanas de verdad. Publicar es {@code rol_carga_parametros} —la
+ * unica que puede escribir las tres tablas de valuacion desde V55— y componer es {@code
+ * kamayuk_app}, que sobre {@code parametro_tributario} solo tiene {@code SELECT}. Con una sola
+ * conexion de superusuario esto pasaria en verde sin verificar ni la politica, ni el privilegio, ni
+ * el disparador.
  *
- * <p>Porque <b>un conjunto sellado no admite un parametro mas</b> —lo mide {@code
- * AbrirConjuntoDeParametrosTest} y lo vuelve a medir aqui sobre el ejercicio real, que es la
- * decision y no el mecanismo—, y `catastro` <b>exige</b> la llave que falta para publicar una sola
- * cifra. Sellar la version 1 de 2026 ahora la dejaria inservible para la valuacion y obligaria a
- * abrir una version 2 el dia que la firma llegue; y dos versiones del mismo ejercicio no son un
- * detalle administrativo, porque cada valuacion guarda el {@code conjuntoId} con que se calculo
- * (ADR-0025 §3). Es la misma frase que el {@code CLAUDE.md} de este repositorio trae desde antes de
- * este issue, con la mitad de los cuadros ya tachada.
+ * <h2>Lo que sellar cuesta, y por que aun asi se sella</h2>
  *
- * <h2>Las dos credenciales, que no son una comodidad</h2>
+ * <p>Un conjunto sellado <b>no admite un parametro mas</b> (disparador de {@code V9}), y lo mide
+ * {@code unSelloNoAdmiteUnaCifraMas} aqui abajo. Lo que <b>no</b> es cierto —y este issue lo
+ * corrigio despues de leer el esquema en vez de repetirlo— es que sellar deje el ejercicio sin
+ * salida: no existe ninguna restriccion de «un solo conjunto sellado por ejercicio». Hay {@code
+ * conjunto_uq (municipalidad_id, ejercicio, version)}, y {@code
+ * ParametrosRepositoryJdbc.selladoVigenteDe} <b>ordena por version y toma la ultima</b>, con su
+ * comentario diciendo que desde {@code V10} puede haber varias selladas del mismo ejercicio (ARQ-09
+ * §3). Lo que cuesta sellar antes de tiempo es otra cosa: cada valuacion guarda el {@code
+ * conjuntoId} con que se calculo (ADR-0025 §3), asi que las cifras de la version 1 y las de la
+ * version 2 son hechos sellados distintos y hacerlas converger es <b>recalcular el padron</b>.
  *
- * <p>Publicar es {@code rol_carga_parametros} —la unica que puede escribir las tres tablas de
- * valuacion desde V55— y componer es {@code kamayuk_app}, que sobre {@code parametro_tributario}
- * solo tiene {@code SELECT}. Con una sola conexion de superusuario esto pasaria en verde sin
- * verificar ni la politica, ni el privilegio, ni el disparador.
+ * <h2>Lo que NO entra en este conjunto, contado antes de sellar y no despues</h2>
+ *
+ * <p>Diez filas del mapa normativo no tienen ni archivo del corpus: <b>ocho de D-02b</b> —tasas de
+ * arbitrios y sus criterios de distribucion, el descuento por pago anual, las inafectaciones, la
+ * tasa de anuncios, la TIM, el CUIS y el interes del fraccionamiento— y <b>dos de D-02c</b> —el
+ * arancel de costas coactivas y los descuentos por pronto pago de papeletas—. Las diez son de
+ * <b>acto propio de la municipalidad</b>, no de norma nacional, asi que este repositorio no las
+ * puede publicar: entran en el conjunto de cada municipalidad que apruebe su ordenanza, en una
+ * version posterior. Se cuentan aqui porque «faltan cosas» no es una lista, y quien selle tiene que
+ * poder ver si alguna es suya.
  */
-@DisplayName("catastro#8 — El ejercicio 2026: lo que ya se compone, y la fila que impide sellarlo")
-class ElEjercicio2026TodaviaNoSeSellaTest {
+@DisplayName("catastro#8 — El ejercicio 2026 se sella: 33 filas, dos cuadros, y lo que cuesta")
+class ElEjercicio2026SeSellaTest {
 
     private static final Clock RELOJ =
             Clock.fixed(Instant.parse("2026-09-06T10:00:00Z"), ZoneOffset.UTC);
@@ -87,10 +103,10 @@ class ElEjercicio2026TodaviaNoSeSellaTest {
     /** El ejercicio del que habla el corpus. No es un numero de prueba. */
     private static final Ejercicio EJERCICIO = new Ejercicio(2026);
 
-    /** La llave que falta, escrita una vez. Es la misma constante que `catastro` exige. */
-    private static final String LA_LLAVE_QUE_FALTA = "PORCENTAJE_DE_ACTUALIZACION";
+    /** La llave que faltaba, escrita una vez. Es la misma constante que `catastro` exige. */
+    private static final String LA_LLAVE_QUE_FALTABA = "PORCENTAJE_DE_ACTUALIZACION";
 
-    /** El archivo del corpus que la respaldaria, y que sigue esperando su segunda firma. */
+    /** El archivo del corpus que la respalda, firmado el 2026-09-06. */
     private static final String SU_ARCHIVO_DEL_CORPUS = "predial-porcentaje-de-actualizacion.md";
 
     private static final Path CORPUS =
@@ -104,6 +120,7 @@ class ElEjercicio2026TodaviaNoSeSellaTest {
     private static long municipalidad;
     private static AdministrarParametros administrar;
     private static ImportarParametrosDelConjunto importar;
+    private static ComponerSnapshot componer;
     private static long conjunto;
 
     @BeforeAll
@@ -128,8 +145,7 @@ class ElEjercicio2026TodaviaNoSeSellaTest {
                         new DatosDelCuadro(cuadros.toString(), "cadena-de-2026"))
                 .run(null);
 
-        // Paso 1 y composicion. Como kamayuk_app y con su contexto de tenant. NO se sella: ver el
-        // javadoc de la clase, y el caso `sellarloAhoraCerrariaLaPuerta` que lo mide.
+        // Paso 1, composicion y SELLO. Como kamayuk_app y con su contexto de tenant.
         DriverManagerDataSource pool = new DriverManagerDataSource();
         pool.setUrl(base.url());
         pool.setUsername(BaseDeDatosDePrueba.APP);
@@ -143,9 +159,10 @@ class ElEjercicio2026TodaviaNoSeSellaTest {
                                 repositorio, new AuditoriaJdbc(jdbcApp, RELOJ), RELOJ),
                         gestor);
         importar = envolver(new ImportarParametrosDelConjunto(administrar), gestor);
-        // Se construye aunque no se use en ninguna asercion: si algun dia esta clase vuelve a
-        // sellar, el snapshot es lo que hay que mirar. Se deja nombrado y no comentado.
-        envolver(new ComponerSnapshot(repositorio, new SnapshotRepositoryJdbc(jdbcApp)), gestor);
+        componer =
+                envolver(
+                        new ComponerSnapshot(repositorio, new SnapshotRepositoryJdbc(jdbcApp)),
+                        gestor);
 
         TenantContext.fijar(new MunicipalidadId(municipalidad));
         OrigenContext.fijar(Origen.deProceso("cadena-de-2026"));
@@ -157,6 +174,13 @@ class ElEjercicio2026TodaviaNoSeSellaTest {
         // olvida del otro, el conjunto se sella nombrando algo que no se publico.
         componerCon(PARAMETROS, porque);
         componerCon(cuadros, porque);
+
+        // Y se sella. Es el acto que este issue anade, y va en el @BeforeAll a proposito: lo que
+        // las pruebas miden no es el mecanismo de sellar —eso es `AbrirConjuntoDeParametrosTest`—
+        // sino que el ejercicio 2026, compuesto con lo que el corpus publica de verdad, QUEDA
+        // sellado; si sellarlo fallara, ninguna de las tres tendria sentido y todas caerian juntas.
+        administrar.sellar(
+                conjunto, Observacion.de("Se sella el ejercicio 2026 (catastro#8, AC-3)"));
     }
 
     /**
@@ -236,11 +260,10 @@ class ElEjercicio2026TodaviaNoSeSellaTest {
                                                 + " WHERE conjunto_id = "
                                                 + conjunto)))
                 .as(
-                        "las 32 filas de parametros-2026.csv mas las 2 ediciones de cuadros que el"
-                                + " ambito VALUACION compone (la vehicular es de OBLIGACION). Eran 33 +"
-                                + " 2 mientras la fila del «% actualizacion» estuvo publicada con una"
-                                + " firma que nadie puso")
-                .isEqualTo(34);
+                        "las 33 filas de parametros-2026.csv mas las 2 ediciones de cuadros que el"
+                                + " ambito VALUACION compone (la vehicular es de OBLIGACION). Fueron"
+                                + " 34 mientras el «% actualizacion» espero su segunda firma")
+                .isEqualTo(35);
     }
 
     @Test
@@ -253,66 +276,105 @@ class ElEjercicio2026TodaviaNoSeSellaTest {
     }
 
     // ------------------------------------------------------------------
-    // Lo que falta, y por que no se sella
+    // La fila que faltaba, y el sello
     // ------------------------------------------------------------------
 
     @Test
-    @DisplayName(
-            "la fila que falta es el «% actualizacion», y falta porque le falta la SEGUNDA FIRMA")
-    void laFilaQueFaltaEsElPorcentajeDeActualizacion() throws IOException, SQLException {
-        // Los tres hechos, cada uno leido de su fuente y no de una lista escrita aqui.
+    @DisplayName("el «% actualizacion» ya esta, y lo que lo trajo fue la SEGUNDA FIRMA")
+    void laFilaQueFaltabaEsElPorcentajeDeActualizacion() throws IOException, SQLException {
+        // Los tres hechos, cada uno leido de su fuente y no de una lista escrita aqui. Son los
+        // mismos tres que esta prueba media al reves mientras la firma no estuvo: el estado del
+        // archivo, su presencia en el derivado y su fila en la base. Ninguno de los tres se
+        // consigue razonando mejor; los tres cuelgan de que una persona firmara.
         assertThat(estadoDelArchivoDelCorpus(SU_ARCHIVO_DEL_CORPUS))
-                .as(
-                        "su §1.6 esta escrito y razonado; lo que no ha ocurrido es que una segunda"
-                                + " persona lo lea y lo firme (ADR-0007)")
-                .isEqualTo("TRANSCRITO");
+                .as("una segunda persona leyo §1.6 y lo firmo el 2026-09-06 (ADR-0007)")
+                .isEqualTo("VERIFICADO");
         assertThat(Files.readString(PARAMETROS, StandardCharsets.UTF_8))
                 .as(
-                        "y por eso no hay fila suya en el derivado publicable:"
-                                + " verificar-publicacion.mjs no publica desde TRANSCRITO")
-                .doesNotContain(LA_LLAVE_QUE_FALTA);
+                        "y por eso hay fila suya en el derivado publicable:"
+                                + " verificar-publicacion.mjs solo publica desde VERIFICADO")
+                .contains(LA_LLAVE_QUE_FALTABA);
         assertThat(
                         dato(
                                 "SELECT count(*) FROM parametro_tributario WHERE tipo = '"
-                                        + LA_LLAVE_QUE_FALTA
+                                        + LA_LLAVE_QUE_FALTABA
                                         + "'"))
-                .as("ni una fila publicada, que es lo que `catastro` va a encontrar")
-                .isEqualTo("0");
+                .as("y una sola fila publicada, que es lo que `catastro` va a encontrar")
+                .isEqualTo("1");
     }
 
     @Test
-    @DisplayName("por eso el conjunto de 2026 queda ABIERTO: sellarlo ahora cerraria la puerta")
-    void sellarloAhoraCerrariaLaPuerta() throws SQLException {
+    @DisplayName("el conjunto de 2026 queda SELLADO, y su snapshot entrega la llave que faltaba")
+    void elEjercicio2026QuedaSellado() throws SQLException {
         assertThat(estadoDelConjunto(conjunto))
-                .as("compuesto con todo lo publicable, y sin sellar")
-                .isEqualTo("ABIERTO");
+                .as("compuesto con todo lo que el corpus publica, y sellado (catastro#8, AC-3)")
+                .isEqualTo("SELLADO");
 
-        // Y la razon, medida sobre el ejercicio real y no sobre uno de prueba. El mecanismo ya lo
-        // mide `AbrirConjuntoDeParametrosTest` («con la bandera queda sellado, y despues no admite
-        // ninguna escritura»); lo que se mide aqui es la DECISION: sellar la version 1 de 2026
-        // ahora la dejaria sin poder recibir nunca la fila que falta, y obligaria a abrir una
-        // version 2 el dia que la firma llegue —dos conjuntos distintos del mismo ejercicio, y
-        // cada valuacion guarda con cual se calculo (ADR-0025 §3)—.
-        Observacion porque = Observacion.de("Se comprueba que sellar cierra la puerta");
-        ConjuntoDeParametros otraVersion = administrar.abrirVersion(EJERCICIO, porque);
-        long sellado = java.util.Objects.requireNonNull(otraVersion.id());
-
-        // Hay que meterle algo antes de sellar, y eso ya es una medida: sellar un conjunto vacio
-        // se rechaza con «El conjunto N no tiene ningun parametro: sellarlo vacio diria que el
-        // ejercicio esta parametrizado cuando no lo esta». Lo dijo la primera ejecucion de este
-        // caso, y es la misma familia de guardas que la de abajo.
-        List<Long> dosParametros = dosParametrosNacionales();
-        administrar.agregarParametro(sellado, dosParametros.get(0), porque);
-        administrar.sellar(sellado, porque);
-
-        assertThatThrownBy(
-                        () -> administrar.agregarParametro(sellado, dosParametros.get(1), porque))
+        // Y se lee como lo leera `catastro`: por el snapshot del ambito VALUACION, no por la tabla.
+        // Un conjunto ABIERTO no lo devuelve esta consulta —exige `estado = 'SELLADO'`—, asi que
+        // esta linea tambien mide el sello, y ademas por el camino que usa el consumidor.
+        SnapshotDelConjunto snapshot = componer.vigenteDe(EJERCICIO, Ambito.VALUACION);
+        assertThat(snapshot.conjuntoId()).isEqualTo(conjunto);
+        assertThat(snapshot.parametros())
                 .as(
-                        "un conjunto sellado no admite un parametro mas: es la frase que este"
-                                + " repositorio trae escrita desde antes de catastro#8, y sigue"
-                                + " siendo la que impide sellar 2026 hoy")
-                .isInstanceOf(RuntimeException.class);
-        assertThat(estadoDelConjunto(sellado)).isEqualTo("SELLADO");
+                        "la llave que paro la valuacion de 23 predios viaja en el conjunto sellado,"
+                                + " que es la unica forma en que `catastro` la puede leer")
+                .anySatisfy(p -> assertThat(p.tipo()).isEqualTo(LA_LLAVE_QUE_FALTABA));
+        assertThat(snapshot.valoresUnitarios()).as("el cuadro de H-14, dentro").isNotEmpty();
+        assertThat(snapshot.depreciaciones()).as("el cuadro de H-15, dentro").isNotEmpty();
+    }
+
+    @Test
+    @DisplayName("y un sello no admite una cifra mas: es lo que costaba contar antes de sellar")
+    void unSelloNoAdmiteUnaCifraMas() throws SQLException {
+        // El mecanismo lo mide `AbrirConjuntoDeParametrosTest`; lo que se mide aqui es el COSTE de
+        // la decision que este issue toma, sobre el ejercicio real y con sus parametros reales.
+        //
+        // No se hace sobre `conjunto` porque ya tiene dentro TODOS los parametros nacionales
+        // publicados: anadirle uno fallaria por duplicado y no por sellado, y las dos causas se
+        // leerian igual desde aqui.
+        //
+        // Y se hace en OTRA MUNICIPALIDAD, que es lo que la primera ejecucion enseno. Escrito
+        // como una version 2 de la misma, la prueba pasaba a verde o a rojo segun el orden en que
+        // JUnit corriera los casos: `selladoVigenteDe` ordena por version y toma la ultima, asi
+        // que el conjunto de juguete de dos filas se convertia en «el conjunto sellado de 2026» y
+        // `elEjercicio2026QuedaSellado` caia con «expected: 1L but was: 2L». El rojo es correcto
+        // —eso es exactamente lo que le pasaria a una municipalidad que sellara de mas— y por eso
+        // se mide donde no puede tapar al ejercicio de verdad.
+        //
+        // Que una version 2 se pueda sellar teniendo la 1 sellada NO es un descuido: no existe
+        // ninguna restriccion de «un solo conjunto sellado por ejercicio» —hay `conjunto_uq
+        // (municipalidad_id, ejercicio, version)`—. Es la salida de un sello prematuro, y su
+        // precio es que cada valuacion guarda con que `conjuntoId` se calculo (ADR-0025 §3):
+        // converger es recalcular el padron.
+        long otra = crearMunicipalidad("200101", "Municipalidad Provincial de Sullana");
+        TenantContext.fijar(new MunicipalidadId(otra));
+        try {
+            Observacion porque = Observacion.de("Se mide lo que cuesta sellar");
+            ConjuntoDeParametros suyo = administrar.abrirVersion(EJERCICIO, porque);
+            long sellado = java.util.Objects.requireNonNull(suyo.id());
+
+            // Hay que meterle algo antes de sellar, y eso ya es una medida: sellar un conjunto
+            // vacio se rechaza con «El conjunto N no tiene ningun parametro: sellarlo vacio diria
+            // que el ejercicio esta parametrizado cuando no lo esta». Lo dijo la primera ejecucion
+            // de este caso, y es la misma familia de guardas que la de abajo.
+            List<Long> dosParametros = dosParametrosNacionales();
+            administrar.agregarParametro(sellado, dosParametros.get(0), porque);
+            administrar.sellar(sellado, porque);
+
+            assertThatThrownBy(
+                            () ->
+                                    administrar.agregarParametro(
+                                            sellado, dosParametros.get(1), porque))
+                    .as(
+                            "un conjunto sellado no admite un parametro mas, y por eso las diez"
+                                    + " filas de D-02b y D-02c que no tienen archivo del corpus se"
+                                    + " contaron ANTES de sellar (ver el javadoc de la clase)")
+                    .isInstanceOf(RuntimeException.class);
+            assertThat(estadoDelConjunto(sellado)).isEqualTo("SELLADO");
+        } finally {
+            TenantContext.fijar(new MunicipalidadId(municipalidad));
+        }
     }
 
     // ------------------------------------------------------------------
