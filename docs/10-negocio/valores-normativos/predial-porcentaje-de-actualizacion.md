@@ -2,10 +2,10 @@
 
 | Campo | Valor |
 |---|---|
-| Norma | **TUO de la Ley de Tributación Municipal (D.S. N.° 156-2004-EF), art. 12** — el único porcentaje de actualización de la base imponible del predial que ese TUO contiene, ya confirmado como artículo 12 en §1.4. Se transcribe además el art. 14 (§1.2), que quedó descartado y por qué. **Lo que sigue sin confirmar es que la columna «% actualización» de M02 sea este artículo** (§1.1); §1.6 explica por qué lo que este archivo publica para 2026 no depende de esa identificación |
+| Norma | **TUO de la Ley de Tributación Municipal (D.S. N.° 156-2004-EF), art. 12** — el único porcentaje de actualización de la base imponible del predial que ese TUO contiene, ya confirmado como artículo 12 en §1.4. Se transcribe además el art. 14 (§1.2), que quedó descartado y por qué. **Lo que sigue sin confirmar es que la columna «% actualización» de M02 sea este artículo** (§1.1); §1.6 explica por qué lo que este archivo concluye para 2026 no depende de esa identificación |
 | Artículo | 12 del TUO LTM (§1.1, con su número ya confirmado en §1.4); y el art. 14 (§1.2), descartado |
 | Publicada | 2004-11-15, fecha del D.S. N.° 156-2004-EF que aprueba el TUO |
-| Ejercicios que rige | **2026, y solo 2026.** §1.6 lee el supuesto del art. 12 contra ese ejercicio; el siguiente vuelve a necesitar la misma lectura y no se hereda |
+| Ejercicios que rige | **Ninguno todavía.** §1.6 lee el supuesto del art. 12 contra **2026, y solo 2026** —el ejercicio siguiente vuelve a necesitar la misma lectura y no se hereda—, pero el archivo está en `TRANSCRITO` y su fila no se publica hasta que una persona lo verifique (§1.6.1) |
 | Filas de NEG-02 §2 | 33 |
 | Transcribió | Agent, 2026-08-30; el hecho del ejercicio 2026 (§1.6): Agent, 2026-09-06 |
 | Verificó | — |
@@ -21,14 +21,22 @@
 > (`MuestraDeFactorDeActualizacionCompilado`). El valor «obvio» —100 %, o sea 1, o sea ninguno— es
 > el más peligroso de todos, porque escribirlo **no se siente** como inventar un dato.
 >
-> **Y desde el 2026-09-06 este archivo publica una fila, sin dejar de suscribir el párrafo de
-> arriba.** Lo que §1.6 sella **no es un valor por omisión**: es un **hecho** sobre el ejercicio
-> 2026 —que los dos cuadros cuya ausencia activa el art. 12 se publicaron ese año— leído en dos
-> archivos de este mismo corpus que ya están `VERIFICADO` con sus propias dos firmas. La diferencia
-> entre las dos cosas es comprobable y no es retórica: **un valor por omisión vale para todos los
-> ejercicios y este no vale para ninguno más que 2026**, y el día que un ejercicio se quede sin uno
-> de los dos cuadros, este archivo no tiene nada que decir de él y el sistema vuelve a fallar
-> nombrando la llave. Ese es el contraste, y §1.6 lo escribe.
+> **Y desde el 2026-09-06 este archivo tiene escrito un fundamento que podría publicar una fila,
+> y sigue sin publicarla.** §1.6 lee el supuesto del art. 12 contra el ejercicio 2026 y concluye
+> que no se cumple; lo que concluye **no es un valor por omisión** sino un **hecho** sobre ese año
+> —que los dos cuadros cuya ausencia activa el art. 12 se publicaron— leído en dos archivos de este
+> mismo corpus que ya están `VERIFICADO` con sus propias dos firmas. La diferencia entre las dos
+> cosas es comprobable y no es retórica: **un valor por omisión vale para todos los ejercicios y
+> este no valdría para ninguno más que 2026**.
+>
+> **Pero este archivo está en `TRANSCRITO` y ahí se queda hasta que una persona lo verifique.** La
+> segunda firma de ADR-0007 es un acto humano, y §1.6.1 dice con todas las letras quién escribió
+> §1.6 y qué comprobó: **una máquina, cotejando este corpus contra sí mismo**. Mientras esa firma
+> no exista, la fila **no está** en `publicacion/parametros-2026.csv`, el ejercicio 2026 **no se
+> sella**, y todo predio que se intente valorizar sigue saliendo con su motivo y su llave. Eso no
+> es un defecto de esta entrega: es lo que ADR-0007 existe para conseguir, y lo que cuesta está
+> medido —`catastro` cuenta hoy **0 de 23** predios del padrón de demostración valorizados, los 23
+> por `PORCENTAJE_DE_ACTUALIZACION`—.
 
 ## 1. La tabla tal como está en la norma
 
@@ -243,16 +251,19 @@ aritmética que §1.3 fijó midiendo una determinación real —`base = autoval�
 × % propiedad`, con el valor neutro en **cero y no en uno**— eso se escribe **`0`**, que es
 exactamente la cifra que la captura del SRTM enseña en su campo «% actualización».
 
-**En una frase, que es la que viaja al derivado publicable de `publicacion/` y de ahí a
-`parametro_tributario`.`valor_texto`:**
+**En una frase, que es la que viajaría al derivado publicable de `publicacion/` y de ahí a
+`parametro_tributario`.`valor_texto` el día que alguien firme este archivo. Hoy no viaja: la fila
+no está en `parametros-2026.csv` y §1.6.1 dice por qué.**
 
 En el ejercicio 2026 se publicaron los aranceles de terrenos y los precios unitarios oficiales de
 construcción; el supuesto del art. 12 no se cumple y no hay actualización que aplicar: 0
 
 **Cabe en `varchar(200)`, y eso no es una casualidad tipográfica**: `parametro_tributario`.`valor_texto`
-mide exactamente eso (`V1`), y la primera redacción de esta frase —treinta y cinco caracteres más
-larga— se publicó, la rechazó la base y dejó al conjunto sin la fila. El fundamento entero está
-arriba; lo que viaja a la base es la frase que cabe y remite a él.
+mide exactamente eso (`V1`), y se midió cuando la fila sí estuvo en el CSV durante esta misma
+entrega: la primera redacción de esta frase —treinta y cinco caracteres más larga— se publicó, la
+rechazó la base y dejó al conjunto sin la fila, con el conjunto diciendo «No hay ningún parámetro
+publicado con la llave PORCENTAJE_DE_ACTUALIZACION». El fundamento entero está arriba; lo que
+viajaría a la base es la frase que cabe y remite a él.
 
 **Y la diferencia con el valor por omisión que la cabecera prohíbe es comprobable**, no una
 declaración de intenciones. Un valor por omisión diría «cuando no se sepa, cero» y valdría para
@@ -282,15 +293,27 @@ nombrando la llave `PORCENTAJE_DE_ACTUALIZACION`, que es lo que ya hace.
   colocaciones dan el mismo céntimo, así que 2026 no obliga a decidirlo; un ejercicio con `p ≠ 0`
   sí. Queda anotado aquí y en el registro de `catastro`.
 
-#### 1.6.1 En qué consistió la verificación de §1.6, y qué no cubre
+#### 1.6.1 Quién escribió §1.6, qué comprobó, y por qué eso **no** es la segunda firma
 
-**La segunda lectura fue un cotejo mecánico contra este mismo corpus, no una persona releyendo el
-PDF del TUO**, y la autorizó el dueño del repositorio, que es quien responde por ella. Es la misma
-forma —y la misma limitación— que
-[`obras-complementarias-y-oficializacion-2026.md`](obras-complementarias-y-oficializacion-2026.md)
-declara para su factor de oficialización.
+**§1.6 lo escribió una máquina, y lo que hizo fue un cotejo mecánico contra este mismo corpus, no
+una persona releyendo el PDF del TUO.** Por eso la cabecera de este archivo dice `Verificó | —` y
+`Estado | TRANSCRITO`, y por eso la fila **no está** en `publicacion/parametros-2026.csv`.
 
-Lo que el cotejo comprueba es exactamente esto y nada más:
+**Un cotejo mecánico no es una verificación de ADR-0007, y la diferencia no es de grado.** Lo que
+ADR-0007 pide es que **dos personas distintas** respondan por una cifra normativa, y ninguna de las
+dos puede ser el mismo proceso que la escribió: un agente que se verifica a sí mismo no añade una
+segunda lectura, añade una segunda copia de la primera. Escribir en la cabecera el nombre de una
+persona sobre un acto que esa persona no hizo es exactamente el defecto que ADR-0007 existe para
+impedir, y en esta entrega llegó a escribirse y se revirtió; queda dicho aquí para que no se vuelva
+a escribir por descuido.
+
+**Lo que hace falta para que esta fila entre**, y es una sola cosa: que una persona —distinta de
+quien transcribió, conforme a ADR-0007— lea §1.6, esté de acuerdo, ponga su firma y su fecha en la
+cabecera, pase el estado a `VERIFICADO` y añada la línea a `parametros-2026.csv`. No hace falta
+ningún dato nuevo: el fundamento está escrito, sus dos apoyos ya están `VERIFICADO` con sus propias
+firmas, y `verificar-publicacion.mjs` comprueba en cada PR que esas dos firmas sean distintas.
+
+Lo que el cotejo mecánico sí comprobó es exactamente esto y nada más:
 
 1. que el texto del art. 12 citado arriba sea **letra por letra** el que §1.1 y §1.4 ya traen —lo
    son: es la misma cadena, y §1.4 la respalda con el sha256 del PDF oficial leído;
@@ -298,7 +321,10 @@ Lo que el cotejo comprueba es exactamente esto y nada más:
    firmas sean distintas —lo comprueba además `verificar-publicacion.mjs` en cada PR, y sobre los
    propios archivos, no sobre esta tabla.
 
-**Lo que no cubre:** no se ha vuelto al diario oficial a comprobar que no exista, además, un
+Las dos cosas son comprobaciones de **consistencia interna del corpus**. Ninguna de las dos es
+leer la norma, que es lo que una verificación de ADR-0007 significa.
+
+**Lo que tampoco cubre:** no se ha vuelto al diario oficial a comprobar que no exista, además, un
 Decreto Supremo de 2026 dictado al amparo del art. 12. No podría existir sin contradecir su propio
 supuesto, pero eso es un razonamiento y no una lectura.
 `‹NO CONFIRMADO EN FUENTE OFICIAL: que no se haya publicado ningún Decreto Supremo de actualización
@@ -307,9 +333,14 @@ se cumple›`.
 
 ## 2. Cómo entra al sistema
 
-**Entra desde el 2026-09-06, y solo para 2026.** Lo que entra es el hecho de §1.6, no una cifra
-buscada: en el ejercicio 2026 el supuesto del art. 12 no se cumple, y por tanto **no hay
-actualización que aplicar**.
+**Hoy no entra.** El fundamento de §1.6 está escrito y el archivo sigue en `TRANSCRITO`: le falta
+la segunda firma de ADR-0007, que es un acto de una persona (§1.6.1). Mientras no exista, la fila
+**no está** en `publicacion/parametros-2026.csv` —hoy son **32** filas y ésta sería la 33.ª—, el
+ejercicio 2026 **no se puede sellar** con ella dentro y todo predio que se intente valorizar sale
+con su motivo nombrando la llave.
+
+**Así es como entraría, el día que alguien firme.** No hace falta decidir nada más: la forma está
+resuelta y medida.
 
 | Qué | Dónde |
 |---|---|
@@ -318,14 +349,15 @@ actualización que aplicar**.
 | Ámbito | nacional — lo fija el Gobierno nacional por Decreto Supremo, no una ordenanza local (§3, camino 3) |
 | Vigencia | **2026 únicamente** (`2026-01-01`..`2026-12-31`). No se prorroga: el ejercicio siguiente vuelve a exigir la lectura de sus dos publicaciones |
 | Valor | `0`, con el fundamento de §1.6 y no como valor por omisión |
+| Estado hoy | **no publicada**, porque este archivo está en `TRANSCRITO` |
 
 Y lo que **no** cambia, porque es lo que hace que la fila de arriba signifique algo:
 
 | Qué | Cómo |
 |---|---|
-| Un ejercicio **sin** fila | Falla nombrando su llave, como `TASA_ANUNCIO:‹CLASE›` (#51), `BENEFICIO:‹CAMPAÑA›` (#72) y `VEHICULAR_MINIMO` (#399): **422 nombrando la llave**, nunca un importe plausible. Hoy eso es todo ejercicio que no sea 2026 |
+| Un ejercicio **sin** fila | Falla nombrando su llave, como `TASA_ANUNCIO:‹CLASE›` (#51), `BENEFICIO:‹CAMPAÑA›` (#72) y `VEHICULAR_MINIMO` (#399): **422 nombrando la llave**, nunca un importe plausible. Hoy eso es **todo** ejercicio, 2026 incluido |
 | Si alguien lo compila | La regla 5 lo rechaza igual que antes: `ACTUALIZACION` y `FACTOR` siguen en la lista de nombres vigilados desde #437, con su muestra. Que exista una fila **publicada** no autoriza a escribir la cifra en el código: son las dos mitades de la regla, no una alternativa a la otra |
-| `RT-002`, `RT-005` y `RT-011` | Siguen sin implementarse aquí. Lo que 2026 desbloquea es la **valuación** de `catastro` (su `#8`), que es la mitad de Predial de ADR-0024; la determinación de la obligación es de `rentas` y no la toca esta fila |
+| `RT-002`, `RT-005` y `RT-011` | Siguen sin implementarse aquí. Lo que 2026 desbloquearía es la **valuación** de `catastro` (su `#8`), que es la mitad de Predial de ADR-0024; la determinación de la obligación es de `rentas` y no la tocaría esta fila. Y está medido lo que desbloquearía y lo que no: `catastro` pasa de **0 de 23** predios valorizados a **4 de 23**, y los otros 19 se quedan por RT-004, que es otra decisión |
 
 ## 3. Qué no cabe hoy
 

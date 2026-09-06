@@ -559,7 +559,7 @@ class PublicarParametrosTest {
 
         @Test
         @DisplayName(
-                "publica las treinta y tres filas del corpus, con las firmas que el corpus dice")
+                "publica las treinta y dos filas del corpus, con las firmas que el corpus dice")
         void publicaElDerivadoDelCorpus() throws IOException, SQLException {
             assertThat(DERIVADO)
                     .as("es el archivo que publicar-parametros.sh monta en el Job")
@@ -573,13 +573,15 @@ class PublicarParametrosTest {
             // ejercicio tiene que ser un acto deliberado, no algo que se cuele en un diff. Fueron
             // 22 hasta el 2026-08-30, cuando entraron las diez que ya estaban firmadas en el corpus
             // y nadie habia pasado al derivado —alcabala, espectaculos y el factor de
-            // oficializacion— (#438). Y 33 desde el 2026-09-06, con
-            // `PORCENTAJE_DE_ACTUALIZACION` del ejercicio 2026, que cierra D-11 SOLO para ese
-            // ejercicio (catastro#8): lo que la fila publica no es un valor por omision sino el
-            // hecho de que el supuesto del art. 12 del TUO LTM no se cumple en 2026, porque ese
-            // ano se publicaron los aranceles y los precios unitarios —§1.6 de
-            // `predial-porcentaje-de-actualizacion.md`, con las dos firmas de ADR-0007—.
-            assertThat(delArchivo).hasSize(33);
+            // oficializacion— (#438).
+            //
+            // Y SIGUEN SIENDO 32 tras catastro#8, que es lo que esta linea existe para decir.
+            // Ese issue llego a anadir una 33.a —el `PORCENTAJE_DE_ACTUALIZACION` de 2026— y la
+            // direccion la rechazo: se apoyaba en un `VERIFICADO` cuya segunda firma NADIE puso.
+            // El archivo del corpus volvio a `TRANSCRITO`, y con el a `verificar-publicacion.mjs`
+            // negandose a publicar desde ese estado. El razonamiento de §1.6 se queda escrito y
+            // espera su firma; la cifra no se publica hasta que la tenga.
+            assertThat(delArchivo).hasSize(32);
             for (String llave : delArchivo) {
                 String[] partes = llave.split("\\|", -1);
                 assertThat(
