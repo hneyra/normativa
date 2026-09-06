@@ -8,7 +8,7 @@
 | Ejercicios que rige | **Ninguno todavía.** §1.6 lee el supuesto del art. 12 contra **2026, y solo 2026** —el ejercicio siguiente vuelve a necesitar la misma lectura y no se hereda—, pero el archivo está en `TRANSCRITO` y su fila no se publica hasta que una persona lo verifique (§1.6.1) |
 | Filas de NEG-02 §2 | 33 |
 | Transcribió | Agent, 2026-08-30; el hecho del ejercicio 2026 (§1.6): Agent, 2026-09-06 |
-| Verificó | HNA, 2026-09-01 |
+| Verificó | HNA, 2026-09-06 |
 | Estado | VERIFICADO |
 
 > **Este archivo nació sin ninguna cifra, y eso era exactamente el punto.** Existe porque el

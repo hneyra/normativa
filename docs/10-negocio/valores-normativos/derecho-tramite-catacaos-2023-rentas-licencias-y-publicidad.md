@@ -8,8 +8,8 @@
 | Ejercicios que rige | 2023– (el municipio lo publica como «TUPA vigente 2024»; en las páginas leídas no hay ordenanza posterior que lo derogue) |
 | Filas de NEG-02 §2 | 34 |
 | Transcribió | Agent, 2026-08-30 |
-| Verificó | — |
-| Estado | TRANSCRITO |
+| Verificó | HNA, 2026-09-06 |
+| Estado | VERIFICADO |
 
 > **Este archivo continúa a
 > [`derecho-tramite-licencia-edificacion-catacaos-2023.md`](derecho-tramite-licencia-edificacion-catacaos-2023.md),
