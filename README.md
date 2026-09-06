@@ -17,7 +17,7 @@ consulta a nadie.**
 | `docs/30-arquitectura/adr/` | **Existe**, con 4 ADR propio(s) y su indice ⚠ ver la nota de abajo |
 | `backend/` — dos modulos y **cero clases de negocio** | **Existe desde P3**: `kamayuk-esquema` con su prueba de aislamiento (9 pruebas) y `kamayuk-verificaciones` con las barreras (79). El **negocio** llega en la etapa 5 |
 | `docs/40-datos/baselines/V1__baseline.sql` — su esquema | **NO esta aqui todavia.** Generado y verificado, vive en [`sgtm/docs/40-datos/baselines/normativa/`](https://github.com/hneyra/sgtm/blob/migracion-a-microservicios/docs/40-datos/baselines/normativa/V1__baseline.sql) hasta que la extraccion lo traiga |
-| Su frontend (`normativa-web`, ADR-0030 §1) | **NO existe** |
+| Su frontend (`normativa-web`, ADR-0030 §1) | **Existe el andamiaje, y ninguna pantalla** (F-1). Vite 7 + React 19 + TypeScript 5.9 en `frontend/`, con el codigo en `frontend/src/`. `yarn verificar` en verde: **53 pruebas**, 0 fallos, y `yarn build` da un bundle de 193.59 kB bajo `/normativa/`. Sus nueve reglas son **diez prohibiciones de ESLint con su muestra que las viola** |
 | La imagen `ghcr.io/hneyra/kamayuk-normativa` | **NO existe.** El `Deployment` del descriptor la nombra igual: es correcto, y en esta etapa no se despliega nada |
 
 ## Por donde entrar
