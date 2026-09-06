@@ -8,8 +8,8 @@
 | Ejercicios que rige | 1999– para la deducción del art. 18. Su art. 19 da a los beneficios tributarios del Capítulo III un período de 50 (cincuenta) años, y el art. 1 de la Ley N.° 29742 —publicada el 09 julio 2011, según la nota del propio texto de la Ley— restituyó la plena vigencia de la Ley 27037. El día desde el que corre ese plazo de 50 años no lo dice el texto leído: ver §3 |
 | Filas de NEG-02 §2 | 32 |
 | Transcribió | Agent, 2026-08-28 |
-| Verificó | — |
-| Estado | TRANSCRITO |
+| Verificó | HNA, 2026-09-06 |
+| Estado | VERIFICADO |
 
 > **Este archivo no trae ninguna cifra de deducción, y eso es el hallazgo.** El porcentaje **no lo
 > fija ninguna norma nacional**: el art. 3 del D.S. N.° 031-99-EF dice que «Las Municipalidades de
