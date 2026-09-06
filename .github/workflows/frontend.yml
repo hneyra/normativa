@@ -1,0 +1,80 @@
+name: Frontend
+
+# La CI de `normativa-web`. Corre `yarn verificar` —lint, tipos y pruebas— y `yarn build`, y
+# nada mas: aqui no se construye imagen ni se despliega, porque F-1 levanta el andamiaje y
+# ninguna pantalla.
+#
+# POR QUE SI LLEVA FILTRO `paths`, AL REVES QUE `publicar-imagenes.yml`
+# Alli el filtro seria un defecto: la guarda de `infrastructure` necesita que TODO commit de
+# `main` tenga sus dos imagenes, y con filtro un merge de solo documentacion dejaria un `sha`
+# de `main` sin imagenes, en silencio. Aqui no se publica nada que nadie vaya a pedir por su
+# etiqueta, asi que la equivalencia no hace falta y el filtro solo evita gastar una
+# instalacion de npm en cada cambio del backend o del corpus.
+#
+# El workflow se incluye en su propio filtro: un cambio en este archivo tiene que verificarse
+# a si mismo. Sin eso, romper la CI del frontend es el unico cambio que la CI del frontend no
+# revisa.
+#
+# NO NECESITA EL CLON HERMANO. El backend si —`settings.gradle.kts` consume `infrastructure`
+# como *composite build*, y por eso `backend.yml` e `infraestructura.yml` mueven el anfitrion—.
+# El frontend no depende todavia de ningun paquete `@kamayuk/*` publicado ni de ningun `link:`,
+# asi que se clona donde toca y ya. El dia que dependa, este archivo se parecera a aquellos.
+#
+# QUE SE EJECUTA, Y EN QUE ORDEN
+# `yarn verificar` encadena lint, tipos y pruebas —las tres, y en ese orden, porque el error
+# mas barato de leer tiene que salir primero—, y es LA MISMA orden que se ejecuta en local: si
+# aqui se escribieran los tres pasos por separado, «verde en CI» y «verde en mi maquina»
+# dejarian de ser la misma afirmacion en cuanto una de las dos cambiara. `yarn build` viene
+# despues porque afirma otra cosa: que `tsc` pase no implica que Rollup empaquete.
+
+on:
+  push:
+    branches: [main]
+    paths: ["frontend/**", ".github/workflows/frontend.yml"]
+  pull_request:
+    paths: ["frontend/**", ".github/workflows/frontend.yml"]
+
+# Sin permisos de escritura: este trabajo lee y verifica, no publica nada.
+permissions:
+  contents: read
+
+# Un `push` nuevo cancela la corrida anterior de la misma rama. En `main` no se cancela: cada
+# commit de `main` tiene que dejar su propio veredicto, y una corrida cancelada no es uno.
+concurrency:
+  group: frontend-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  verificar:
+    name: normativa-web verifica y construye
+    runs-on: ubuntu-latest
+    # Un colgado no consume cuota sin limite: la leccion de `observabilidad-alertas`.
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # La version sale de `frontend/.nvmrc` y no de un literal aqui: con el literal, la CI y
+      # quien clona el repositorio son dos numeros que pueden separarse sin que nada lo diga.
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: frontend/.nvmrc
+          cache: yarn
+          cache-dependency-path: frontend/yarn.lock
+
+      # `--frozen-lockfile` y no `yarn install` a secas: sin el, una version nueva de
+      # cualquier dependencia entra en la CI sin pasar por ningun PR, y el dia que rompa algo
+      # el diff no lo explica.
+      - name: Instalar
+        run: yarn install --frozen-lockfile
+
+      - name: Lint, tipos y pruebas
+        run: yarn verificar
+
+      # El bundle no se publica todavia, pero se construye: un `tsc` en verde no demuestra que
+      # Vite sepa empaquetar esto, y descubrirlo el dia del despliegue es tarde.
+      - name: Construir el bundle
+        run: yarn build
