@@ -430,34 +430,40 @@ inconsistencia censable.
 | Ámbito | nacional |
 | Vigencia | 2026 |
 
-**No se carga todavía, y ya no es por ninguna firma.** D-13 se cerró el 2026-08-28
+**Se carga desde el 2026-09-06** (`catastro#8`), y los cuatro puntos que faltaban se cerraron en
+ese orden. D-13 se cerró el 2026-08-28
 ([ADR-0017](../../30-arquitectura/adr/ADR-0017-tablas-de-valuacion-nacionales.md)), las cifras se
 leyeron en el Anexo I.2 (§1.4) y la segunda firma llegó el 2026-08-29. Con ADR-0017 cada región es
 una **edición** distinta y el conjunto de una municipalidad compone la suya, así que publicar la
-Costa tampoco espera a las otras tres (§3). Lo que falta es trabajo, y se puede nombrar entero:
+Costa no espera a las otras tres (§3). Lo que faltaba, y cómo quedó:
 
-1. **`PublicarCuadros` no sabe publicar este cuadro.** `FilaDelManifiesto.CUADROS` son hoy
-   `DEPRECIACION` y `VALOR_REFERENCIAL`, y un manifiesto que nombre otro se rechaza **nombrando el
-   motivo**, que es lo que se quiere mientras el motivo siga siendo cierto.
-2. **No hay `archivo_de_filas` ni su `sha256`**, y por tanto no hay fila en
-   [`publicacion/cuadros-2026.csv`](publicacion/cuadros-2026.csv). Las 27 cifras caben enteras en
-   este archivo, así que el derivado sale de aquí como el de `depreciacion.md`
-   —[`derivar-depreciacion.mjs`](fuentes/depreciacion-rnt-2016/derivar-depreciacion.mjs)— y no de un
-   PDF.
-3. **El vocabulario de partidas, que no es solo de esta tabla.** `valor_unitario_edificacion.partida`
-   (V1) admite siete valores; las tres del anexo —`MUROS`, `TECHOS`, `PUERTAS`— están entre ellos, de
-   modo que la carga **no fallaría**: dejaría `PISOS`, `REVESTIMIENTOS`, `BANIOS` e `INSTALACIONES`
-   sin ninguna fila, y una edición a la que le faltan cuatro partidas no se distingue de una
-   completa hasta que alguien valoriza un predio. Y el mismo vocabulario de siete está escrito en
-   `construccion` con una columna `categoria_*` por partida (V1), en `edificacion_estructura` (V43),
-   y en Java en `catastro.dominio.Partida` y `licencias.dominio.PartidaDeEdificacion`: reducirlo a
-   tres es una decisión sobre el modelo entero, no un `CHECK` que se corrige. **Y no la puede tomar
-   este archivo**, porque solo leyó la Costa: lo que decide entre tres y siete es leer el Anexo I.1
-   (§3).
-4. **`anio_construccion_desde` es `NOT NULL` desde V18.** Si gana la lectura de este archivo —que el
-   año de construcción es la entrada de la depreciación y no una dimensión de este cuadro— las 27
-   filas entran con **un solo tramo abierto**; esa es la forma que H-4 deja pendiente de decidir
-   (§3).
+1. ~~**`PublicarCuadros` no sabe publicar este cuadro.**~~ **Cerrado**: `FilaDelManifiesto.CUADROS`
+   son hoy los **tres** —`DEPRECIACION`, `VALOR_REFERENCIAL` y `VALOR_UNITARIO`—, y un manifiesto
+   que nombre otro se sigue rechazando **nombrando el motivo**.
+2. ~~**No hay `archivo_de_filas` ni su `sha256`.**~~ **Cerrado**: lo hay, y sale de aquí como el de
+   `depreciacion.md` —[`derivar-valores-unitarios.mjs`](fuentes/valores-unitarios-2026/README.md)—
+   y no de un PDF, porque las cifras ya están transcritas en §1.1 y firmadas. Son **24 filas y no
+   27**: las tres celdas de puntos suspensivos no se proyectan, porque «no son un dato que falte en
+   esta transcripción ni un cero» (§1.1) — y los dos `0.00` explícitos sí, porque los publica la
+   norma.
+3. ~~**El vocabulario de partidas, que no es solo de esta tabla.**~~ **Ya estaba cerrado y este
+   archivo lo decía mal.** Decía que `valor_unitario_edificacion.partida` (V1) «admite siete
+   valores»; **medido contra el baseline de hoy, admite exactamente los tres del anexo** —`MUROS`,
+   `TECHOS`, `PUERTAS`— y `categoria` admite `^[A-J]$`, porque V58 y V59 separaron los dos
+   vocabularios (#436, y el propio §3 de este archivo lo recoge). Lo que se queda con siete es
+   `construccion.categoria_*`, que es el formulario de la ficha catastral y otra cosa.
+4. ~~**`anio_construccion_desde` es `NOT NULL` desde V18.**~~ **Decidido, y con la lectura de este
+   archivo**: el año de construcción **no es una dimensión de este cuadro** (§3, H-4), así que las
+   24 filas entran con **un solo tramo abierto**. El extremo inferior se escribe con el **piso del
+   dominio `ejercicio`** (`V1`: 1990..2100), que no es una cifra de la norma —la norma no publica
+   ninguna— sino el único modo de decir «sin tope inferior» en una columna que no admite nulo. Vive
+   en el guion de derivación y no en el código de la aplicación.
+
+**Una región por edición, y esta es la Costa.** La tabla no tiene columna de región y su unicidad
+es `(publicacion_id, partida, categoria, anio_construccion_desde)`: las cuatro regiones chocarían
+celda con celda dentro de una misma edición —está medido, `PublicarCuadrosTest` lo comprueba
+rechazando la celda repetida—. Lima Metropolitana/Callao (I.1), Sierra (I.3) y Selva (I.4) están
+transcritas en §1.5 y su derivado es otro, el día que una municipalidad de otra región lo necesite.
 
 ## 3. Qué no cabe hoy
 

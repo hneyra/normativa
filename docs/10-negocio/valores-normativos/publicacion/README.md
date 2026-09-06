@@ -39,7 +39,7 @@ infra/carga-de-datos/abrir-conjunto-parametros.sh --ambiente stg --municipalidad
     --conjunto-id N --archivo parametros-2026.csv
 ```
 
-## Las treinta y dos filas, y de dónde sale cada una
+## Las treinta y tres filas, y de dónde sale cada una
 
 | Tipo | Clave | Filas | Archivo del corpus |
 |---|---|---|---|
@@ -57,6 +57,7 @@ infra/carga-de-datos/abrir-conjunto-parametros.sh --ambiente stg --municipalidad
 | `ALCABALA_TRAMO_INAFECTO_UIT` | — | 1 | `alcabala.md` |
 | `ESPECTACULO_ALICUOTA` | `TAURINO-SUPERIOR-0.5-UIT`, `TAURINO-RESTO`, `CARRERAS-CABALLOS`, `CINEMATOGRAFICO`, `MUSICA-GENERAL`, `FOLCLOR-TEATRO-ZARZUELA-OPERA-BALLET-CIRCO`, `OTROS` | 7 | `espectaculos.md` |
 | `FACTOR_OFICIALIZACION` | — | 1 (solo 2026) | `obras-complementarias-y-oficializacion-2026.md` |
+| `PORCENTAJE_DE_ACTUALIZACION` | — | 1 (solo 2026) | `predial-porcentaje-de-actualizacion.md` |
 
 La **UIT no lleva clave**: es la forma del tipo con un solo valor, y las cinco filas se distinguen
 por `vigencia_desde`, como describe `LlaveDeParametro`. Cada una vale sólo su ejercicio
@@ -186,11 +187,25 @@ padrón.
 
 ## Antes de sellar: la lista, y por qué es una lista y no un paso
 
-**Sellar es un acto único por ejercicio.** El disparador de `V9` hace inmutable lo sellado y
-`conjunto_sellado_uq` admite **un solo** conjunto sellado por ejercicio y municipalidad, así que a un
-conjunto sellado **no se le puede añadir una cifra más**: la única salida de un sello prematuro es
-abrir otra versión. Y un conjunto abierto no lo lee nadie —la lectura exige `estado = 'SELLADO'`—, de
-modo que el ejercicio se queda sin poder completarse hasta que alguien lo rehaga entero.
+**Sellar no se deshace.** El disparador de `V9` hace inmutable lo sellado, así que a un conjunto
+sellado **no se le puede añadir una cifra más**: la única salida de un sello prematuro es abrir otra
+versión. Y un conjunto abierto no lo lee nadie —la lectura exige `estado = 'SELLADO'`—.
+
+> **Y una corrección medida, porque este párrafo decía algo que el esquema no dice.** Hasta el
+> 2026-09-06 afirmaba que «`conjunto_sellado_uq` admite un solo conjunto sellado por ejercicio y
+> municipalidad». **Esa restricción no existe**: lo único que hay en `V1` es
+> `conjunto_uq UNIQUE (municipalidad_id, ejercicio, version)` y el índice parcial
+> `conjunto_sellado_vigente_ix … version DESC WHERE estado = 'SELLADO'`, y
+> `ParametrosRepositoryJdbc.selladoVigenteDe` **ordena por versión y toma la última**, con su
+> comentario diciendo que «desde `V10` puede haber varias versiones selladas del mismo ejercicio
+> (ARQ-09 §3)». O sea que sellar **no** deja el ejercicio sin poder completarse: lo completa una
+> versión 2.
+>
+> Lo que cuesta sellar antes de tiempo sigue siendo real y es otro: cada valuación guarda **con qué
+> `conjuntoId` se calculó** (ADR-0025 §3), así que las cifras emitidas con la versión 1 y las de la
+> versión 2 son hechos sellados distintos, y hacerlas converger es recalcular el padrón, no editar
+> una fila. Un coste que se paga recalculando no es el mismo que uno que no tiene salida, y la
+> lista de abajo existe para no pagarlo por descuido.
 
 Por eso `--sellar` es explícito, y por eso esta lista existe. **Lo que hay que poder responder que
 sí, antes de escribirlo:**
@@ -198,14 +213,37 @@ sí, antes de escribirlo:**
 | | Qué comprobar | Cómo |
 |---|---|---|
 | 1 | Las filas sueltas están publicadas, y sin duplicar | `publicar-parametros.sh` termina en `RECHAZADAS=0`, o dice «ya estaba publicado» para todas — que es lo que se espera de la segunda corrida |
-| 2 | Los cuadros que el ejercicio necesita están publicados | `publicar-cuadros.sh`, una edición por cuadro. Hoy la depreciación entra; la vehicular espera a #388 (su archivo de filas no cabe en un `ConfigMap`) y los valores unitarios no tienen camino de carga |
+| 2 | Los cuadros que el ejercicio necesita están publicados | `publicar-cuadros.sh`, una edición por cuadro. **Los tres entran** desde `catastro#8`: la depreciación, la vehicular y los valores unitarios de edificación. Lo que sigue esperando a #388 es su **despliegue** —`tvr-2026.csv` no cabe en un `ConfigMap`—, que es otra cosa que poder publicarlos |
 | 3 | El arancel de la municipalidad está cargado | `cargar-arancel-vial.sh`, contra **ese** conjunto |
 | 4 | No falta ninguna cifra que una regla vaya a pedir | Cada `‹llave›` que una regla nombre y no esté produce un **422 nombrando la llave**. Eso es correcto en una consulta y es un desastre en una emisión masiva |
 | 5 | Nada de lo que falta es de este ejercicio | Ver «Lo que hoy no se publica, y por qué», arriba: lo que espera a D-02b y D-02c **no** puede entrar hoy, y sellar sin ello es sellar un ejercicio incompleto |
 
-**El punto 5 es el que decide, y hoy la respuesta es que no.** Faltan los valores unitarios (H-14:
-sin camino de carga), el `% actualización` (D-11: sin fuente) y todo lo de ordenanza local (D-02b).
-Sellar 2026 hoy dejaría el ejercicio con la mitad de sus cifras y sin poder recibir la otra mitad.
+**El punto 5 es el que decide, y de las tres cosas que faltaban quedan las de ordenanza local.**
+Los valores unitarios (H-14) tienen desde `catastro#8` su archivo de filas, su huella y su sitio en
+`FilaDelManifiesto.CUADROS`; el `% actualización` (D-11) tiene desde el 2026-09-06 sus dos firmas y
+su fila. Lo que **no** puede entrar hoy son **diez filas del mapa normativo que no tienen ni archivo
+del corpus**, y se nombran una a una porque «faltan cosas» no es una lista:
+
+| Fila | Qué | Parte |
+|---|---|---|
+| 11 | Tasas de limpieza pública, relleno sanitario, parques y jardines y serenazgo | D-02b |
+| 12 | Criterios de distribución del costo del servicio | D-02b |
+| 13 | Descuento por pago anual adelantado | D-02b |
+| 14 | Inafectaciones de arbitrios | D-02b |
+| 18 | Anuncios y propaganda: tasas por tipo y dimensión | D-02b |
+| 19 | Interés moratorio (TIM), que fija una ordenanza municipal | D-02b |
+| 23 | Costas y gastos del procedimiento coactivo | D-02c |
+| 25 | Cuadro único de infracciones y sanciones administrativas (CUIS) | D-02b |
+| 26 | Descuentos por pronto pago de papeletas | D-02c |
+| 28 | Interés del convenio de fraccionamiento y número máximo de cuotas | D-02b |
+
+**Las diez son de acto propio de la municipalidad, y el conjunto es por municipalidad**
+(`conjunto_uq` lleva `municipalidad_id` delante): una que todavía no ha aprobado su ordenanza de
+arbitrios y una que sí sellan cosas distintas el mismo año. Lo que **este repositorio** publica —lo
+de norma nacional— está completo para 2026; lo que falta lo pone cada municipalidad en su propio
+conjunto, y para ella sellar sin ello sigue siendo sellar un ejercicio incompleto. Con la corrección
+de arriba eso no es una puerta cerrada sino una versión 2 y un recálculo, y por eso **se nombran las
+diez** en vez de decir «faltan cosas»: quien selle tiene que poder ver si alguna es suya.
 
 ### Lo que sí está probado, contra `stg` real
 
@@ -238,7 +276,7 @@ recalcula antes de publicar una sola fila.
 | Cuadro | Estado |
 |---|---|
 | `vehicular-valores-referenciales-2026.md` | **Publicable hoy.** Su anexo es `fuentes/tvr-2026/tvr-2026.csv`, extraído mecánicamente y con su huella firmada; entran 54 111 filas |
-| `valores-unitarios-2026.md` | **No, y ya no por sus cifras ni por sus firmas.** Las 27 del Anexo I.2 están leídas del PDF y `VERIFICADO` desde el 2026-08-29. Le faltan tres cosas y una es de este directorio: **no tiene archivo de filas ni huella**, así que no hay fila que escribir aquí; `FilaDelManifiesto.CUADROS` no incluye `VALOR_UNITARIO`; y sus **3 partidas** conviven con las **7** que declara el esquema, de modo que publicarlas dejaría cuatro sin fila sin que nada lo dijera. Sigue además sólo la región Costa de las cuatro (GOB-03, H-14) |
+| `valores-unitarios-2026.md` | **Publicable desde `catastro#8`.** Las tres cosas que le faltaban se cerraron allí: su archivo de filas es `fuentes/valores-unitarios-2026/valores-unitarios-costa-2026.csv` —derivado del propio archivo del corpus, con su huella firmada—, `FilaDelManifiesto.CUADROS` ya incluye `VALOR_UNITARIO`, y la tercera resultó falsa al medirla: `valor_unitario_edificacion_partida_check` admite **exactamente** `MUROS`, `TECHOS` y `PUERTAS` desde `V58`/`V59`, no siete. Entran 24 filas. Sigue siendo sólo la región **Costa** de las cuatro (GOB-03, H-14), y con ADR-0017 eso es la forma correcta: `valor_unitario_uq` no tiene columna de región y las cuatro chocarían celda con celda |
 | `depreciacion.md` | **Publicable desde el 2026-08-29** (`V57`, H-15). Su archivo de filas es `fuentes/depreciacion-rnt-2016/depreciacion.csv`, **derivado del propio archivo del corpus** y no de un PDF —cabe entero en él— con su huella firmada; entran 492 filas, las cuatro tablas del Anexo I |
 
 `PublicarCuadros` rechaza el que falta **nombrando el motivo**, en vez de publicar un cuadro

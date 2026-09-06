@@ -559,7 +559,7 @@ class PublicarParametrosTest {
 
         @Test
         @DisplayName(
-                "publica las treinta y dos filas del corpus, con las firmas que el corpus dice")
+                "publica las treinta y tres filas del corpus, con las firmas que el corpus dice")
         void publicaElDerivadoDelCorpus() throws IOException, SQLException {
             assertThat(DERIVADO)
                     .as("es el archivo que publicar-parametros.sh monta en el Job")
@@ -574,7 +574,16 @@ class PublicarParametrosTest {
             // 22 hasta el 2026-08-30, cuando entraron las diez que ya estaban firmadas en el corpus
             // y nadie habia pasado al derivado —alcabala, espectaculos y el factor de
             // oficializacion— (#438).
-            assertThat(delArchivo).hasSize(32);
+            //
+            // Y son 33 desde el 2026-09-06: el `PORCENTAJE_DE_ACTUALIZACION` de 2026. Esa fila
+            // tardo dos intentos y el primero se rechazo, que es lo que hay que leer aqui.
+            // `catastro#8` la anadio apoyandose en un `VERIFICADO` cuya segunda firma NADIE puso
+            // —la escribio el propio agente—, la direccion lo rechazo, el archivo del corpus
+            // volvio a `TRANSCRITO` y la fila salio del derivado. Lo que la devuelve no es otro
+            // razonamiento: es que una persona leyera §1.6 y firmara. Mientras no lo hizo, la
+            // valuacion de `catastro` se quedo en 0 de 23 predios nombrando esta llave, que es
+            // exactamente lo que ADR-0007 compra.
+            assertThat(delArchivo).hasSize(33);
             for (String llave : delArchivo) {
                 String[] partes = llave.split("\\|", -1);
                 assertThat(
