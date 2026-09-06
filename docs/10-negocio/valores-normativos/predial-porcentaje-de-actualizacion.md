@@ -3,9 +3,9 @@
 | Campo | Valor |
 |---|---|
 | Norma | **TUO de la Ley de Tributación Municipal (D.S. N.° 156-2004-EF), art. 12** — el único porcentaje de actualización de la base imponible del predial que ese TUO contiene, ya confirmado como artículo 12 en §1.4. Se transcribe además el art. 14 (§1.2), que quedó descartado y por qué. **Lo que sigue sin confirmar es que la columna «% actualización» de M02 sea este artículo** (§1.1); §1.6 explica por qué lo que este archivo concluye para 2026 no depende de esa identificación |
-| Artículo | 12 del TUO LTM (§1.1, con su número ya confirmado en §1.4); y el art. 14 (§1.2), descartado |
+| Artículo | 12 |
 | Publicada | 2004-11-15, fecha del D.S. N.° 156-2004-EF que aprueba el TUO |
-| Ejercicios que rige | **2026, y sólo 2026.** §1.6 lee el supuesto del art. 12 contra ese ejercicio y ninguno más: el siguiente vuelve a necesitar la misma lectura y **no se hereda**. Verificado el 2026-09-06 (§1.6.1), el archivo está en `VERIFICADO` y su fila se publica |
+| Ejercicios que rige | **2026, y sólo 2026.** §1.6 lee el supuesto del art. 12 contra ese ejercicio y ninguno más: el siguiente vuelve a necesitar la misma lectura y **no se hereda** (§1.6.2, con la fecha en que sus dos resoluciones se podrán leer). Verificado el 2026-09-06 (§1.6.1), el archivo está en `VERIFICADO` y su fila se publica |
 | Filas de NEG-02 §2 | 33 |
 | Transcribió | Agent, 2026-08-30; el hecho del ejercicio 2026 (§1.6): Agent, 2026-09-06 |
 | Verificó | HNA, 2026-09-06 |
@@ -346,6 +346,35 @@ supuesto, pero eso es un razonamiento y no una lectura.
 `‹NO CONFIRMADO EN FUENTE OFICIAL: que no se haya publicado ningún Decreto Supremo de actualización
 de la base imponible para el ejercicio 2026. Lo confirmado es que el supuesto que lo habilitaría no
 se cumple›`.
+
+#### 1.6.2 El ejercicio 2027, y cualquier otro: la lectura **no se hereda**
+
+**Lo que §1.6 concluye vale para 2026 y se acaba el 31 de diciembre de 2026.** No es una cautela
+retórica: está escrito en la fila como `vigencia_hasta = 2026-12-31`, de modo que el 1 de enero de
+2027 el conjunto de ese ejercicio **no trae** `PORCENTAJE_DE_ACTUALIZACION` y toda valuación de 2027
+vuelve a fallar nombrando la llave. **Eso es lo correcto**, y es la diferencia entre un hecho y un
+valor por omisión: un valor por omisión se habría prorrogado solo.
+
+**Cuándo se puede hacer la lectura de 2027, y no antes.** El supuesto del art. 12 se lee contra dos
+publicaciones que salen **a fines de octubre o noviembre del año anterior**: las de 2026 se
+publicaron **las dos el 2025-10-30** —la R.M. 514-2025-EF/15 (aranceles, MEF) y la R.M.
+277-2025-VIVIENDA (valores unitarios)—. Hasta que las de 2027 aparezcan en El Peruano no hay nada
+que leer, y adelantar la conclusión sería exactamente el atajo que §1.6.1 cuenta.
+
+**Los cuatro pasos, cuando salgan**, que son los mismos que dio 2026:
+
+1. transcribir cada resolución en su archivo del corpus (`aranceles-2027.md`,
+   `valores-unitarios-2027.md`), con su fuente archivada y su primera firma;
+2. que una **segunda persona** los verifique — sin eso no se publica nada, ni ellos ni esta fila;
+3. añadir aquí un §1.6.3 que lea el supuesto del art. 12 contra 2027, citando esos dos archivos
+   como §1.6 cita los de 2026, y firmarlo a dos manos **después** de escribirlo, que es lo que la
+   guarda de las fechas comprueba desde el 2026-09-06;
+4. añadir la fila a `publicacion/parametros-2027.csv` con `vigencia_hasta = 2027-12-31`.
+
+**Y si algún año el supuesto SÍ se cumple** —falta una de las dos publicaciones—, este archivo no
+tiene la respuesta: hay que buscar el Decreto Supremo dictado al amparo del art. 12, y **antes de
+correr nada** decidir las dos cosas que §1.3 dejó sin poder probar con una captura de `0,00 %`: la
+forma de la fórmula y dónde se aplica.
 
 ## 2. Cómo entra al sistema
 
