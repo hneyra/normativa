@@ -3,6 +3,7 @@ package kamayuk.normativa.parametros.dominio;
 import java.util.Optional;
 import kamayuk.normativa.dominio.Alicuota;
 import kamayuk.normativa.dominio.Dinero;
+import kamayuk.normativa.dominio.ValorNormativo;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -64,6 +65,35 @@ public interface PublicacionDeCuadros {
             String estadoConservacion,
             @Nullable Integer antiguedadHasta,
             Alicuota porcentaje,
+            String documentoFuente);
+
+    /**
+     * Una celda del Cuadro de Valores Unitarios Oficiales de Edificacion (H-14, catastro#8).
+     *
+     * <p><b>Una region por edicion.</b> {@code valor_unitario_edificacion} no tiene columna de
+     * region y su unicidad es {@code (publicacion_id, partida, categoria,
+     * anio_construccion_desde)}: las cuatro regiones del Anexo I chocarian celda con celda dentro
+     * de una misma edicion. Con ADR-0017 eso no es una limitacion sino la forma —cada region es una
+     * edicion distinta y el conjunto de una municipalidad compone la suya—, y por eso este metodo
+     * no recibe la region: la lleva la CABECERA de la edicion, en su clave.
+     *
+     * @param partida una de las tres de apreciacion exterior: {@code MUROS}, {@code TECHOS} o
+     *     {@code PUERTAS} (V59). No son las siete de {@code construccion.categoria_*}, que son el
+     *     formulario de la ficha catastral y otra cosa
+     * @param categoria la letra del cuadro, {@code A}..{@code J}. La {@code J} solo existe en el
+     *     Anexo I.4 (Selva) y solo en muros y columnas (V58)
+     * @param anioConstruccionHasta el tope del tramo de ano de construccion; <b>nulo</b> es el
+     *     tramo abierto. El Anexo I <b>no</b> tiene dimension de ano de construccion —H-4 se
+     *     contesto leyendolo: es {@code categoria x partida}, y el ano entra en la tabla de
+     *     depreciacion— asi que hoy toda celda llega con un tramo unico y sin tope
+     */
+    void agregarValorUnitario(
+            long edicion,
+            String partida,
+            String categoria,
+            int anioConstruccionDesde,
+            @Nullable Integer anioConstruccionHasta,
+            ValorNormativo valorM2,
             String documentoFuente);
 
     /** Una fila del cuadro de valores referenciales de vehiculos. */

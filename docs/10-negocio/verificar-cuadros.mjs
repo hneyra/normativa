@@ -62,14 +62,23 @@ const COLUMNAS = [
 ];
 
 /* Los cuadros que `PublicarCuadros` sabe publicar, y tienen que ser los mismos que
-   `FilaDelManifiesto.CUADROS` del backend. `VALOR_UNITARIO` no esta porque su tabla
-   todavia no puede recibirlo sin perder una dimension: la R.M. anual del MVCS publica
-   un cuadro por region y el corpus solo trae Costa, ademas de faltarle la segunda
-   firma (GOB-03, H-14). `DEPRECIACION` estuvo fuera por lo mismo hasta V57 —cuatro
-   tablas, una por uso de la edificacion, y ninguna columna de uso donde ponerlas
-   (H-15)— y entra desde ahi. Un manifiesto que nombre lo que falta se rechaza aqui y
-   en el proceso, con el mismo motivo. */
-const CUADROS_PUBLICABLES = new Set(['VALOR_REFERENCIAL', 'DEPRECIACION']);
+   `FilaDelManifiesto.CUADROS` del backend. Los tres estan desde catastro#8, y cada
+   uno entro el dia que dejo de faltarle algo:
+
+     - `DEPRECIACION` estuvo fuera hasta V57 —el Anexo I publica cuatro tablas, una
+       por uso de la edificacion, y no habia columna de uso donde ponerlas (H-15)—;
+     - `VALOR_UNITARIO` estuvo fuera hasta catastro#8 por dos motivos que ya no son
+       ciertos: le faltaba la segunda firma —llego el 2026-08-29— y el vocabulario de
+       partidas eran siete contra las tres del anexo, que V58/V59 separo (la columna
+       admite hoy MUROS, TECHOS y PUERTAS, y la categoria `^[A-J]$`). Lo que quedaba
+       era el derivado con su sha256, y es lo que catastro#8 anade. Publica UNA
+       region por edicion —la Costa, Anexo I.2— porque la tabla no tiene columna de
+       region y su unicidad haria chocar las cuatro; con ADR-0017 esa es la forma
+       correcta y no una limitacion.
+
+   Un manifiesto que nombre lo que falta se rechaza aqui y en el proceso, con el mismo
+   motivo. */
+const CUADROS_PUBLICABLES = new Set(['VALOR_REFERENCIAL', 'DEPRECIACION', 'VALOR_UNITARIO']);
 
 const argumentos = process.argv.slice(2);
 function opcion(nombre, porOmision) {

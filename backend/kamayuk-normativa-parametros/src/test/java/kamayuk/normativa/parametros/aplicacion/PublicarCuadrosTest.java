@@ -65,6 +65,17 @@ class PublicarCuadrosTest {
     private static final String CABECERA_DE_DEPRECIACION =
             "tabla,material,estado_conservacion,antiguedad_hasta,porcentaje";
 
+    /** El derivado del Cuadro de Valores Unitarios que este repositorio versiona (H-14). */
+    private static final Path DERIVADO_DE_VALORES_UNITARIOS =
+            Path.of(
+                            "../../docs/10-negocio/valores-normativos/fuentes/"
+                                    + "valores-unitarios-2026/valores-unitarios-costa-2026.csv")
+                    .toAbsolutePath()
+                    .normalize();
+
+    private static final String CABECERA_DE_VALORES_UNITARIOS =
+            "partida,categoria,anio_construccion_desde,anio_construccion_hasta,valor_m2";
+
     private static final String CABECERA_DEL_ANEXO =
             "categoria,marca,modelo_anterior,modelo,valor_1,valor_2,valor_3";
 
@@ -173,11 +184,23 @@ class PublicarCuadrosTest {
     @Test
     @DisplayName("un cuadro que el proceso no sabe publicar se rechaza nombrando el motivo")
     void unCuadroQueNoSePuedePublicarSeRechaza() throws IOException {
-        // El ejemplo era DEPRECIACION hasta que V57 le dio a `depreciacion` su columna de uso y
-        // paso a ser publicable (H-15). El que queda es el de valores unitarios, y por dos motivos
-        // que este proceso no puede resolver: la R.M. anual publica un cuadro por region y el
-        // corpus solo trae Costa, y su archivo volvio a TRANSCRITO al cotejarlo contra el Anexo I.2
-        // real (GOB-03, H-14).
+        // El ejemplo ha cambiado DOS veces, y las dos por lo mismo: dejo de ser cierto que el
+        // proceso no supiera publicarlo. Era DEPRECIACION hasta que V57 le dio a `depreciacion` su
+        // columna de uso (H-15), y era VALOR_UNITARIO hasta catastro#8, que le trajo su derivado
+        // con sha256 sobre un vocabulario de partidas que V58/V59 ya habia separado (H-14).
+        //
+        // El que queda es el ANEXO III de la misma R.M. 277-2025-VIVIENDA —los valores unitarios a
+        // costo directo de obras complementarias—, y lo que le falta no es codigo: no esta
+        // transcrito en el corpus, y antes de transcribirlo hay que decidir que significa, porque
+        // la propia resolucion dice que esos valores «pueden ser utilizados de manera OPCIONAL por
+        // los Gobiernos Locales o contribuyentes como una guia» mientras su Anexo II manda el
+        // camino del analisis de costos unitarios con el factor de oficializacion
+        // (`obras-complementarias-y-oficializacion-2026.md` §3).
+        //
+        // Un ejemplo que deja de ser cierto convierte esta prueba en una que no puede fallar, asi
+        // que cuando el Anexo III entre habra que buscar otro — y si no queda ninguno, lo que hay
+        // que comprobar es que un cuadro INVENTADO se sigue rechazando, que es lo que la lista
+        // blanca protege.
         Path filas = filasFicticias("MARCA-D", "MODELO-D");
         Path manifiesto =
                 escribir(
@@ -188,7 +211,8 @@ class PublicarCuadrosTest {
                                 + filas.getFileName()
                                 + ","
                                 + huella(filas)
-                                + ",valores-unitarios-2026.md,JNA,HNA,VALOR_UNITARIO\n");
+                                + ",obras-complementarias-y-oficializacion-2026.md,Agent,HNA,"
+                                + "VALOR_UNITARIO_OBRA_COMPLEMENTARIA\n");
 
         InformeDeImportacion informe = proceso.publicar(manifiesto);
 
@@ -416,6 +440,148 @@ class PublicarCuadrosTest {
         List<String> lineas = Files.readAllLines(MANIFIESTO, StandardCharsets.UTF_8);
         assertThat(lineas).anyMatch(linea -> linea.endsWith(",VALOR_REFERENCIAL"));
         assertThat(lineas).anyMatch(linea -> linea.endsWith(",DEPRECIACION"));
+        assertThat(lineas).anyMatch(linea -> linea.endsWith(",VALOR_UNITARIO"));
+    }
+
+    // ------------------------------------------------------------------
+    // El Cuadro de Valores Unitarios Oficiales de Edificacion (H-14, catastro#8)
+    // ------------------------------------------------------------------
+
+    @Test
+    @DisplayName("la matriz del Anexo I.2 entra entera, sin municipalidad y con su tramo abierto")
+    void laMatrizDeValoresUnitariosEntraEntera() throws IOException {
+        Path manifiesto = manifiestoDeValoresUnitarios("2031-01-01");
+
+        InformeDeImportacion informe = proceso.publicar(manifiesto);
+        long edicion = edicionDeValoresUnitarios("2031-01-01");
+
+        assertThat(informe.rechazadas()).isEmpty();
+        assertThat(informe.nuevas())
+                .as(
+                        "el derivado que se despliega trae las celdas con cifra, y todas tienen que"
+                                + " entrar")
+                .isEqualTo(filasDelDerivadoDeValoresUnitarios());
+        assertThat(filasDeValoresUnitarios(edicion))
+                .isEqualTo(filasDelDerivadoDeValoresUnitarios());
+        assertThat(partidasDeValoresUnitarios(edicion))
+                .as(
+                        "las TRES partidas de apreciacion exterior del anexo, no las siete de la ficha"
+                                + " catastral (V59)")
+                .containsExactly("MUROS", "PUERTAS", "TECHOS");
+        assertThat(municipalidadesDeValoresUnitarios(edicion))
+                .as("un cuadro nacional no lleva municipalidad: es de todas (ARQ-09 §2.1)")
+                .isZero();
+        assertThat(
+                        jdbc.sql(
+                                        "SELECT count(*) FROM valor_unitario_edificacion"
+                                                + " WHERE publicacion_id = :edicion"
+                                                + "   AND anio_construccion_hasta IS NOT NULL")
+                                .param("edicion", edicion)
+                                .query(Integer.class)
+                                .single())
+                .as(
+                        "el Anexo I.2 no tiene dimension de ano de construccion: H-4 se contesto"
+                                + " leyendolo, y el ano entra en la tabla de depreciacion")
+                .isZero();
+    }
+
+    @Test
+    @DisplayName(
+            "las tres celdas de puntos suspensivos no producen fila: una celda que falta no"
+                    + " vale cero")
+    void lasCeldasDePuntosNoProducenFila() throws IOException {
+        proceso.publicar(manifiestoDeValoresUnitarios("2032-01-01"));
+        long edicion = edicionDeValoresUnitarios("2032-01-01");
+
+        // Nueve categorias por tres partidas son 27 celdas. Tres de ellas son puntos suspensivos
+        // en el propio cuadro —muros en H e I, techos en I— y §1.1 del corpus lo dice: «no son un
+        // dato que falte en esta transcripcion ni un cero». La cifra de la izquierda es lo que la
+        // matriz tiene; la de la derecha, lo que la norma publica.
+        assertThat(filasDeValoresUnitarios(edicion))
+                .as("las celdas con cifra del Anexo I.2, sin las tres de puntos suspensivos")
+                .isEqualTo(24);
+        assertThat(
+                        jdbc.sql(
+                                        "SELECT count(*) FROM valor_unitario_edificacion"
+                                                + " WHERE publicacion_id = :edicion"
+                                                + "   AND partida = 'MUROS'"
+                                                + "   AND categoria IN ('H', 'I')")
+                                .param("edicion", edicion)
+                                .query(Integer.class)
+                                .single())
+                .as(
+                        "muros en H e I son puntos suspensivos: la fila no existe, y quien la busque"
+                                + " tiene que fallar nombrandola en vez de valorizar al 0,00 (#48)")
+                .isZero();
+        assertThat(
+                        jdbc.sql(
+                                        "SELECT count(*) FROM valor_unitario_edificacion"
+                                                + " WHERE publicacion_id = :edicion"
+                                                + "   AND valor_m2 = 0")
+                                .param("edicion", edicion)
+                                .query(Integer.class)
+                                .single())
+                .as(
+                        "y los dos 0.00 EXPLICITOS del cuadro —techos en H, «SIN TECHO»; puertas en I,"
+                                + " «SIN PUERTAS NI VENTANAS»— si se publican, porque los publica la norma")
+                .isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("una celda con una partida que el anexo no publica se rechaza nombrandola")
+    void unaPartidaQueElAnexoNoPublicaSeRechaza() throws IOException {
+        Path filas =
+                escribir(
+                        "valores-unitarios-partida-de-la-ficha.csv",
+                        CABECERA_DE_VALORES_UNITARIOS + "\nREVESTIMIENTOS,C,1990,,100.00\n");
+
+        InformeDeImportacion informe =
+                proceso.publicar(manifiestoDeValoresUnitariosCon("2033-01-01", filas));
+
+        assertThat(informe.rechazadas())
+                .singleElement()
+                .extracting(InformeDeImportacion.FilaRechazada::motivo, STRING)
+                .contains("no es una de las tres partidas de apreciacion exterior");
+    }
+
+    @Test
+    @DisplayName("una celda con el valor vacio se rechaza: no se publica con cero")
+    void unaCeldaSinValorSeRechaza() throws IOException {
+        Path filas =
+                escribir(
+                        "valores-unitarios-sin-valor.csv",
+                        CABECERA_DE_VALORES_UNITARIOS + "\nMUROS,H,1990,,\n");
+
+        InformeDeImportacion informe =
+                proceso.publicar(manifiestoDeValoresUnitariosCon("2034-01-01", filas));
+
+        assertThat(informe.rechazadas())
+                .singleElement()
+                .extracting(InformeDeImportacion.FilaRechazada::motivo, STRING)
+                .contains("no se publica con cero, no se publica");
+    }
+
+    @Test
+    @DisplayName("la misma celda dos veces en una edicion la rechaza la base, no un `if`")
+    void laMismaCeldaDosVecesSeRechaza() throws IOException {
+        Path filas =
+                escribir(
+                        "valores-unitarios-repetida.csv",
+                        CABECERA_DE_VALORES_UNITARIOS
+                                + "\nMUROS,C,1990,,387.43\nMUROS,C,1990,,999.99\n");
+
+        InformeDeImportacion informe =
+                proceso.publicar(manifiestoDeValoresUnitariosCon("2035-01-01", filas));
+
+        // Lo que la rechaza es `valor_unitario_uq` (publicacion_id, partida, categoria,
+        // anio_construccion_desde), y por eso las cuatro regiones del Anexo I NO caben en una
+        // misma edicion: chocarian celda con celda. Esa es la medida de por que se publica una
+        // region por edicion (ADR-0017), y no una preferencia.
+        assertThat(informe.nuevas()).isEqualTo(1);
+        assertThat(informe.rechazadas())
+                .singleElement()
+                .extracting(InformeDeImportacion.FilaRechazada::motivo, STRING)
+                .contains("Ya estaba publicada en esta edicion");
     }
 
     // ------------------------------------------------------------------
@@ -581,6 +747,95 @@ class PublicarCuadrosTest {
                 .query(BigDecimal.class)
                 .optional()
                 .orElse(null);
+    }
+
+    // ---------- El Cuadro de Valores Unitarios (H-14, catastro#8) ----------
+
+    /**
+     * El derivado real del corpus, copiado tal cual al directorio temporal.
+     *
+     * <p>Igual que el de la depreciacion: se copia byte a byte —la huella se recalcula sobre la
+     * copia— para que el manifiesto temporal pueda nombrarlo como hermano suyo sin tocar el
+     * desplegado.
+     */
+    private static Path derivadoDeValoresUnitarios() throws IOException {
+        Path copia = directorio.resolve("valores-unitarios-del-corpus.csv");
+        if (!Files.exists(copia)) {
+            Files.copy(DERIVADO_DE_VALORES_UNITARIOS, copia);
+        }
+        return copia;
+    }
+
+    /** Cuantas filas trae el derivado desplegado, contadas ahi y no escritas aqui. */
+    private static int filasDelDerivadoDeValoresUnitarios() throws IOException {
+        try (var lineas = Files.lines(DERIVADO_DE_VALORES_UNITARIOS, StandardCharsets.UTF_8)) {
+            return (int) lineas.filter(linea -> !linea.isBlank()).count() - 1; // menos la cabecera
+        }
+    }
+
+    private static Path manifiestoDeValoresUnitarios(String desde) throws IOException {
+        return manifiestoDeValoresUnitariosCon(desde, derivadoDeValoresUnitarios());
+    }
+
+    private static Path manifiestoDeValoresUnitariosCon(String desde, Path filas)
+            throws IOException {
+        String ejercicio = desde.substring(0, 4);
+        return escribir(
+                "manifiesto-valores-unitarios-" + ejercicio + ".csv",
+                CABECERA
+                        + "\nTABLA_FICTICIA_VALORES_UNITARIOS,"
+                        + ejercicio
+                        + ","
+                        + desde
+                        + ","
+                        + ejercicio
+                        + "-12-31,Norma de mentira 000-0000-XX,"
+                        + filas.getFileName()
+                        + ","
+                        + huella(filas)
+                        + ",valores-unitarios-2026.md,JNA,HNA,VALOR_UNITARIO\n");
+    }
+
+    private static long edicionDeValoresUnitarios(String desde) {
+        return publicacion
+                .edicionPublicada(
+                        new LlaveDeParametro(
+                                "TABLA_FICTICIA_VALORES_UNITARIOS",
+                                desde.substring(0, 4),
+                                java.time.LocalDate.parse(desde)))
+                .orElseThrow()
+                .id();
+    }
+
+    private static int filasDeValoresUnitarios(long edicion) {
+        Integer cuantas =
+                jdbc.sql(
+                                "SELECT count(*) FROM valor_unitario_edificacion"
+                                        + " WHERE publicacion_id = :edicion")
+                        .param("edicion", edicion)
+                        .query(Integer.class)
+                        .single();
+        return cuantas == null ? 0 : cuantas;
+    }
+
+    private static List<String> partidasDeValoresUnitarios(long edicion) {
+        return jdbc.sql(
+                        "SELECT DISTINCT partida FROM valor_unitario_edificacion"
+                                + " WHERE publicacion_id = :edicion ORDER BY partida")
+                .param("edicion", edicion)
+                .query(String.class)
+                .list();
+    }
+
+    private static int municipalidadesDeValoresUnitarios(long edicion) {
+        Integer cuantas =
+                jdbc.sql(
+                                "SELECT count(municipalidad_id) FROM valor_unitario_edificacion"
+                                        + " WHERE publicacion_id = :edicion")
+                        .param("edicion", edicion)
+                        .query(Integer.class)
+                        .single();
+        return cuantas == null ? 0 : cuantas;
     }
 
     private static int filasDe(String modelo) {
