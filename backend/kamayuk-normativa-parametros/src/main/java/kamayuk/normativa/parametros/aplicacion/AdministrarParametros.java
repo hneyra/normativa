@@ -201,9 +201,20 @@ public class AdministrarParametros {
      * Sella el conjunto: a partir de aqui rige, y no se modifica.
      *
      * <p>Es el acto administrativo del que cuelga la reproducibilidad de todo el ejercicio. Por eso
-     * queda con fecha y con nombre, y por eso el rechazo de un segundo sellado no depende de esta
-     * comprobacion sino del disparador y del indice unico de la base (V9): entre leer el estado y
-     * escribirlo cabe otra transaccion.
+     * queda con fecha y con nombre, y por eso el rechazo de un segundo sellado <b>del mismo
+     * conjunto</b> no depende de esta comprobacion sino del disparador {@code
+     * conjunto_sellado_inmutable}: entre leer el estado y escribirlo cabe otra transaccion, y el
+     * disparador rechaza el UPDATE igual.
+     *
+     * <p><b>Lo que este javadoc decia y el esquema no dice:</b> que ademas lo sujetaba «el indice
+     * unico de la base (V9)». {@code conjunto_sellado_uq} <b>no existe</b>, y no se perdio al
+     * aplanar el baseline: {@code V10__varias_versiones_selladas.sql} lo borro a proposito porque
+     * ARQ-09 §3 exige lo contrario —un arancel corregido a mitad de ano abre una version nueva y se
+     * sella tambien—. Lo que queda es {@code conjunto_sellado_vigente_ix}, que NO es unico, y
+     * {@code ParametrosRepositoryJdbc.selladoVigenteDe} ordena por version y toma la ultima. El
+     * README de {@code valores-normativos/publicacion/} ya trae esta correccion con su medida; este
+     * javadoc se habia quedado atras, que es peor que no decir nada: lo lee quien va a cambiar el
+     * metodo.
      */
     @Transactional
     public ConjuntoDeParametros sellar(long conjuntoId, Observacion observacion) {

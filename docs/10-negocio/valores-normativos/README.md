@@ -22,6 +22,7 @@ reporta el verificador; no se repite aquí para que este índice no pueda mentir
 | [`predial-deducciones.md`](predial-deducciones.md) | Deducciones: pensionista y adulto mayor no pensionista |
 | [`predial-deduccion-amazonia.md`](predial-deduccion-amazonia.md) | Deducción del predio en la Amazonía |
 | [`predial-plazos-y-reajuste.md`](predial-plazos-y-reajuste.md) | Vencimientos del predial y reajuste por IPM |
+| [`predial-porcentaje-de-actualizacion.md`](predial-porcentaje-de-actualizacion.md) | El `% actualización` del art. 12: qué se buscó, qué se descartó, y por qué en 2026 vale `0` |
 | [`valores-unitarios-2026.md`](valores-unitarios-2026.md) | Valores unitarios oficiales de edificación, 2026 |
 | [`obras-complementarias-y-oficializacion-2026.md`](obras-complementarias-y-oficializacion-2026.md) | Obras complementarias y factor de oficialización, 2026 |
 | [`depreciacion.md`](depreciacion.md) | Tabla de depreciación por material, antigüedad y estado |
@@ -35,6 +36,7 @@ reporta el verificador; no se repite aquí para que este índice no pueda mentir
 | [`valores-plazos-de-reclamacion.md`](valores-plazos-de-reclamacion.md) | Plazos de reclamación de valores y exigibilidad coactiva |
 | [`transito-tabla-de-infracciones.md`](transito-tabla-de-infracciones.md) | Tabla de infracciones de tránsito |
 | [`derecho-tramite-licencia-edificacion-catacaos-2023.md`](derecho-tramite-licencia-edificacion-catacaos-2023.md) | Derecho de trámite del TUPA para la licencia de edificación (Catacaos) |
+| [`derecho-tramite-catacaos-2023-rentas-licencias-y-publicidad.md`](derecho-tramite-catacaos-2023-rentas-licencias-y-publicidad.md) | Derecho de trámite del TUPA para rentas y coactiva, licencia de funcionamiento y publicidad (Catacaos) |
 
 Y lo que no es una norma: [`_plantilla.md`](_plantilla.md) (la forma de un archivo nuevo),
 [`_muestras/`](_muestras/) (los archivos rotos a propósito con que se demuestra que el verificador

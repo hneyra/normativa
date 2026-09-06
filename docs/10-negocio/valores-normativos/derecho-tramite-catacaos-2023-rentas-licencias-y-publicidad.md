@@ -211,10 +211,11 @@ procedimiento, no la tasa anual que algunos municipios cobran aparte.
 
 - **El tipo `DERECHO_TRAMITE` no existe** en el código: no hay puerto, ni llave, ni 422 que lo
   nombre. Es lo que hay que construir antes de publicar una sola de estas filas (§2).
-- **La segunda firma.** Este archivo está `TRANSCRITO`, no `VERIFICADO`. Las cifras salen de leer
-  **escaneos sin capa de texto** —la Sección 1 del TUPA no la tiene—, y ADR-0007 pide que quien
-  verifique no sea quien transcribió. Firmarlo sin releer las 66 páginas sería convertir la doble
-  firma en un trámite.
+- **La segunda firma ya no falta**: llegó el **2026-09-06** (HNA), sobre unas cifras que salen de
+  leer **escaneos sin capa de texto** —la Sección 1 del TUPA no la tiene—. Lo que sigue impidiendo
+  publicar una sola de estas 34 filas es el punto de arriba: **no hay tipo, ni puerto, ni llave, ni
+  422 que las nombre**. Un archivo `VERIFICADO` que no publica nada es un estado legítimo del
+  corpus, y `verificar-publicacion.mjs` lo cuenta en su libro mayor para que se vea.
 - **El resto del TUPA sigue sin transcribir.** De las 495 páginas de la Sección 1, este archivo y el
   de licencia de edificación cubren 15–204, 302–315, 352–375 y 468–509. Quedan fuera: habilitaciones
   urbanas y sus modificaciones (205–301), certificados y registros catastrales (316–351) —donde están
