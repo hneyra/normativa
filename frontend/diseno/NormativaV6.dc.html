@@ -1,0 +1,2390 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&amp;display=swap" />
+<style>
+  @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+  @keyframes pop { from { opacity: 0; transform: translateY(-6px) scale(.985) } to { opacity: 1; transform: none } }
+  @keyframes subir { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: none } }
+  html, body { margin: 0; height: 100%; background: #F2F6F9; color: #16232C; font-family: 'Source Sans 3', system-ui, sans-serif; font-size: 15px; -webkit-font-smoothing: antialiased }
+  * { box-sizing: border-box }
+  a { color: #005284; text-decoration: none }
+  a:hover { text-decoration: underline; text-underline-offset: 3px }
+  input, select, textarea, button { font: inherit; color: inherit }
+  :focus-visible { outline: 2px solid #52BDEF; outline-offset: 2px }
+  input:focus, select:focus, textarea:focus { border-color: #005284; box-shadow: 0 0 0 3px #D3EBFA; outline: none }
+  ::placeholder { color: #93A3AF }
+  ::-webkit-scrollbar { width: 10px; height: 10px }
+  ::-webkit-scrollbar-thumb { background: #C3CFD9; border-radius: 8px }
+  ::-webkit-scrollbar-thumb:hover { background: #A7B7C4 }
+  [data-ancho="1"] { grid-column: 1 / -1 }
+  [data-sticky] th { position: sticky; top: 0; z-index: 2 }
+  @media (max-width: 1240px) { [data-lista] { flex: 0 0 320px !important; width: 320px !important } }
+  @media (max-width: 900px) {
+    [data-split] { flex-direction: column !important }
+    [data-lista] { flex: 0 0 auto !important; width: 100% !important; max-height: 300px; border-right: 0 !important; border-bottom: 1px solid #D6DEE4 !important }
+  }
+  @media (max-width: 760px) { [data-sm-hide] { display: none !important } }
+  /* El selector de marco y el de estado son controles del prototipo: se
+     retiran antes que cualquier elemento de la aplicación. */
+  @media (max-width: 1180px) { [data-marco-hide] { display: none !important } }
+  @media (prefers-reduced-motion: reduce) { * { animation-duration: .01ms !important } }
+</style>
+</helmet>
+
+<div style="display:flex; flex-direction:column; height:100vh; overflow:hidden; background:#F2F6F9">
+
+  <!-- ══════════ LANZADOR DE MÓDULOS ══════════ -->
+  <sc-if value="{{ lanzador }}">
+    <div onClick="{{ cerrarLanzador }}" style="position:fixed; inset:0; z-index:80"></div>
+    <div role="dialog" aria-label="Módulos del sistema" style="position:fixed; z-index:81; top:56px; right:10px; width:min(560px,calc(100vw - 20px)); background:#fff; border:1px solid #D6DEE4; border-radius:10px; box-shadow:0 18px 48px rgba(0,54,90,.2); overflow:hidden; animation:pop .14s ease">
+      <div style="display:flex; align-items:baseline; gap:10px; padding:14px 16px 12px; border-bottom:1px solid #E3E9EE">
+        <p style="margin:0; flex:1; font-size:15px; font-weight:700">Módulos</p>
+        <p style="margin:0; font-size:12.5px; color:#5A6B78">Los trece comparten este marco</p>
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(168px,1fr)); gap:0; padding:6px">
+        <sc-for list="{{ modulos }}" as="m" hint-placeholder-count="13">
+          <button onClick="{{ m.ir }}" aria-current="{{ m.actual }}" style="{{ m.style }}" style-hover="background:#EFF7FC">
+            <span style="{{ m.iconStyle }}">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                <sc-for list="{{ m.icon }}" as="p" hint-placeholder-count="3">
+                  <path d="{{ p.d }}"></path>
+                </sc-for>
+              </svg>
+            </span>
+            <span style="flex:1; min-width:0; text-align:left; font-size:13.5px; line-height:1.3; text-wrap:pretty">{{ m.label }}</span>
+          </button>
+        </sc-for>
+      </div>
+      <p style="margin:0; padding:11px 16px; border-top:1px solid #E3E9EE; background:#F7FBFE; font-size:12.5px; color:#5A6B78">El ejercicio de trabajo es global a la sesión. Aquí decide qué conjunto se compone; en los demás módulos, con qué cifras se calcula.</p>
+    </div>
+  </sc-if>
+
+  <!-- ══════════ PALETA DE COMANDOS ══════════ -->
+  <sc-if value="{{ pal }}">
+    <div onClick="{{ cerrarPal }}" style="position:fixed; inset:0; z-index:82; background:rgba(22,35,44,.38)"></div>
+    <div role="dialog" aria-label="Buscar" style="position:fixed; z-index:83; top:12vh; left:50%; transform:translateX(-50%); width:min(620px,92vw); background:#fff; border:1px solid #D6DEE4; border-radius:10px; box-shadow:0 22px 56px rgba(0,54,90,.26); overflow:hidden; animation:pop .14s ease">
+      <div style="display:flex; align-items:center; gap:11px; padding:14px 16px; border-bottom:1px solid #E3E9EE">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5A6B78" stroke-width="1.8" stroke-linecap="round" style="flex:0 0 auto"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4.3-4.3"></path></svg>
+        <input value="{{ pq }}" onChange="{{ onPq }}" autofocus="{{ true }}" placeholder="Una llave, un tipo, un ejercicio, una acción…" style="flex:1; border:0; background:transparent; padding:2px 0; font-size:16px; outline:none" />
+        <kbd style="font-size:11px; color:#93A3AF; border:1px solid #D6DEE4; border-radius:4px; padding:2px 6px">Esc</kbd>
+      </div>
+      <div style="max-height:54vh; overflow:auto">
+        <sc-for list="{{ palRes }}" as="r" hint-placeholder-count="6">
+          <button onClick="{{ r.ir }}" style="display:flex; align-items:center; gap:12px; width:100%; text-align:left; border:0; border-bottom:1px solid #E3E9EE; background:transparent; padding:11px 16px; cursor:pointer" style-hover="background:#EFF7FC">
+            <span style="{{ r.tipoStyle }}">{{ r.tipo }}</span>
+            <span style="flex:1; min-width:0; font-size:14.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ r.label }}</span>
+            <span data-sm-hide="1" style="font-size:12.5px; color:#5A6B78; flex:0 0 auto">{{ r.nota }}</span>
+          </button>
+        </sc-for>
+      </div>
+      <div style="display:flex; justify-content:space-between; gap:10px; padding:9px 16px; background:#F7FBFE; font-size:12px; color:#5A6B78">
+        <span>{{ palPie }}</span>
+        <span>Ctrl K</span>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ══════════ BARRA GLOBAL ══════════
+       La misma de V6: 52 px de alto, del azul #00365A. A la izquierda el
+       conmutador del panel y la entidad; a la derecha, y en este orden desde
+       el borde, el usuario, el lanzador, el buscador y el ejercicio. -->
+  <header style="flex:0 0 auto; display:flex; align-items:center; gap:12px; height:52px; padding:0 12px 0 8px; background:#00365A; z-index:50">
+    <button onClick="{{ abrirSecciones }}" aria-label="Mostrar u ocultar las secciones de Normativa" aria-expanded="{{ secAria }}" title="{{ seccionesTitulo }}" style="{{ seccionesStyle }}">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"></path></svg>
+    </button>
+
+    <span style="display:flex; align-items:center; gap:10px; flex:1 1 auto; min-width:0">
+      <img src="escudo-catacaos.png" alt="Escudo de la municipalidad" width="30" height="36" style="display:block; width:auto; height:36px; flex:0 0 auto" />
+      <span style="flex:1 1 auto; min-width:0; line-height:1.15">
+        <span style="display:block; font-size:14.5px; font-weight:700; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ entidad }}</span>
+        <span data-sm-hide="1" style="display:block; font-size:10.5px; color:#9FC6DF">Sistema de gestión tributaria municipal</span>
+      </span>
+    </span>
+
+    <sc-if value="{{ aviso }}">
+      <button onClick="{{ verAviso }}" aria-label="{{ avisoAria }}" title="{{ avisoAria }}" style="position:relative; display:grid; place-items:center; width:32px; height:32px; border:1px solid rgba(255,255,255,.2); border-radius:6px; background:rgba(255,255,255,.09); color:#fff; cursor:pointer; flex:0 0 auto" style-hover="background:rgba(255,255,255,.18)">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 15.6V10.5a6 6 0 0 0-12 0v5.1L4.4 18h15.2z"></path>
+          <path d="M9.8 18a2.2 2.2 0 0 0 4.4 0"></path>
+        </svg>
+        <span style="position:absolute; top:-5px; right:-5px; min-width:17px; height:17px; padding:0 4px; border-radius:999px; display:grid; place-items:center; font-size:10.5px; font-weight:700; background:#C0492F; color:#fff; border:1.5px solid #00365A">{{ avisosN }}</span>
+      </button>
+    </sc-if>
+
+    <!-- El ejercicio de trabajo. Aquí no elige con qué se calcula: elige de
+         qué ejercicio se compone y se sella el conjunto. -->
+    <div style="display:flex; align-items:center; gap:7px; border:1px solid rgba(255,255,255,.2); border-radius:6px; padding:3px 4px 3px 10px; background:rgba(255,255,255,.09); flex:0 0 auto">
+      <span data-sm-hide="1" style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:#9FC6DF">Ejercicio</span>
+      <select value="{{ ejercicio }}" onChange="{{ onEjercicio }}" aria-label="Ejercicio de trabajo" style="border:0; background:#E4F4FD; color:#004670; border-radius:4px; padding:3px 7px; font-size:13px; font-weight:600; cursor:pointer">
+        <sc-for list="{{ anios }}" as="a" hint-placeholder-count="4">
+          <option value="{{ a }}">{{ a }}</option>
+        </sc-for>
+      </select>
+    </div>
+
+    <button onClick="{{ abrirPal }}" aria-label="Buscar" title="Buscar — Ctrl K" style="display:grid; place-items:center; width:32px; height:32px; border:1px solid rgba(255,255,255,.2); border-radius:6px; background:rgba(255,255,255,.09); color:#fff; cursor:pointer; flex:0 0 auto" style-hover="background:rgba(255,255,255,.18)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4.3-4.3"></path></svg>
+    </button>
+
+    <button onClick="{{ abrirLanzador }}" aria-label="Ver todos los módulos" aria-expanded="{{ lanzador }}" title="Todos los módulos" style="{{ lanzadorStyle }}">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor">
+        <sc-for list="{{ puntos }}" as="p" hint-placeholder-count="9">
+          <circle cx="{{ p.x }}" cy="{{ p.y }}" r="1.9"></circle>
+        </sc-for>
+      </svg>
+    </button>
+
+    <div style="position:relative; border-left:1px solid rgba(255,255,255,.18); padding-left:12px; flex:0 0 auto">
+      <button onClick="{{ abrirSesion }}" aria-expanded="{{ sesionAria }}" aria-label="Sesión de H. Neyra Alama" style="{{ sesionStyle }}" style-hover="background:rgba(255,255,255,.14)">
+        <span style="width:27px; height:27px; border-radius:50%; background:#E4F4FD; color:#004670; display:grid; place-items:center; font-size:11.5px; font-weight:700; flex:0 0 auto">HN</span>
+        <span data-sm-hide="1" style="line-height:1.2; text-align:left">
+          <span style="display:block; font-size:12.5px; font-weight:600; color:#fff">H. Neyra Alama</span>
+          <span style="display:block; font-size:10.5px; color:#9FC6DF">Normativa · parámetros</span>
+        </span>
+        <span style="{{ sesionCaret }}">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5l6 6 6-6"></path></svg>
+        </span>
+      </button>
+
+      <sc-if value="{{ sesionAbierta }}">
+        <div onClick="{{ cerrarSesion }}" style="position:fixed; inset:0; z-index:84"></div>
+        <div role="menu" aria-label="Sesión" style="position:absolute; z-index:85; top:44px; right:0; width:min(276px,calc(100vw - 24px)); background:#fff; border:1px solid #D6DEE4; border-radius:9px; box-shadow:0 16px 42px rgba(0,54,90,.22); overflow:hidden; animation:pop .13s ease">
+          <div style="display:flex; align-items:center; gap:10px; padding:13px 14px; border-bottom:1px solid #E3E9EE">
+            <span style="width:34px; height:34px; border-radius:50%; background:#E4F4FD; color:#004670; display:grid; place-items:center; font-size:13px; font-weight:700; flex:0 0 auto">HN</span>
+            <span style="flex:1; min-width:0; line-height:1.25">
+              <span style="display:block; font-size:13.5px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">H. Neyra Alama</span>
+              <span style="display:block; font-size:11.5px; color:#5A6B78">hneyra · acceso «parametros»</span>
+            </span>
+          </div>
+          <p style="margin:0; padding:9px 14px; border-bottom:1px solid #E3E9EE; background:#F7FBFE; font-size:11.5px; line-height:1.5; color:#5A6B78; text-wrap:pretty">Componer y sellar es de esta sesión. <b>Publicar un valor normativo no</b>: eso lo hace <code>rol_carga_parametros</code>, que la aplicación no usa nunca (REQ-03).</p>
+          <div style="padding:5px">
+            <sc-for list="{{ sesionOpciones }}" as="o" hint-placeholder-count="3">
+              <button onClick="{{ o.ir }}" role="menuitem" style="{{ o.style }}" style-hover="background:#EFF7FC">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto">
+                  <sc-for list="{{ o.icon }}" as="p" hint-placeholder-count="2">
+                    <path d="{{ p.d }}"></path>
+                  </sc-for>
+                </svg>
+                <span style="flex:1; min-width:0; text-align:left; font-size:13.5px">{{ o.label }}</span>
+              </button>
+            </sc-for>
+          </div>
+          <sc-if value="{{ haySucias }}">
+            <p style="margin:0; padding:10px 14px; border-top:1px solid #E3E9EE; background:#FFF4D9; font-size:12px; line-height:1.5; color:#7A5200; text-wrap:pretty">{{ avisoSucias }}</p>
+          </sc-if>
+        </div>
+      </sc-if>
+    </div>
+  </header>
+
+  <div style="flex:1; display:flex; min-height:0; overflow:hidden">
+
+  <sc-if value="{{ secOpen }}">
+      <aside aria-label="Módulos y submódulos" style="{{ panel.asideStyle }}">
+
+        <div style="flex:0 0 auto; padding:10px 11px; border-bottom:1px solid #E3E9EE">
+          <div style="display:flex; align-items:center; gap:7px; border:1px solid #D6DEE4; border-radius:6px; padding:6px 9px; background:#F7FBFE">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5A6B78" stroke-width="1.8" stroke-linecap="round" style="flex:0 0 auto"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4.3-4.3"></path></svg>
+            <input value="{{ filtro }}" onChange="{{ onFiltro }}" placeholder="Filtrar módulos y submódulos" aria-label="Filtrar módulos y submódulos" style="flex:1; min-width:0; border:0; background:transparent; font-size:12.5px; outline:none" />
+            <sc-if value="{{ hayFiltro }}">
+              <button onClick="{{ limpiarFiltro }}" aria-label="Quitar el filtro" style="border:0; background:transparent; padding:0; cursor:pointer; color:#93A3AF; flex:0 0 auto">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+              </button>
+            </sc-if>
+          </div>
+          <sc-if value="{{ hayFiltro }}">
+            <p style="margin:7px 2px 0; font-size:11px; color:#5A6B78">{{ filtroConteo }}</p>
+          </sc-if>
+        </div>
+
+        <!-- ══ A · Acordeón con chevrón ══ Es la única variante que se porta. -->
+        <sc-if value="{{ panel.esA }}">
+          <div style="flex:1; min-width:0; display:flex; flex-direction:column; overflow:auto">
+            <div style="padding:7px 7px 10px; display:flex; flex-direction:column; gap:1px">
+              <sc-for list="{{ arbolModulos }}" as="m" hint-placeholder-count="13">
+                <div>
+                  <button onClick="{{ m.toggle }}" aria-expanded="{{ m.abiertoAria }}" style="{{ m.style }}" style-hover="background:#EFF7FC">
+                    <span style="{{ m.iconStyle }}">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <sc-for list="{{ m.icon }}" as="p" hint-placeholder-count="3">
+                          <path d="{{ p.d }}"></path>
+                        </sc-for>
+                      </svg>
+                    </span>
+                    <span style="flex:1; min-width:0; text-align:left; font-size:13.5px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ m.label }}</span>
+                    <sc-if value="{{ m.conteo }}">
+                      <span style="{{ m.conteoStyle }}">{{ m.conteo }}</span>
+                    </sc-if>
+                    <span style="{{ m.chevronStyle }}">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5l6 6 6-6"></path></svg>
+                    </span>
+                  </button>
+                  <sc-if value="{{ m.abierto }}">
+                    <div style="display:flex; flex-direction:column; gap:1px; padding:2px 0 7px 15px; margin-left:16px; border-left:1px solid #E3E9EE">
+                      <sc-for list="{{ m.hojas }}" as="h" hint-placeholder-count="4">
+                        <button onClick="{{ h.ir }}" aria-current="{{ h.actual }}" style="{{ h.style }}" style-hover="background:#EFF7FC">
+                          <span style="flex:1; min-width:0; text-align:left; font-size:13px">{{ h.label }}</span>
+                          <sc-if value="{{ h.marca }}">
+                            <span style="{{ h.marcaStyle }}">{{ h.marca }}</span>
+                          </sc-if>
+                        </button>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ══ B · Sin control de despliegue ══ -->
+        <sc-if value="{{ panel.esB }}">
+          <div style="flex:1; min-width:0; display:flex; flex-direction:column; overflow:auto">
+            <div style="padding:7px 7px 10px; display:flex; flex-direction:column; gap:1px">
+              <sc-for list="{{ arbolModulos }}" as="m" hint-placeholder-count="13">
+                <div>
+                  <button onClick="{{ m.toggle }}" aria-expanded="{{ m.abiertoAria }}" style="{{ m.styleB }}" style-hover="background:#EFF7FC">
+                    <span style="{{ m.iconStyleB }}">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <sc-for list="{{ m.icon }}" as="p" hint-placeholder-count="3">
+                          <path d="{{ p.d }}"></path>
+                        </sc-for>
+                      </svg>
+                    </span>
+                    <span style="flex:1; min-width:0; text-align:left; font-size:13.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ m.label }}</span>
+                    <sc-if value="{{ m.conteo }}">
+                      <span style="{{ m.conteoStyle }}">{{ m.conteo }}</span>
+                    </sc-if>
+                  </button>
+                  <sc-if value="{{ m.abierto }}">
+                    <div style="display:flex; flex-direction:column; gap:1px; padding:3px 0 8px 16px">
+                      <sc-for list="{{ m.hojas }}" as="h" hint-placeholder-count="4">
+                        <button onClick="{{ h.ir }}" aria-current="{{ h.actual }}" style="{{ h.styleB }}" style-hover="background:#EFF7FC">
+                          <span style="{{ h.barraStyle }}"></span>
+                          <span style="flex:1; min-width:0; text-align:left; font-size:13px">{{ h.label }}</span>
+                          <sc-if value="{{ h.marca }}">
+                            <span style="{{ h.marcaStyle }}">{{ h.marca }}</span>
+                          </sc-if>
+                        </button>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ sinCoincidencias }}">
+          <div style="flex:1; display:grid; place-items:center; padding:24px 18px">
+            <p style="margin:0; font-size:13px; line-height:1.55; color:#5A6B78; text-align:center; text-wrap:pretty">Ningún módulo ni submódulo se llama así. Pruebe con «ediciones», «cuadros», «publicación» o «panel».</p>
+          </div>
+        </sc-if>
+
+        <!-- ══ C · Riel de módulos y lista de submódulos ══ -->
+        <sc-if value="{{ panel.esC }}">
+          <div style="flex:1; min-width:0; display:flex; overflow:hidden">
+            <nav aria-label="Módulos" style="flex:0 0 56px; width:56px; background:#F7FBFE; border-right:1px solid #E3E9EE; display:flex; flex-direction:column; align-items:center; gap:2px; padding:8px 0; overflow-y:auto">
+              <sc-for list="{{ arbolModulos }}" as="m" hint-placeholder-count="13">
+                <button onClick="{{ m.toggle }}" aria-current="{{ m.abiertoAria }}" title="{{ m.label }}" aria-label="{{ m.label }}" style="{{ m.rielStyle }}">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <sc-for list="{{ m.icon }}" as="p" hint-placeholder-count="3">
+                      <path d="{{ p.d }}"></path>
+                    </sc-for>
+                  </svg>
+                  <sc-if value="{{ m.conteo }}">
+                    <span style="{{ m.rielPastilla }}">{{ m.conteo }}</span>
+                  </sc-if>
+                </button>
+              </sc-for>
+            </nav>
+            <div style="flex:1; min-width:0; display:flex; flex-direction:column; overflow:auto">
+              <div style="padding:12px 14px 11px; border-bottom:1px solid #E3E9EE">
+                <p style="margin:0; font-size:14px; font-weight:700; line-height:1.2; text-wrap:pretty">{{ panel.modLabel }}</p>
+                <p style="margin:3px 0 0; font-size:11px; color:#5A6B78">{{ panel.modNota }}</p>
+              </div>
+              <div style="padding:7px; display:flex; flex-direction:column; gap:1px">
+                <sc-for list="{{ panel.hojas }}" as="h" hint-placeholder-count="4">
+                  <button onClick="{{ h.ir }}" aria-current="{{ h.actual }}" style="{{ h.styleB }}" style-hover="background:#EFF7FC">
+                    <span style="{{ h.barraStyle }}"></span>
+                    <span style="flex:1; min-width:0; text-align:left; font-size:13px">{{ h.label }}</span>
+                    <sc-if value="{{ h.marca }}">
+                      <span style="{{ h.marcaStyle }}">{{ h.marca }}</span>
+                    </sc-if>
+                  </button>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- Conmutadores del experimento: no son parte del producto. El de
+             arriba elige el marco; el de abajo, con qué datos se dibuja, que
+             es lo que permite ver la pantalla también vacía. -->
+        <div style="flex:0 0 auto; display:flex; align-items:center; gap:7px; padding:9px 11px; border-top:1px solid #E3E9EE; background:#F7FBFE">
+          <span style="font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.09em; color:#5A6B78; flex:0 0 auto">Panel</span>
+          <sc-for list="{{ panelOpciones }}" as="o" hint-placeholder-count="3">
+            <button onClick="{{ o.ir }}" aria-pressed="{{ o.on }}" title="{{ o.titulo }}" style="{{ o.style }}">{{ o.label }}</button>
+          </sc-for>
+        </div>
+        <div style="flex:0 0 auto; display:flex; align-items:center; gap:7px; padding:9px 11px; border-top:1px solid #E3E9EE; background:#F7FBFE">
+          <span style="font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.09em; color:#5A6B78; flex:0 0 auto">Datos</span>
+          <sc-for list="{{ datosOpciones }}" as="o" hint-placeholder-count="2">
+            <button onClick="{{ o.ir }}" aria-pressed="{{ o.on }}" title="{{ o.titulo }}" style="{{ o.style }}">{{ o.label }}</button>
+          </sc-for>
+        </div>
+
+        <sc-if value="{{ panel.hayCola }}">
+        <div style="flex:0 0 auto; padding:11px; border-top:1px solid #E3E9EE">
+          <p style="margin:0 0 7px; font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:.1em; color:#5A6B78">Cola de trabajo</p>
+          <sc-for list="{{ cola }}" as="c" hint-placeholder-count="3">
+            <button onClick="{{ c.ir }}" style="display:flex; align-items:center; gap:9px; width:100%; text-align:left; border:0; border-radius:5px; padding:6px 7px; background:transparent; cursor:pointer" style-hover="background:#EFF7FC">
+              <span style="{{ c.puntoStyle }}"></span>
+              <span style="flex:1; min-width:0; font-size:12.5px; color:#3A4A55">{{ c.label }}</span>
+              <span style="font-size:12.5px; font-weight:600; color:#16232C">{{ c.n }}</span>
+            </button>
+          </sc-for>
+        </div>
+        </sc-if>
+      </aside>
+  </sc-if>
+
+
+    <div style="flex:1; min-width:0; display:flex; flex-direction:column; overflow:hidden">
+
+      <div style="flex:0 0 auto; display:flex; align-items:stretch; gap:0; padding:0 12px 0 0; min-height:44px; background:#F2F6F9; border-bottom:1px solid #D6DEE4; z-index:40; overflow-x:auto">
+        <sc-for list="{{ pestanas }}" as="t" hint-placeholder-count="2">
+          <span style="{{ t.marcoStyle }}">
+            <button onClick="{{ t.ir }}" aria-current="{{ t.actual }}" style="{{ t.style }}">
+              <span style="{{ t.iconStyle }}">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <sc-for list="{{ t.icon }}" as="p" hint-placeholder-count="3">
+                    <path d="{{ p.d }}"></path>
+                  </sc-for>
+                </svg>
+              </span>
+              <span style="white-space:nowrap">{{ t.label }}</span>
+            </button>
+            <button onClick="{{ t.cerrar }}" aria-label="{{ t.cerrarAria }}" title="{{ t.cerrarAria }}" style="{{ t.cerrarStyle }}" style-hover="background:#E3E9EE; color:#16232C">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+            </button>
+          </span>
+        </sc-for>
+        <span style="flex:1; min-width:8px"></span>
+      </div>
+
+      <sc-if value="{{ hayPestanas }}">
+        <div style="flex:0 0 auto; display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:0 16px; min-height:52px; background:#fff; border-bottom:1px solid #D6DEE4">
+          <span style="flex:1; min-width:0; display:flex; align-items:baseline; gap:9px">
+            <h1 style="margin:0; font-size:16.5px; font-weight:700; letter-spacing:-.01em; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ titulo }}</h1>
+            <span data-sm-hide="1" style="font-size:13px; color:#5A6B78; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ subtitulo }}</span>
+          </span>
+          <sc-if value="{{ hayAccion }}">
+            <button onClick="{{ nuevaVersion }}" style="display:flex; align-items:center; gap:7px; border:0; border-radius:6px; padding:9px 15px; background:#005284; color:#fff; font-size:13.5px; font-weight:600; cursor:pointer; flex:0 0 auto" style-hover="background:#00365A">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+              {{ accionLabel }}
+            </button>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ sinPestanas }}">
+        <div style="flex:1; display:grid; place-items:center; padding:32px">
+          <div style="max-width:40ch; text-align:center">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#93A3AF" stroke-width="1.5" stroke-linejoin="round"><path d="M6.5 3.5h7.5l4 4v13h-11.5z"></path><path d="M14 3.5v4h4"></path><path d="M9.5 12.5h5"></path></svg>
+            <p style="margin:12px 0 0; font-size:16px; font-weight:700">No hay ningún submódulo abierto</p>
+            <p style="margin:7px 0 0; font-size:13.5px; line-height:1.55; color:#5A6B78; text-wrap:pretty">Elija uno en el menú de la izquierda y se abrirá como pestaña. Puede tener varios abiertos y moverse entre ellos.</p>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ avisoAbierto }}">
+        <div role="status" style="flex:0 0 auto; display:flex; align-items:flex-start; gap:12px; padding:11px 16px; background:#FFF4D9; border-bottom:1px solid #E8C86A">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8A5B00" stroke-width="2" stroke-linecap="round" style="flex:0 0 auto; margin-top:1px"><circle cx="12" cy="12" r="9"></circle><path d="M12 7.6V13M12 16.4h.02"></path></svg>
+          <p style="margin:0; flex:1; font-size:13.5px; line-height:1.5; color:#4A3200; text-wrap:pretty">{{ avisoTexto }}</p>
+          <button onClick="{{ cerrarAviso }}" aria-label="Descartar el aviso" style="border:0; background:transparent; padding:2px; cursor:pointer; color:#8A5B00; flex:0 0 auto">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+          </button>
+        </div>
+      </sc-if>
+
+      <!-- Un submódulo de otro módulo: la pestaña existe y dice de dónde
+           viene. Su pantalla vive en el archivo de ese módulo. -->
+      <sc-if value="{{ esAjena }}">
+        <div style="flex:1; overflow:auto; padding:18px">
+          <div style="max-width:640px; background:#fff; border:1px solid #D6DEE4; border-radius:8px; overflow:hidden">
+            <div style="display:flex; align-items:center; gap:11px; padding:14px 16px; border-bottom:1px solid #E3E9EE">
+              <span style="display:grid; place-items:center; width:30px; height:30px; border-radius:7px; flex:0 0 auto; background:#E4F4FD; color:#004670">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <sc-for list="{{ ajena.icon }}" as="p" hint-placeholder-count="3">
+                    <path d="{{ p.d }}"></path>
+                  </sc-for>
+                </svg>
+              </span>
+              <span style="flex:1; min-width:0; line-height:1.25">
+                <span style="display:block; font-size:15px; font-weight:700">{{ ajena.label }}</span>
+                <span style="display:block; font-size:12.5px; color:#5A6B78">{{ ajena.mod }} · {{ ajena.nota }}</span>
+              </span>
+            </div>
+            <p style="margin:0; padding:15px 16px; font-size:13.5px; line-height:1.6; color:#3A4A55; text-wrap:pretty">{{ ajena.texto }}</p>
+            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:12px 16px; border-top:1px solid #E3E9EE; background:#F7FBFE">
+              <p style="margin:0; flex:1; min-width:180px; font-size:12.5px; color:#5A6B78; text-wrap:pretty">Puede dejarla abierta y volver a ella desde la barra de pestañas.</p>
+              <button onClick="{{ ajena.cerrar }}" style="border:1px solid #D6DEE4; border-radius:6px; padding:8px 15px; background:#fff; font-size:13px; cursor:pointer" style-hover="border-color:#7E96A8">Cerrar la pestaña</button>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ══════════ PANEL ══════════
+           Lo que un panel de Normativa tiene que contestar es una sola
+           pregunta: ¿con qué se puede emitir este ejercicio, y qué le
+           falta? Por eso lo que falta ocupa tanto sitio como lo que hay. -->
+      <sc-if value="{{ esPanel }}">
+        <div style="flex:1; overflow:auto; padding:18px; animation:fadeIn .22s ease">
+          <div style="max-width:1180px; display:flex; flex-direction:column; gap:14px">
+
+            <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(212px,1fr)); gap:12px">
+              <sc-for list="{{ cifras }}" as="c" hint-placeholder-count="4">
+                <div style="background:#fff; border:1px solid #D6DEE4; border-radius:8px; padding:14px 15px">
+                  <div style="display:flex; align-items:center; gap:8px">
+                    <p style="margin:0; flex:1; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.09em; color:#5A6B78">{{ c.etiqueta }}</p>
+                    <sc-if value="{{ c.delta }}">
+                      <span style="{{ c.deltaStyle }}">{{ c.delta }}</span>
+                    </sc-if>
+                  </div>
+                  <p style="margin:9px 0 0; font-size:29px; font-weight:700; letter-spacing:-.025em; line-height:1; color:#16232C">{{ c.valor }}</p>
+                  <p style="margin:8px 0 0; font-size:12.5px; line-height:1.45; color:#5A6B78; text-wrap:pretty">{{ c.nota }}</p>
+                </div>
+              </sc-for>
+            </div>
+
+            <!-- El estado del ejercicio de trabajo, dicho de una vez: es la
+                 respuesta de `GET /seguridad/parametros/ejercicios/{ejercicio}`
+                 antes de que nadie rellene un formulario. -->
+            <section style="{{ estado.marcoStyle }}">
+              <div style="display:flex; align-items:flex-start; gap:13px; padding:15px 16px">
+                <span style="{{ estado.iconoStyle }}">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ estado.icono }}"></path></svg>
+                </span>
+                <span style="flex:1; min-width:0">
+                  <span style="display:flex; align-items:baseline; gap:9px; flex-wrap:wrap">
+                    <span style="font-size:16.5px; font-weight:700; letter-spacing:-.01em">{{ estado.titulo }}</span>
+                    <span style="{{ estado.insignia }}">{{ estado.etiqueta }}</span>
+                  </span>
+                  <span style="display:block; margin-top:6px; font-size:13.5px; line-height:1.6; color:#3A4A55; max-width:86ch; text-wrap:pretty">{{ estado.texto }}</span>
+                </span>
+                <button onClick="{{ estado.ir }}" style="border:1px solid #D6DEE4; border-radius:6px; padding:8px 14px; background:#fff; font-size:13px; cursor:pointer; flex:0 0 auto; white-space:nowrap" style-hover="border-color:#7E96A8">{{ estado.accion }}</button>
+              </div>
+              <div style="overflow-x:auto; border-top:1px solid #E3E9EE">
+                <table style="width:100%; border-collapse:collapse; min-width:620px">
+                  <thead>
+                    <tr>
+                      <sc-for list="{{ estado.cols }}" as="c" hint-placeholder-count="5">
+                        <th style="{{ c.style }}"><span style="display:block">{{ c.label }}</span><span style="{{ c.campoStyle }}">{{ c.campo }}</span></th>
+                      </sc-for>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <sc-for list="{{ estado.filas }}" as="r" hint-placeholder-count="3">
+                      <tr style="border-top:1px solid #E3E9EE" style-hover="background:#F7FBFE">
+                        <sc-for list="{{ r.celdas }}" as="cl" hint-placeholder-count="5">
+                          <td style="{{ cl.style }}">{{ cl.texto }}</td>
+                        </sc-for>
+                      </tr>
+                    </sc-for>
+                  </tbody>
+                </table>
+              </div>
+              <p style="margin:0; padding:11px 16px; border-top:1px solid #E3E9EE; background:#F7FBFE; font-size:12.5px; line-height:1.5; color:#5A6B78; text-wrap:pretty">{{ estado.pie }}</p>
+            </section>
+
+            <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(380px,1fr)); gap:14px">
+
+              <!-- Las decisiones abiertas. Una que está cerrada para un solo
+                   ejercicio se lee distinto que una cerrada, y por eso se dice
+                   así: D-11 no se hereda. -->
+              <section style="background:#fff; border:1px solid #D6DEE4; border-radius:8px; overflow:hidden">
+                <div style="display:flex; align-items:center; gap:10px; padding:12px 15px; border-bottom:1px solid #E3E9EE">
+                  <h2 style="margin:0; flex:1; font-size:14.5px; font-weight:700">Decisiones que deciden qué se puede sellar</h2>
+                  <span style="font-size:12px; color:#5A6B78">{{ decisionesNota }}</span>
+                </div>
+                <sc-for list="{{ decisiones }}" as="d" hint-placeholder-count="4">
+                  <div style="display:flex; align-items:flex-start; gap:11px; padding:12px 15px; border-bottom:1px solid #E3E9EE">
+                    <span style="{{ d.insignia }}">{{ d.estado }}</span>
+                    <span style="flex:1; min-width:0">
+                      <span style="display:block; font-size:13.5px; font-weight:600">{{ d.id }} — {{ d.titulo }}</span>
+                      <span style="display:block; font-size:12.5px; line-height:1.5; color:#5A6B78; margin-top:3px; text-wrap:pretty">{{ d.detalle }}</span>
+                    </span>
+                  </div>
+                </sc-for>
+                <p style="margin:0; padding:11px 15px; background:#F7FBFE; font-size:12.5px; line-height:1.5; color:#5A6B78; text-wrap:pretty">Sellar no cierra ninguna puerta: no existe «un solo conjunto sellado por ejercicio». Lo que cuesta un sello prematuro es que cada valuación guarda con qué <code>conjuntoId</code> se calculó, así que converger es <b>recalcular el padrón</b>.</p>
+              </section>
+
+              <!-- Lo que el sello NO incluye. Se nombran las diez porque
+                   «faltan cosas» no es una lista: quien selle el conjunto de
+                   SU municipalidad tiene que poder ver si alguna es suya. -->
+              <section style="background:#fff; border:1px solid #D6DEE4; border-radius:8px; overflow:hidden">
+                <div style="display:flex; align-items:center; gap:10px; padding:12px 15px; border-bottom:1px solid #E3E9EE">
+                  <h2 style="margin:0; flex:1; font-size:14.5px; font-weight:700">Lo que este sello no incluye</h2>
+                  <span style="{{ INSwarn }}">{{ sinArchivoN }}</span>
+                </div>
+                <p style="margin:0; padding:11px 15px; border-bottom:1px solid #E3E9EE; font-size:12.5px; line-height:1.55; color:#3A4A55; text-wrap:pretty">Diez filas del mapa normativo sin archivo del corpus. Las diez son de <b>acto propio de la municipalidad</b> —ordenanza de arbitrios, TIM, CUIS, fraccionamiento…—, así que <code>normativa</code> no las publica: las pone cada municipalidad en su propio conjunto.</p>
+                <div style="max-height:268px; overflow:auto">
+                  <table data-sticky="1" style="width:100%; border-collapse:collapse; min-width:420px">
+                    <thead>
+                      <tr>
+                        <sc-for list="{{ sinArchivoCols }}" as="c" hint-placeholder-count="3">
+                          <th style="{{ c.style }}">{{ c.label }}</th>
+                        </sc-for>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <sc-for list="{{ sinArchivo }}" as="r" hint-placeholder-count="10">
+                        <tr style="border-top:1px solid #E3E9EE" style-hover="background:#F7FBFE">
+                          <sc-for list="{{ r.celdas }}" as="cl" hint-placeholder-count="3">
+                            <td style="{{ cl.style }}">{{ cl.texto }}</td>
+                          </sc-for>
+                        </tr>
+                      </sc-for>
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            </div>
+
+            <section style="background:#fff; border:1px solid #D6DEE4; border-radius:8px; overflow:hidden">
+              <div style="display:flex; align-items:center; gap:10px; padding:12px 15px; border-bottom:1px solid #E3E9EE">
+                <h2 style="margin:0; flex:1; font-size:14.5px; font-weight:700">Actividad reciente</h2>
+                <button onClick="{{ irEdiciones }}" style="border:1px solid #D6DEE4; border-radius:5px; padding:5px 11px; background:#fff; font-size:12.5px; cursor:pointer" style-hover="border-color:#7E96A8">Ver todas las ediciones</button>
+              </div>
+              <sc-if value="{{ sinActividad }}">
+                <p style="margin:0; padding:26px 15px; text-align:center; font-size:13px; line-height:1.55; color:#5A6B78; text-wrap:pretty">Ninguna escritura todavía. La bitácora se llena sola: toda operación de esta pantalla exige observación y deja fila (regla 10).</p>
+              </sc-if>
+              <sc-for list="{{ actividad }}" as="a" hint-placeholder-count="4">
+                <div style="display:flex; align-items:center; gap:12px; width:100%; border-bottom:1px solid #E3E9EE; padding:10px 15px">
+                  <span style="{{ a.insignia }}">{{ a.tipo }}</span>
+                  <span style="flex:0 0 auto; font-size:13px; font-weight:600; color:#005284; font-variant-numeric:tabular-nums">{{ a.objeto }}</span>
+                  <span style="flex:1; min-width:0; font-size:13px; color:#3A4A55; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ a.detalle }}</span>
+                  <span data-sm-hide="1" style="flex:0 0 auto; font-size:12px; color:#5A6B78">{{ a.quien }}</span>
+                  <span style="flex:0 0 auto; font-size:12px; color:#5A6B78">{{ a.cuando }}</span>
+                </div>
+              </sc-for>
+            </section>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ══════════ EDICIONES ══════════ -->
+      <sc-if value="{{ esEdiciones }}">
+        <div data-split="1" style="flex:1; display:flex; min-height:0; overflow:hidden">
+
+          <div data-lista="1" style="flex:0 0 344px; width:344px; display:flex; flex-direction:column; min-height:0; background:#fff; border-right:1px solid #D6DEE4">
+            <div style="flex:0 0 auto; padding:11px 12px 10px; border-bottom:1px solid #E3E9EE">
+              <div style="display:flex; align-items:center; gap:8px; border:1px solid #D6DEE4; border-radius:6px; padding:7px 10px; background:#F7FBFE">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5A6B78" stroke-width="1.8" stroke-linecap="round" style="flex:0 0 auto"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4.3-4.3"></path></svg>
+                <input value="{{ q }}" onChange="{{ onQ }}" placeholder="Ejercicio, versión o identificador" style="flex:1; min-width:0; border:0; background:transparent; font-size:14px; outline:none" />
+                <sc-if value="{{ hayQ }}">
+                  <button onClick="{{ limpiarQ }}" aria-label="Limpiar la búsqueda" style="border:0; background:transparent; padding:0; cursor:pointer; color:#93A3AF; flex:0 0 auto">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+                  </button>
+                </sc-if>
+              </div>
+              <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:9px">
+                <sc-for list="{{ chips }}" as="c" hint-placeholder-count="3">
+                  <button onClick="{{ c.ir }}" aria-pressed="{{ c.on }}" style="{{ c.style }}">{{ c.label }}</button>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="flex:0 0 auto; display:flex; align-items:center; gap:9px; padding:8px 12px; border-bottom:1px solid #E3E9EE; background:#F7FBFE">
+              <span style="flex:1; font-size:12px; font-weight:600; color:#5A6B78">{{ conteo }}</span>
+              <select value="{{ orden }}" onChange="{{ onOrden }}" aria-label="Ordenar la lista" style="border:1px solid #D6DEE4; border-radius:5px; padding:3px 7px; background:#fff; font-size:12px; cursor:pointer">
+                <sc-for list="{{ ordenes }}" as="o" hint-placeholder-count="3">
+                  <option value="{{ o }}">{{ o }}</option>
+                </sc-for>
+              </select>
+            </div>
+
+            <div style="flex:1; overflow:auto; min-height:0">
+              <sc-if value="{{ listaVacia }}">
+                <div style="padding:30px 20px; text-align:center">
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#93A3AF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.6 20.4 8 12 12.4 3.6 8z"></path><path d="M3.6 12 12 16.4 20.4 12"></path><path d="M3.6 16 12 20.4 20.4 16"></path></svg>
+                  <p style="margin:11px 0 0; font-size:14.5px; font-weight:600">{{ vacio.titulo }}</p>
+                  <p style="margin:7px 0 0; font-size:13px; line-height:1.55; color:#5A6B78; text-wrap:pretty">{{ vacio.texto }}</p>
+                  <button onClick="{{ nuevaVersion }}" style="margin-top:14px; border:0; border-radius:6px; padding:9px 16px; background:#005284; color:#fff; font-size:13.5px; font-weight:600; cursor:pointer">Abrir la primera versión</button>
+                </div>
+              </sc-if>
+              <sc-for list="{{ filas }}" as="r" hint-placeholder-count="3">
+                <button onClick="{{ r.ir }}" aria-current="{{ r.actual }}" style="{{ r.style }}" style-hover="background:#F7FBFE">
+                  <span style="display:flex; align-items:center; gap:8px">
+                    <span style="flex:1; min-width:0; font-size:14px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ r.titulo }}</span>
+                    <sc-if value="{{ r.vigente }}">
+                      <span style="{{ r.vigenteStyle }}">vigente</span>
+                    </sc-if>
+                    <span style="{{ r.insignia }}">{{ r.estado }}</span>
+                  </span>
+                  <span style="display:block; font-size:12.5px; color:#5A6B78; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ r.detalle }}</span>
+                  <span style="display:flex; align-items:baseline; gap:9px; margin-top:6px">
+                    <span style="font-size:12px; color:#5A6B78; font-variant-numeric:tabular-nums">{{ r.sello }}</span>
+                    <span style="flex:1"></span>
+                    <span style="font-size:12.5px; font-weight:600; font-variant-numeric:tabular-nums">{{ r.detalles }}</span>
+                  </span>
+                </button>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="flex:1; min-width:0; display:flex; flex-direction:column; min-height:0; overflow:hidden">
+            <sc-if value="{{ sinSeleccion }}">
+              <div style="flex:1; display:grid; place-items:center; padding:32px">
+                <div style="max-width:44ch; text-align:center">
+                  <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#93A3AF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.6 20.4 8 12 12.4 3.6 8z"></path><path d="M3.6 12 12 16.4 20.4 12"></path><path d="M3.6 16 12 20.4 20.4 16"></path></svg>
+                  <p style="margin:12px 0 0; font-size:16px; font-weight:700">{{ vacio.fichaTitulo }}</p>
+                  <p style="margin:7px 0 0; font-size:13.5px; line-height:1.55; color:#5A6B78; text-wrap:pretty">{{ vacio.fichaTexto }}</p>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ hayFicha }}">
+              <div style="flex:0 0 auto; padding:12px 18px; background:#fff; border-bottom:1px solid #D6DEE4">
+                <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap">
+                  <span style="font-size:14px; font-weight:700; color:#005284; font-variant-numeric:tabular-nums">{{ ficha.codigo }}</span>
+                  <span style="{{ ficha.insignia }}">{{ ficha.estado }}</span>
+                  <span style="flex:1; min-width:20px"></span>
+                  <sc-for list="{{ ficha.acciones }}" as="a" hint-placeholder-count="3">
+                    <button onClick="{{ a.ir }}" style="{{ a.style }}">{{ a.label }}</button>
+                  </sc-for>
+                </div>
+                <p style="margin:8px 0 0; font-size:17px; font-weight:700; letter-spacing:-.015em; text-wrap:pretty">{{ ficha.titulo }}</p>
+                <p style="margin:4px 0 0; font-size:13.5px; line-height:1.5; color:#5A6B78; text-wrap:pretty">{{ ficha.contexto }}</p>
+              </div>
+
+              <div style="flex:0 0 auto; display:flex; align-items:stretch; gap:2px; padding:0 14px; background:#fff; border-bottom:1px solid #D6DEE4; overflow-x:auto">
+                <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="4">
+                  <button onClick="{{ t.ir }}" aria-current="{{ t.actual }}" style="{{ t.style }}">
+                    <span>{{ t.label }}</span>
+                    <sc-if value="{{ t.marca }}">
+                      <span style="{{ t.marcaStyle }}">{{ t.marca }}</span>
+                    </sc-if>
+                  </button>
+                </sc-for>
+              </div>
+
+              <div style="flex:1; overflow:auto; min-height:0; padding:16px 18px 24px; animation:fadeIn .18s ease">
+                <div style="max-width:980px">
+                  <p style="margin:0 0 14px; font-size:13.5px; line-height:1.6; color:#3A4A55; max-width:80ch; text-wrap:pretty">{{ paso.nota }}</p>
+
+                  <!-- La negativa del dominio, con su mensaje literal. No es
+                       un texto de interfaz: es lo que contesta el servidor, y
+                       se enseña tal cual para que quien lo lea aquí lo
+                       reconozca cuando lo reciba. -->
+                  <sc-if value="{{ negativa.hay }}">
+                    <section style="margin:0 0 16px; background:#FBE4E0; border:1px solid #A8321E; border-radius:8px; overflow:hidden">
+                      <div style="display:flex; align-items:flex-start; gap:11px; padding:13px 15px">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8F2A17" stroke-width="2.1" stroke-linecap="round" style="flex:0 0 auto; margin-top:1px"><circle cx="12" cy="12" r="9"></circle><path d="M12 7.6V13M12 16.4h.02"></path></svg>
+                        <span style="flex:1; min-width:0">
+                          <span style="display:flex; align-items:baseline; gap:9px; flex-wrap:wrap">
+                            <span style="font-size:14px; font-weight:700; color:#8F2A17">{{ negativa.titulo }}</span>
+                            <span style="{{ negativa.codigoStyle }}">{{ negativa.codigo }}</span>
+                          </span>
+                          <span style="display:block; margin-top:7px; font-size:13px; line-height:1.6; color:#8F2A17; background:#FFF9F8; border:1px solid #A8321E; border-radius:6px; padding:9px 11px; text-wrap:pretty">{{ negativa.mensaje }}</span>
+                          <span style="display:block; margin-top:8px; font-size:12.5px; line-height:1.55; color:#3A4A55; text-wrap:pretty">{{ negativa.explicacion }}</span>
+                        </span>
+                      </div>
+                      <sc-if value="{{ negativa.salida }}">
+                        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:11px 15px; border-top:1px solid #A8321E; background:#FFF9F8">
+                          <p style="margin:0; flex:1; min-width:200px; font-size:12.5px; color:#3A4A55; text-wrap:pretty">{{ negativa.salidaTexto }}</p>
+                          <button onClick="{{ negativa.ir }}" style="border:1px solid #A8321E; border-radius:6px; padding:8px 14px; background:#fff; font-size:13px; color:#8F2A17; cursor:pointer; white-space:nowrap" style-hover="background:#FBE4E0">{{ negativa.salida }}</button>
+                        </div>
+                      </sc-if>
+                    </section>
+                  </sc-if>
+
+                  <sc-if value="{{ paso.hayCampos }}">
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(212px,1fr)); gap:14px 16px">
+                      <sc-for list="{{ paso.campos }}" as="f" hint-placeholder-count="6">
+                        <label data-ancho="{{ f.ancho }}" style="display:block; min-width:0">
+                          <span style="display:flex; align-items:baseline; gap:7px; margin-bottom:5px; flex-wrap:wrap">
+                            <span style="font-size:12.5px; font-weight:600; color:#3A4A55">{{ f.label }}</span>
+                            <code style="{{ f.campoStyle }}">{{ f.campo }}</code>
+                            <sc-if value="{{ f.opcional }}">
+                              <span style="font-size:11.5px; color:#93A3AF">opcional</span>
+                            </sc-if>
+                          </span>
+                          <sc-if value="{{ f.esTexto }}">
+                            <input value="{{ f.valor }}" onChange="{{ f.on }}" placeholder="{{ f.ph }}" style="{{ f.style }}" />
+                          </sc-if>
+                          <sc-if value="{{ f.esFecha }}">
+                            <input type="date" value="{{ f.valor }}" onChange="{{ f.on }}" style="{{ f.style }}" />
+                          </sc-if>
+                          <sc-if value="{{ f.esSel }}">
+                            <select value="{{ f.valor }}" onChange="{{ f.on }}" style="{{ f.style }}">
+                              <sc-for list="{{ f.opts }}" as="o" hint-placeholder-count="4">
+                                <option value="{{ o }}">{{ o }}</option>
+                              </sc-for>
+                            </select>
+                          </sc-if>
+                          <sc-if value="{{ f.esArea }}">
+                            <textarea value="{{ f.valor }}" onChange="{{ f.on }}" rows="3" placeholder="{{ f.ph }}" style="{{ f.areaStyle }}"></textarea>
+                          </sc-if>
+                          <sc-if value="{{ f.esChk }}">
+                            <span style="display:flex; align-items:flex-start; gap:9px; border:1px solid #C3CFD9; border-radius:6px; padding:9px 10px; background:#fff">
+                              <input type="checkbox" checked="{{ f.marcado }}" onChange="{{ f.on }}" style="accent-color:#005284; width:17px; height:17px; flex:0 0 auto; margin-top:1px" />
+                              <span style="font-size:13.5px; line-height:1.4; color:#3A4A55">{{ f.ph }}</span>
+                            </span>
+                          </sc-if>
+                          <sc-if value="{{ f.esRo }}">
+                            <span style="display:block; border:1px dashed #C3CFD9; border-radius:6px; padding:9px 10px; background:#F7FBFE; font-size:13.5px; color:#3A4A55; font-variant-numeric:tabular-nums">{{ f.valor }}</span>
+                          </sc-if>
+                          <sc-if value="{{ f.ayuda }}">
+                            <span style="display:block; font-size:12px; line-height:1.45; color:#5A6B78; margin-top:5px; text-wrap:pretty">{{ f.ayuda }}</span>
+                          </sc-if>
+                        </label>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+
+                  <sc-if value="{{ paso.hayTabla }}">
+                    <section style="{{ paso.tabla.marcoStyle }}">
+                      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:11px 14px; border-bottom:1px solid #E3E9EE">
+                        <h3 style="margin:0; flex:1; font-size:13.5px; font-weight:700">{{ paso.tabla.titulo }}</h3>
+                        <span style="font-size:12px; color:#5A6B78">{{ paso.tabla.conteo }}</span>
+                        <button style="border:1px solid #D6DEE4; border-radius:5px; padding:5px 11px; background:#fff; font-size:12.5px; cursor:pointer" style-hover="border-color:#7E96A8">{{ paso.tabla.accion }}</button>
+                      </div>
+                      <div style="overflow-x:auto">
+                        <table style="width:100%; border-collapse:collapse; min-width:{{ paso.tabla.min }}">
+                          <thead>
+                            <tr>
+                              <sc-for list="{{ paso.tabla.cols }}" as="c" hint-placeholder-count="7">
+                                <th style="{{ c.style }}"><span style="display:block">{{ c.label }}</span><span style="{{ c.campoStyle }}">{{ c.campo }}</span></th>
+                              </sc-for>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <sc-for list="{{ paso.tabla.filas }}" as="r" hint-placeholder-count="8">
+                              <tr style="border-top:1px solid #E3E9EE" style-hover="background:#F7FBFE">
+                                <sc-for list="{{ r.celdas }}" as="cl" hint-placeholder-count="7">
+                                  <td style="{{ cl.style }}">{{ cl.texto }}</td>
+                                </sc-for>
+                              </tr>
+                            </sc-for>
+                          </tbody>
+                        </table>
+                      </div>
+                      <sc-if value="{{ paso.tabla.vacia }}">
+                        <p style="margin:0; padding:24px 14px; text-align:center; font-size:13px; line-height:1.55; color:#5A6B78; text-wrap:pretty">{{ paso.tabla.vacioTexto }}</p>
+                      </sc-if>
+                      <p style="margin:0; padding:10px 14px; border-top:1px solid #E3E9EE; background:#F7FBFE; font-size:12.5px; line-height:1.5; color:#5A6B78; text-wrap:pretty">{{ paso.tabla.nota }}</p>
+                    </section>
+                  </sc-if>
+
+                  <sc-if value="{{ cierre.hay }}">
+                    <section style="margin-top:18px; background:#fff; border:1px solid #D6DEE4; border-radius:8px; overflow:hidden">
+                      <div style="padding:13px 15px; border-bottom:1px solid #E3E9EE">
+                        <h3 style="margin:0; font-size:14.5px; font-weight:700">Lo que se va a registrar</h3>
+                        <p style="margin:5px 0 0; font-size:13px; line-height:1.55; color:#5A6B78; max-width:78ch; text-wrap:pretty">{{ cierre.nota }}</p>
+                      </div>
+                      <sc-for list="{{ cierre.lineas }}" as="l" hint-placeholder-count="4">
+                        <div style="display:flex; align-items:flex-start; gap:12px; padding:12px 15px; border-bottom:1px solid #E3E9EE">
+                          <span style="{{ l.iconoStyle }}">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="{{ l.icono }}"></path></svg>
+                          </span>
+                          <span style="flex:1; min-width:0">
+                            <span style="display:block; font-size:13.5px">{{ l.titulo }}</span>
+                            <span style="display:block; font-size:12.5px; line-height:1.45; color:#5A6B78; margin-top:2px; text-wrap:pretty">{{ l.detalle }}</span>
+                          </span>
+                          <span style="font-size:13px; font-weight:600; color:#3A4A55; flex:0 0 auto; white-space:nowrap">{{ l.valor }}</span>
+                        </div>
+                      </sc-for>
+                      <p style="margin:0; padding:12px 15px; border-left:4px solid {{ cierre.borde }}; background:{{ cierre.fondo }}; font-size:13px; line-height:1.55; color:{{ cierre.color }}; text-wrap:pretty">{{ cierre.aviso }}</p>
+                    </section>
+                  </sc-if>
+                </div>
+              </div>
+
+              <sc-if value="{{ paso.esEscritura }}">
+                <div style="flex:0 0 auto; display:flex; align-items:center; gap:11px; flex-wrap:wrap; padding:11px 18px; background:#fff; border-top:1px solid #D6DEE4">
+                  <button onClick="{{ descartar }}" style="border:1px solid #D6DEE4; border-radius:6px; padding:9px 16px; background:#fff; font-size:13.5px; cursor:pointer" style-hover="border-color:#7E96A8">Descartar</button>
+                  <p style="margin:0; flex:1; min-width:190px; font-size:12.5px; line-height:1.45; color:#5A6B78; text-wrap:pretty">{{ pasoNota }}</p>
+                  <button onClick="{{ enviar }}" aria-disabled="{{ bloqueado }}" title="{{ motivo }}" style="{{ enviarStyle }}" style-hover="background:#00365A">{{ botonLabel }}</button>
+                </div>
+              </sc-if>
+            </sc-if>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ══════════ CUADROS DE VALUACIÓN ══════════
+           Los tres cuadros son NACIONALES (ADR-0017): no los edita ninguna
+           municipalidad, y esta pantalla no tiene un solo control de
+           escritura. Lo que sí enseña es la doble firma de cada edición. -->
+      <sc-if value="{{ esCuadros }}">
+        <div style="flex:1; display:flex; flex-direction:column; min-height:0; overflow:hidden">
+          <div style="flex:0 0 auto; display:flex; align-items:stretch; gap:2px; padding:0 16px; background:#fff; border-bottom:1px solid #D6DEE4; overflow-x:auto">
+            <sc-for list="{{ cuadroTabs }}" as="t" hint-placeholder-count="3">
+              <button onClick="{{ t.ir }}" aria-current="{{ t.actual }}" style="{{ t.style }}">
+                <span>{{ t.label }}</span>
+                <span style="{{ t.conteoStyle }}">{{ t.conteo }}</span>
+              </button>
+            </sc-for>
+          </div>
+
+          <div style="flex:0 0 auto; padding:12px 18px; background:#fff; border-bottom:1px solid #D6DEE4">
+            <div style="display:flex; align-items:flex-start; gap:12px; flex-wrap:wrap">
+              <p style="margin:0; flex:1; min-width:240px; font-size:13.5px; line-height:1.55; color:#3A4A55; max-width:84ch; text-wrap:pretty">{{ cuadro.nota }}</p>
+              <span style="display:flex; align-items:center; gap:7px; border:1px solid #D6DEE4; border-radius:999px; padding:4px 12px; background:#F7FBFE; font-size:12.5px; color:#5A6B78; flex:0 0 auto">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 11V8a5 5 0 0 1 10 0v3"></path><path d="M5.5 11h13v9.5h-13z"></path></svg>
+                Solo lectura
+              </span>
+            </div>
+            <!-- La edición: es la unidad que se publica. Una fila del cuadro
+                 no se corrige; se publica otra edición. -->
+            <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(178px,1fr)); gap:10px 16px; margin-top:12px; padding-top:12px; border-top:1px solid #E3E9EE">
+              <sc-for list="{{ cuadro.edicion }}" as="e" hint-placeholder-count="6">
+                <span style="display:block; min-width:0">
+                  <span style="display:block; font-size:10.5px; font-weight:600; text-transform:uppercase; letter-spacing:.07em; color:#5A6B78">{{ e.etiqueta }}</span>
+                  <span style="{{ e.valorStyle }}">{{ e.valor }}</span>
+                </span>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="flex:1; overflow:auto; min-height:0">
+            <table data-sticky="1" style="width:100%; border-collapse:collapse; min-width:{{ cuadro.min }}">
+              <thead>
+                <tr>
+                  <sc-for list="{{ cuadro.cols }}" as="c" hint-placeholder-count="6">
+                    <th style="{{ c.style }}"><span style="display:block">{{ c.label }}</span><span style="{{ c.campoStyle }}">{{ c.campo }}</span></th>
+                  </sc-for>
+                </tr>
+              </thead>
+              <tbody>
+                <sc-for list="{{ cuadro.filas }}" as="r" hint-placeholder-count="10">
+                  <tr style="border-top:1px solid #E3E9EE; background:#fff" style-hover="background:#F7FBFE">
+                    <sc-for list="{{ r.celdas }}" as="cl" hint-placeholder-count="6">
+                      <td style="{{ cl.style }}">{{ cl.texto }}</td>
+                    </sc-for>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+            <p style="margin:0; padding:13px 18px; font-size:12.5px; line-height:1.55; color:#5A6B78; max-width:96ch; text-wrap:pretty">{{ cuadro.pie }}</p>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ══════════ PUBLICACIÓN ══════════
+           El snapshot descargable de ADR-0025 §1: una petición por corrida,
+           no una por predio. Lo que esta pantalla enseña —y no esconde— es
+           la huella, la caducidad y lo que el ámbito deja fuera. -->
+      <sc-if value="{{ esPublicacion }}">
+        <div style="flex:1; overflow:auto; min-height:0; padding:18px; animation:fadeIn .22s ease">
+          <div style="max-width:1100px; display:flex; flex-direction:column; gap:14px">
+
+            <section style="background:#fff; border:1px solid #D6DEE4; border-radius:8px; overflow:hidden">
+              <div style="display:flex; align-items:center; gap:10px; padding:12px 15px; border-bottom:1px solid #E3E9EE">
+                <h2 style="margin:0; flex:1; font-size:14.5px; font-weight:700">Qué conjunto se descarga</h2>
+                <span style="font-size:12px; color:#5A6B78">{{ pub.ruta }}</span>
+              </div>
+              <div style="display:flex; align-items:flex-end; gap:16px; flex-wrap:wrap; padding:14px 15px">
+                <label style="display:block; min-width:210px">
+                  <span style="display:flex; align-items:baseline; gap:7px; margin-bottom:5px">
+                    <span style="font-size:12.5px; font-weight:600; color:#3A4A55">Conjunto</span>
+                    <code style="{{ pub.campoStyle }}">conjuntoId</code>
+                  </span>
+                  <select value="{{ pub.conjunto }}" onChange="{{ pub.onConjunto }}" aria-label="Conjunto a descargar" style="width:100%; box-sizing:border-box; border:1px solid #C3CFD9; border-radius:6px; padding:9px 10px; background:#fff; font-size:14px; cursor:pointer">
+                    <sc-for list="{{ pub.conjuntos }}" as="o" hint-placeholder-count="3">
+                      <option value="{{ o }}">{{ o }}</option>
+                    </sc-for>
+                  </select>
+                </label>
+                <span style="display:block">
+                  <span style="display:flex; align-items:baseline; gap:7px; margin-bottom:5px">
+                    <span style="font-size:12.5px; font-weight:600; color:#3A4A55">Ámbito</span>
+                    <code style="{{ pub.campoStyle }}">ambito</code>
+                  </span>
+                  <span style="display:flex; align-items:center; gap:7px">
+                    <sc-for list="{{ pub.ambitos }}" as="a" hint-placeholder-count="2">
+                      <button onClick="{{ a.ir }}" aria-pressed="{{ a.on }}" title="{{ a.titulo }}" style="{{ a.style }}">{{ a.label }}</button>
+                    </sc-for>
+                  </span>
+                </span>
+                <span style="flex:1; min-width:12px"></span>
+                <button onClick="{{ pub.descargar }}" style="display:flex; align-items:center; gap:8px; border:0; border-radius:6px; padding:10px 18px; background:#005284; color:#fff; font-size:13.5px; font-weight:600; cursor:pointer" style-hover="background:#00365A">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5v10"></path><path d="M8 11l4 4 4-4"></path><path d="M4.5 18.5h15"></path></svg>
+                  Descargar el snapshot
+                </button>
+              </div>
+              <p style="margin:0; padding:11px 15px; border-top:1px solid #E3E9EE; background:#F7FBFE; font-size:12.5px; line-height:1.55; color:#5A6B78; text-wrap:pretty">El <b>ámbito no tiene valor por omisión</b>, y eso es la mitad de la decisión: un «todo» implícito sería el snapshot más grande servido a quien no lo pidió, con otra huella y con la mitad de sus filas sin consumidor. <code>?ambito=valuacion</code> en minúsculas se rechaza nombrándolo.</p>
+            </section>
+
+            <sc-if value="{{ pub.hay }}">
+              <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(340px,1fr)); gap:14px">
+
+                <section style="background:#fff; border:1px solid #D6DEE4; border-radius:8px; overflow:hidden">
+                  <div style="display:flex; align-items:center; gap:10px; padding:12px 15px; border-bottom:1px solid #E3E9EE">
+                    <h2 style="margin:0; flex:1; font-size:14.5px; font-weight:700">La respuesta</h2>
+                    <span style="{{ INSok }}">200</span>
+                  </div>
+                  <sc-for list="{{ pub.cabeceras }}" as="c" hint-placeholder-count="5">
+                    <div style="display:flex; align-items:flex-start; gap:12px; padding:10px 15px; border-bottom:1px solid #E3E9EE">
+                      <span style="flex:0 0 118px; font-size:12px; font-weight:600; color:#5A6B78; padding-top:2px">{{ c.etiqueta }}</span>
+                      <span style="flex:1; min-width:0; font-size:13px; line-height:1.5; color:#16232C; word-break:break-all; font-variant-numeric:tabular-nums">{{ c.valor }}</span>
+                    </div>
+                  </sc-for>
+                  <div style="display:flex; align-items:flex-start; gap:11px; padding:12px 15px; background:#DCEFE3">
+                    <span style="display:grid; place-items:center; width:24px; height:24px; border-radius:50%; flex:0 0 auto; background:#fff; color:#1F5B39">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"></path></svg>
+                    </span>
+                    <span style="flex:1; min-width:0">
+                      <span style="display:block; font-size:13.5px; font-weight:700; color:#1F5B39">{{ pub.huella.titulo }}</span>
+                      <span style="display:block; margin-top:3px; font-size:12.5px; line-height:1.55; color:#1F5B39; text-wrap:pretty">{{ pub.huella.detalle }}</span>
+                    </span>
+                  </div>
+                </section>
+
+                <section style="background:#fff; border:1px solid #D6DEE4; border-radius:8px; overflow:hidden">
+                  <div style="display:flex; align-items:center; gap:10px; padding:12px 15px; border-bottom:1px solid #E3E9EE">
+                    <h2 style="margin:0; flex:1; font-size:14.5px; font-weight:700">Qué viene y qué no</h2>
+                    <span style="font-size:12px; color:#5A6B78">{{ pub.filas }}</span>
+                  </div>
+                  <sc-for list="{{ pub.listas }}" as="l" hint-placeholder-count="4">
+                    <div style="display:flex; align-items:flex-start; gap:12px; padding:11px 15px; border-bottom:1px solid #E3E9EE">
+                      <span style="{{ l.insignia }}">{{ l.n }}</span>
+                      <span style="flex:1; min-width:0">
+                        <code style="{{ l.campoStyle }}">{{ l.campo }}</code>
+                        <span style="display:block; font-size:12.5px; line-height:1.5; color:#5A6B78; margin-top:4px; text-wrap:pretty">{{ l.porque }}</span>
+                      </span>
+                    </div>
+                  </sc-for>
+                  <p style="margin:0; padding:11px 15px; background:#F7FBFE; font-size:12.5px; line-height:1.55; color:#5A6B78; text-wrap:pretty">{{ pub.listasPie }}</p>
+                </section>
+              </div>
+
+              <section style="background:#fff; border:1px solid #D6DEE4; border-radius:8px; overflow:hidden">
+                <div style="padding:12px 15px; border-bottom:1px solid #E3E9EE">
+                  <h2 style="margin:0; font-size:14.5px; font-weight:700">Por qué se puede guardar para siempre</h2>
+                </div>
+                <sc-for list="{{ pub.razones }}" as="r" hint-placeholder-count="3">
+                  <div style="display:flex; align-items:flex-start; gap:12px; padding:12px 15px; border-bottom:1px solid #E3E9EE">
+                    <span style="display:grid; place-items:center; width:24px; height:24px; border-radius:50%; flex:0 0 auto; background:#E4F4FD; color:#004670">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="{{ r.icono }}"></path></svg>
+                    </span>
+                    <span style="flex:1; min-width:0">
+                      <span style="display:block; font-size:13.5px; font-weight:600">{{ r.titulo }}</span>
+                      <span style="display:block; font-size:12.5px; line-height:1.55; color:#5A6B78; margin-top:2px; text-wrap:pretty">{{ r.detalle }}</span>
+                    </span>
+                  </div>
+                </sc-for>
+              </section>
+            </sc-if>
+
+            <!-- Sin conjunto sellado no hay snapshot, y el 404 lo dice con el
+                 mensaje del dominio: no es un fallo del servicio. -->
+            <sc-if value="{{ pub.vacio }}">
+              <section style="background:#fff; border:1px solid #D6DEE4; border-radius:8px; overflow:hidden">
+                <div style="display:flex; align-items:center; gap:10px; padding:12px 15px; border-bottom:1px solid #E3E9EE">
+                  <h2 style="margin:0; flex:1; font-size:14.5px; font-weight:700">La respuesta</h2>
+                  <span style="{{ INSwarn }}">404</span>
+                </div>
+                <div style="display:flex; align-items:flex-start; gap:12px; padding:15px">
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#7A5200" stroke-width="2" stroke-linecap="round" style="flex:0 0 auto; margin-top:2px"><circle cx="12" cy="12" r="9"></circle><path d="M12 7.6V13M12 16.4h.02"></path></svg>
+                  <span style="flex:1; min-width:0">
+                    <span style="display:block; font-size:13px; line-height:1.6; color:#7A5200; background:#FFF4D9; border:1px solid #E8C86A; border-radius:6px; padding:10px 12px; text-wrap:pretty">{{ pub.vacioMensaje }}</span>
+                    <span style="display:block; margin-top:10px; font-size:13px; line-height:1.6; color:#3A4A55; max-width:80ch; text-wrap:pretty">{{ pub.vacioTexto }}</span>
+                  </span>
+                </div>
+                <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:12px 15px; border-top:1px solid #E3E9EE; background:#F7FBFE">
+                  <p style="margin:0; flex:1; min-width:200px; font-size:12.5px; color:#5A6B78; text-wrap:pretty">Y es un <b>404</b> y no un 422: aquí se pide un documento —el conjunto sellado de ese ejercicio— y no se intenta ejecutar ningún cálculo.</p>
+                  <button onClick="{{ irEdiciones }}" style="border:0; border-radius:6px; padding:9px 16px; background:#005284; color:#fff; font-size:13.5px; font-weight:600; cursor:pointer; white-space:nowrap" style-hover="background:#00365A">Ir a componer el ejercicio</button>
+                </div>
+              </section>
+            </sc-if>
+
+            <section style="background:#fff; border:1px solid #D6DEE4; border-radius:8px; overflow:hidden">
+              <div style="padding:12px 15px; border-bottom:1px solid #E3E9EE">
+                <h2 style="margin:0; font-size:14.5px; font-weight:700">Quién se lo lleva</h2>
+                <p style="margin:5px 0 0; font-size:12.5px; line-height:1.55; color:#5A6B78; max-width:84ch; text-wrap:pretty">Una petición por corrida, no una por predio. Una emisión de trescientos mil predios haría trescientas mil peticiones, y el día que <code>normativa</code> no esté arriba no habría padrón.</p>
+              </div>
+              <div style="overflow-x:auto">
+                <table style="width:100%; border-collapse:collapse; min-width:620px">
+                  <thead>
+                    <tr>
+                      <sc-for list="{{ pub.consumidoresCols }}" as="c" hint-placeholder-count="4">
+                        <th style="{{ c.style }}">{{ c.label }}</th>
+                      </sc-for>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <sc-for list="{{ pub.consumidores }}" as="r" hint-placeholder-count="3">
+                      <tr style="border-top:1px solid #E3E9EE" style-hover="background:#F7FBFE">
+                        <sc-for list="{{ r.celdas }}" as="cl" hint-placeholder-count="4">
+                          <td style="{{ cl.style }}">{{ cl.texto }}</td>
+                        </sc-for>
+                      </tr>
+                    </sc-for>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </div>
+      </sc-if>
+
+    </div>
+  </div>
+
+  <!-- Cerrar una pestaña con cambios los descarta: se pregunta antes, y la
+       salida por defecto es guardar, no perder. -->
+  <sc-if value="{{ porCerrar }}">
+    <div onClick="{{ confirmar.cancelar }}" style="position:fixed; inset:0; z-index:88; background:rgba(0,54,90,.4)"></div>
+    <div role="dialog" aria-modal="true" aria-label="Cerrar con cambios sin guardar" style="position:fixed; z-index:89; top:50%; left:50%; transform:translate(-50%,-50%); width:min(556px,calc(100vw - 32px)); background:#fff; border-radius:10px; box-shadow:0 22px 56px rgba(0,54,90,.28); overflow:hidden; animation:pop .14s ease">
+      <div style="display:flex; align-items:flex-start; gap:12px; padding:18px 20px 14px">
+        <span style="display:grid; place-items:center; width:32px; height:32px; border-radius:50%; flex:0 0 auto; background:#FFF4D9; color:#7A5200">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7.6V13M12 16.4h.02"></path></svg>
+        </span>
+        <span style="flex:1; min-width:0">
+          <p style="margin:0; font-size:16px; font-weight:700; text-wrap:pretty">{{ confirmar.label }} tiene cambios sin guardar</p>
+          <p style="margin:7px 0 0; font-size:13.5px; line-height:1.55; color:#3A4A55; text-wrap:pretty">Si cierra la pestaña se pierden, y con ellos la observación que ya escribió. Guárdelos primero o ciérrela descartándolos: eso no se puede deshacer.</p>
+        </span>
+      </div>
+      <div style="display:flex; align-items:center; gap:9px; flex-wrap:wrap; padding:13px 20px; border-top:1px solid #E3E9EE; background:#F7FBFE">
+        <button onClick="{{ confirmar.cerrar }}" style="border:1px solid #D6DEE4; border-radius:6px; padding:9px 15px; background:#fff; font-size:13.5px; color:#8F2A17; cursor:pointer; white-space:nowrap" style-hover="border-color:#A8321E">Descartar y cerrar</button>
+        <span style="flex:1; min-width:0"></span>
+        <button onClick="{{ confirmar.cancelar }}" style="border:1px solid #D6DEE4; border-radius:6px; padding:9px 15px; background:#fff; font-size:13.5px; cursor:pointer; white-space:nowrap" style-hover="border-color:#7E96A8">Seguir editando</button>
+        <button onClick="{{ confirmar.guardar }}" style="border:0; border-radius:6px; padding:10px 18px; background:#005284; color:#fff; font-size:13.5px; font-weight:600; cursor:pointer; white-space:nowrap" style-hover="background:#00365A">Guardar y cerrar</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ toast }}">
+    <div role="status" style="position:fixed; z-index:90; bottom:20px; left:50%; transform:translateX(-50%); display:flex; align-items:center; gap:10px; padding:12px 20px; border-radius:7px; background:#16232C; color:#fff; font-size:14px; box-shadow:0 10px 30px rgba(0,54,90,.28); animation:subir .18s ease; max-width:calc(100vw - 40px)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#52BDEF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M5 12.5l4.5 4.5L19 7"></path></svg>
+      {{ toast }}
+    </div>
+  </sc-if>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900},&quot;entidad&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Municipalidad Distrital de Catacaos&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Institución&quot;}}">
+/* ── NormativaV6 · el módulo «Normativa» sobre el marco V6 ──────────────
+   El mismo marco que RentasV6: barra global de 52 px en #00365A, panel
+   lateral de 252 px, pestañas con estado sucio y los mismos once colores
+   con nombre. Aquí no se inventa ni un token: si un color no está en
+   RentasV6, no está.
+
+   Lo que este módulo hace, y no hace ningún otro: componer el conjunto de
+   parámetros de un ejercicio y sellarlo (ADR-0007), enseñar los tres
+   cuadros nacionales de valuación (ADR-0017) y entregar el snapshot
+   descargable (ADR-0025 §1). Publicar un valor normativo NO se hace aquí:
+   eso es de `rol_carga_parametros`, que la aplicación no usa nunca.
+
+   De dónde salen las cifras. De `docs/10-negocio/valores-normativos/`, no
+   de la imaginación: `publicacion/parametros-2026.csv` (33 filas),
+   `publicacion/cuadros-2026.csv` (las tres ediciones con su sha256 y su
+   doble firma) y los tres derivados de `fuentes/`. Los `ETag` de la
+   pantalla de Publicación son valores de EJEMPLO con la forma correcta
+   —64 hexadecimales—: la huella real la calcula el servidor sobre los
+   bytes que emite, y por eso el cliente la recalcula y la compara.
+
+   Lo que está dibujado y todavía no ha ocurrido, dicho aquí y no
+   escondido: la versión 1 del conjunto de 2026 es la que
+   `ElEjercicio2026SeSellaTest` sella contra PostgreSQL —33 parámetros y
+   los dos cuadros de la valuación, 35 detalles, el 2026-09-06—. La
+   versión 2 y la edición abierta de 2027 están dibujadas porque la
+   pantalla tiene que poder enseñarlas: dos conjuntos SELLADOS del mismo
+   ejercicio NO son un error —`conjunto_uq` lleva la versión y
+   `selladoVigenteDe` toma la última—, y sin una edición abierta no hay
+   dónde enseñar las tres escrituras. */
+
+const AZUL = '#005284';
+const AZUL_OSC = '#00365A';
+const AZUL_SUAVE = '#E4F4FD';
+const ACENTO = '#52BDEF';
+const LINEA = '#D6DEE4';
+const LINEA_2 = '#E3E9EE';
+const BORDE_CAMPO = '#C3CFD9';
+const TINTA = '#16232C';
+const TINTA_2 = '#3A4A55';
+const TINTA_3 = '#5A6B78';
+const SUP = '#F7FBFE';
+
+const IN = "width:100%; box-sizing:border-box; border:1px solid " + BORDE_CAMPO + "; border-radius:6px; padding:9px 10px; background:#fff; font-size:14px";
+const IN_MAL = "width:100%; box-sizing:border-box; border:1px solid #A8321E; border-radius:6px; padding:9px 10px; background:#FFF9F8; font-size:14px";
+const AREA = "width:100%; box-sizing:border-box; border:1px solid " + BORDE_CAMPO + "; border-radius:6px; padding:9px 10px; background:#fff; font-family:'Source Sans 3',sans-serif; font-size:14px; resize:vertical";
+const AREA_MAL = "width:100%; box-sizing:border-box; border:1px solid #A8321E; border-radius:6px; padding:9px 10px; background:#FFF9F8; font-family:'Source Sans 3',sans-serif; font-size:14px; resize:vertical";
+
+const TH = 'padding:9px 16px; text-align:left; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:' + TINTA_3 + '; white-space:nowrap; background:' + SUP + '; border-bottom:1px solid ' + LINEA;
+const THN = TH + '; text-align:right';
+const TD = 'padding:11px 16px; font-size:13.5px; color:' + TINTA_2;
+const TDN = 'padding:11px 16px; font-size:13.5px; color:' + TINTA + '; text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums';
+const TD1 = 'padding:11px 16px; font-size:13.5px; font-weight:600; color:' + TINTA + '; white-space:nowrap';
+
+/* El nombre del campo en la API, junto a su rótulo. Es lo que convierte
+   este artboard en la referencia contra la que se implementa: quien
+   escriba la pantalla no tiene que adivinar qué campo es cuál. */
+const CODIGO = 'display:inline-block; font-size:10.5px; font-weight:600; color:#004670; background:' + AZUL_SUAVE + '; border-radius:3px; padding:1px 5px; letter-spacing:.01em';
+const CODIGO_TH = 'display:block; margin-top:3px; font-size:9.5px; font-weight:600; text-transform:none; letter-spacing:0; color:#93A3AF';
+
+const INS = {
+  ok: 'display:inline-block; font-size:11.5px; font-weight:600; border-radius:4px; padding:2px 8px; background:#DCEFE3; color:#1F5B39; white-space:nowrap; flex:0 0 auto',
+  warn: 'display:inline-block; font-size:11.5px; font-weight:600; border-radius:4px; padding:2px 8px; background:#FFF4D9; color:#7A5200; white-space:nowrap; flex:0 0 auto',
+  bad: 'display:inline-block; font-size:11.5px; font-weight:600; border-radius:4px; padding:2px 8px; background:#FBE4E0; color:#8F2A17; white-space:nowrap; flex:0 0 auto',
+  info: 'display:inline-block; font-size:11.5px; font-weight:600; border-radius:4px; padding:2px 8px; background:' + AZUL_SUAVE + '; color:#004670; white-space:nowrap; flex:0 0 auto'
+};
+
+/* Los trece módulos. `Normativa` es el nuevo y va el segundo: es el que
+   este archivo dibuja. Los demás siguen para que el marco pueda
+   demostrar la pestaña ajena, que es la mitad de lo que V6 prueba. */
+const MODULOS = [
+  ['Inicio', ['M3 10.6 12 3.5l9 7.1', 'M5.6 9.6V20.5h12.8V9.6', 'M10 20.5v-5.4h4v5.4']],
+  ['Normativa', ['M5 5.4A1.9 1.9 0 0 1 6.9 3.5H19.2v13.4H6.9A1.9 1.9 0 0 0 5 18.8z', 'M5 18.8a1.9 1.9 0 0 0 1.9 1.7H19.2v-2.9', 'M8.7 8.1h6.6', 'M8.7 11.6h4.2']],
+  ['Catastro', ['M3.5 6.6 9 4.2l6 2.4 5.5-2.4v13.2L15 19.8l-6-2.4-5.5 2.4z', 'M9 4.2v13.2', 'M15 6.6v13.2']],
+  ['Rentas · Registro', ['M6.5 3.5h7.5l4 4v13h-11.5z', 'M14 3.5v4h4', 'M9.5 12.5h5', 'M9.5 16.5h3.5']],
+  ['Fiscalización', ['M9.5 4.5H8A1.5 1.5 0 0 0 6.5 6v13A1.5 1.5 0 0 0 8 20.5h8a1.5 1.5 0 0 0 1.5-1.5V6A1.5 1.5 0 0 0 16 4.5h-1.5', 'M9.5 3.2h5v2.8h-5z', 'M9.6 13.2l2 2 3.4-4']],
+  ['Tránsito', ['M5 15.8v-3.2l1.9-4.4h10.2l1.9 4.4v3.2', 'M3.6 15.8h16.8', 'M8.4 18.4a1.6 1.6 0 1 1-3.2 0 1.6 1.6 0 0 1 3.2 0', 'M18.8 18.4a1.6 1.6 0 1 1-3.2 0 1.6 1.6 0 0 1 3.2 0']],
+  ['Infracciones administrativas', ['M12 4.2 20.8 19.6H3.2z', 'M12 9.8v4.4', 'M12 17.1h.02']],
+  ['Tesorería', ['M3.2 7.4h17.6v9.2H3.2z', 'M13.6 12a1.6 1.6 0 1 1-3.2 0 1.6 1.6 0 0 1 3.2 0', 'M6.6 10.6v2.8', 'M17.4 10.6v2.8']],
+  ['Consultas', ['M17.4 11a6.4 6.4 0 1 1-12.8 0 6.4 6.4 0 0 1 12.8 0', 'M15.8 15.8 20.6 20.6']],
+  ['Valores', ['M6.5 3.5h7.5l4 4v13h-11.5z', 'M14 3.5v4h4', 'M9.5 11.5h5', 'M15.6 16.4a2.3 2.3 0 1 1-4.6 0 2.3 2.3 0 0 1 4.6 0']],
+  ['Coactiva', ['M12 4.4v3.2', 'M5 8.6h14', 'M5 8.6 2.8 14.4h4.4z', 'M19 8.6 16.8 14.4h4.4z', 'M8.4 20h7.2']],
+  ['Autorizaciones y licencias', ['M4.4 9.6V20h15.2V9.6', 'M3.2 9.6 5.2 4.6h13.6l2 5z', 'M9.6 20v-5.4h4.8V20']],
+  ['Seguridad', ['M12 3.4 19 5.9v5.6c0 4.1-3 7.2-7 9.1-4-1.9-7-5-7-9.1V5.9z', 'M9.4 12.1l1.9 1.9 3.5-3.6']]
+];
+
+const ICO_SEC = {
+  'nor-panel': ['M4 19.5h16', 'M6.5 19.5V9', 'M11 19.5V5.5', 'M15.5 19.5v-7', 'M20 19.5v-11'],
+  'nor-ediciones': ['M12 3.6 20.4 8 12 12.4 3.6 8z', 'M3.6 12 12 16.4 20.4 12', 'M3.6 16 12 20.4 20.4 16'],
+  'nor-cuadros': ['M4 5.5h16v13H4z', 'M4 10h16', 'M9.5 10v8.5', 'M15 10v8.5'],
+  'nor-publicacion': ['M12 4.5v10', 'M8 11l4 4 4-4', 'M4.5 18.5h15']
+};
+
+/* ── Los datos, todos del corpus ─────────────────────────────────────
+   `docs/10-negocio/valores-normativos/publicacion/parametros-2026.csv`:
+   33 filas, y estas son las 33. `valorTexto` es la transcripción verbatim
+   de la norma, así que se recorta al dibujarla, no al guardarla. */
+const PARAMETROS = [
+  ['UIT', '', '4600.00', '', '2022-01-01', '2022-12-31', 'D.S. N.° 398-2021-EF'],
+  ['UIT', '', '4950.00', '', '2023-01-01', '2023-12-31', 'D.S. N.° 309-2022-EF'],
+  ['UIT', '', '5150.00', '', '2024-01-01', '2024-12-31', 'D.S. N.° 309-2023-EF'],
+  ['UIT', '', '5350.00', '', '2025-01-01', '2025-12-31', 'D.S. N.° 260-2024-EF'],
+  ['UIT', '', '5500.00', '', '2026-01-01', '2026-12-31', 'D.S. N.° 301-2025-EF'],
+  ['TRAMO_PREDIAL', '1', '0.2', 'Hasta 15 UIT; 0.2%', '2004-11-15', '', 'TUO LTM (D.S. 156-2004-EF), art. 13'],
+  ['TRAMO_PREDIAL', '2', '0.6', 'Más de 15 UIT y hasta 60 UIT; 0.6%', '2004-11-15', '', 'TUO LTM (D.S. 156-2004-EF), art. 13'],
+  ['TRAMO_PREDIAL', '3', '1.0', 'Más de 60 UIT; 1.0%', '2004-11-15', '', 'TUO LTM (D.S. 156-2004-EF), art. 13'],
+  ['TRAMO_PREDIAL_LIMITE', '1', '15', 'Hasta 15 UIT', '2004-11-15', '', 'TUO LTM (D.S. 156-2004-EF), art. 13'],
+  ['TRAMO_PREDIAL_LIMITE', '2', '60', 'Más de 15 UIT y hasta 60 UIT', '2004-11-15', '', 'TUO LTM (D.S. 156-2004-EF), art. 13'],
+  ['DEDUCCION_PENSIONISTA', '', '50', '50 UIT', '2004-11-15', '', 'TUO LTM art. 19'],
+  ['DEDUCCION_ADULTO_MAYOR', '', '50', '50 UIT', '2016-07-21', '', 'Ley N.° 30490, Ley de la Persona Adulta Mayor'],
+  ['PREDIAL_MINIMO', '', '0.6', '0.6% de la UIT vigente al 1 de enero del año al que corresponde el impuesto', '2004-11-15', '', 'TUO LTM (D.S. 156-2004-EF), art. 13, último párrafo'],
+  ['PLAZO', 'PRESCRIPCION-DECLARACION_PRESENTADA', '4', 'prescribe a los cuatro (4) años; deudor que presentó la declaración respectiva', '2013-06-22', '', 'TUO del Código Tributario (D.S. N.º 133-2013-EF)'],
+  ['PLAZO', 'PRESCRIPCION-SIN_DECLARACION', '6', 'seis (6) años para quienes no hayan presentado la declaración respectiva', '2013-06-22', '', 'TUO del Código Tributario (D.S. N.º 133-2013-EF)'],
+  ['PLAZO', 'PRESCRIPCION-AGENTE_RETENCION', '10', 'prescriben a los diez (10) años cuando el Agente de retención o percepción', '2013-06-22', '', 'TUO del Código Tributario (D.S. N.º 133-2013-EF)'],
+  ['PLAZO', 'REC1_CUMPLIMIENTO', '7', 'dentro del plazo de siete (7) días hábiles de notificado', '2004-01-10', '', 'Ley N.º 26979, Ley de Procedimiento de Ejecución Coactiva'],
+  ['PLAZO', 'NOTIFICACION_VALOR-RD', '20', 'término improrrogable de veinte (20) días hábiles', '2013-06-22', '', 'TUO del Código Tributario (D.S. N.º 133-2013-EF)'],
+  ['PLAZO', 'NOTIFICACION_VALOR-RM', '20', 'término improrrogable de veinte (20) días hábiles', '2013-06-22', '', 'TUO del Código Tributario (D.S. N.º 133-2013-EF)'],
+  ['PLAZO', 'NOTIFICACION_VALOR-OP', '0', 'el desfase publicado es de cero (0) días hábiles', '2008-12-06', '', 'TUO de la Ley N.º 26979'],
+  ['PLAZO', 'PRESCRIPCION_INICIO-PREDIAL', '1', 'Desde el uno (1) de enero del año siguiente; desfase de un año respecto del ejercicio', '2013-06-22', '', 'TUO del Código Tributario (D.S. N.º 133-2013-EF)'],
+  ['PLAZO', 'PRESCRIPCION_INICIO-VEHICULAR', '1', 'Desde el uno (1) de enero del año siguiente; desfase de un año respecto del ejercicio', '2013-06-22', '', 'TUO del Código Tributario (D.S. N.º 133-2013-EF)'],
+  ['ALCABALA_ALICUOTA', '', '3', 'La tasa del impuesto es de 3%', '2004-11-15', '', 'TUO LTM (D.S. N.° 156-2004-EF)'],
+  ['ALCABALA_TRAMO_INAFECTO_UIT', '', '10', 'el tramo comprendido por las primeras 10 UIT del valor del inmueble', '2004-11-15', '', 'TUO LTM (D.S. N.° 156-2004-EF)'],
+  ['ESPECTACULO_ALICUOTA', 'TAURINO-SUPERIOR-0.5-UIT', '10', 'Espectáculos taurinos, valor promedio ponderado de la entrada superior al 0.5% de la UIT; 10%', '2007-12-20', '', 'TUO LTM art. 57 (Ley N.° 29168)'],
+  ['ESPECTACULO_ALICUOTA', 'TAURINO-RESTO', '5', 'Espectáculos taurinos, en los demás casos; 5%', '2007-12-20', '', 'TUO LTM art. 57 (Ley N.° 29168)'],
+  ['ESPECTACULO_ALICUOTA', 'CARRERAS-CABALLOS', '15', 'Carreras de caballos; 15%', '2007-12-20', '', 'TUO LTM art. 57 (Ley N.° 29168)'],
+  ['ESPECTACULO_ALICUOTA', 'CINEMATOGRAFICO', '10', 'Espectáculos cinematográficos; 10%', '2007-12-20', '', 'TUO LTM art. 57 (Ley N.° 29168)'],
+  ['ESPECTACULO_ALICUOTA', 'MUSICA-GENERAL', '0', 'Conciertos de música en general; 0%', '2007-12-20', '', 'TUO LTM art. 57 (Ley N.° 29168)'],
+  ['ESPECTACULO_ALICUOTA', 'FOLCLOR-TEATRO-ZARZUELA-OPERA-BALLET-CIRCO', '0', 'Espectáculos de folclor nacional, teatro, zarzuela, música clásica, ópera, opereta, ballet y circo; 0%', '2007-12-20', '', 'TUO LTM art. 57 (Ley N.° 29168)'],
+  ['ESPECTACULO_ALICUOTA', 'OTROS', '10', 'Otros espectáculos públicos; 10%', '2007-12-20', '', 'TUO LTM art. 57 (Ley N.° 29168)'],
+  ['FACTOR_OFICIALIZACION', '', '0.68', 'FACTOR DE OFICIALIZACIÓN Fo = 0,68', '2026-01-01', '2026-12-31', 'Resolución Ministerial N.° 277-2025-VIVIENDA'],
+  ['PORCENTAJE_DE_ACTUALIZACION', '', '0', 'En el ejercicio 2026 se publicaron los aranceles de terrenos y los precios unitarios oficiales de construcción; el supuesto del art. 12 no se cumple y no hay actualización que aplicar: 0', '2026-01-01', '2026-12-31', 'TUO LTM (D.S. N.° 156-2004-EF), art. 12']
+];
+
+/* `fuentes/valores-unitarios-2026/valores-unitarios-costa-2026.csv`: las
+   24 filas del Anexo I.2 (Costa), enteras. Que la J no aparezca y que la
+   H no tenga muros no es un hueco del derivado: es el cuadro. */
+const VALORES_UNITARIOS = [
+  ['MUROS', 'A', '1990', '—', '894.27'], ['TECHOS', 'A', '1990', '—', '543.16'], ['PUERTAS', 'A', '1990', '—', '485.33'],
+  ['MUROS', 'B', '1990', '—', '576.57'], ['TECHOS', 'B', '1990', '—', '354.37'], ['PUERTAS', 'B', '1990', '—', '255.81'],
+  ['MUROS', 'C', '1990', '—', '387.43'], ['TECHOS', 'C', '1990', '—', '285.80'], ['PUERTAS', 'C', '1990', '—', '161.41'],
+  ['MUROS', 'D', '1990', '—', '374.68'], ['TECHOS', 'D', '1990', '—', '181.40'], ['PUERTAS', 'D', '1990', '—', '141.39'],
+  ['MUROS', 'E', '1990', '—', '263.77'], ['TECHOS', 'E', '1990', '—', '67.63'], ['PUERTAS', 'E', '1990', '—', '120.98'],
+  ['MUROS', 'F', '1990', '—', '198.64'], ['TECHOS', 'F', '1990', '—', '37.19'], ['PUERTAS', 'F', '1990', '—', '90.81'],
+  ['MUROS', 'G', '1990', '—', '117.05'], ['TECHOS', 'G', '1990', '—', '25.57'], ['PUERTAS', 'G', '1990', '—', '49.05'],
+  ['TECHOS', 'H', '1990', '—', '0.00'], ['PUERTAS', 'H', '1990', '—', '24.53'],
+  ['PUERTAS', 'I', '1990', '—', '0.00']
+];
+
+/* `fuentes/depreciacion-rnt-2016/depreciacion.csv`: 492 filas. Se dibujan
+   catorce, y el tramo abierto —`antiguedadHasta` nulo, «más de 50
+   años»— entre ellas: leer ese nulo como cero convierte el tramo que
+   todo lo cubre en uno que no cubre nada. */
+const DEPRECIACIONES = [
+  ['01', 'Concreto', 'Muy Bueno', '5', '0'],
+  ['01', 'Concreto', 'Muy Bueno', '10', '0'],
+  ['01', 'Concreto', 'Muy Bueno', '15', '3'],
+  ['01', 'Concreto', 'Muy Bueno', '30', '12'],
+  ['01', 'Concreto', 'Muy Bueno', '50', '24'],
+  ['01', 'Concreto', 'Muy Bueno', '—', '27'],
+  ['01', 'Ladrillo', 'Regular', '5', '20'],
+  ['01', 'Ladrillo', 'Regular', '10', '23'],
+  ['01', 'Ladrillo', 'Regular', '15', '26'],
+  ['02', 'Concreto', 'Bueno', '5', '5'],
+  ['02', 'Ladrillo', 'Malo', '5', '60'],
+  ['02', 'Liviano/Adobe', 'Regular', '5', '32'],
+  ['03', 'Concreto', 'Muy Bueno', '5', '0'],
+  ['04', 'Concreto', 'Muy Bueno', '15', '6']
+];
+
+/* `fuentes/tvr-2026/tvr-2026.csv`: 18 043 líneas y 54 129 filas —cada
+   línea publica tres años de fabricación—. Se dibujan diez. */
+const VALORES_REFERENCIALES = [
+  ['2026', 'A1', 'BAJAJ', 'QUTE', '2025', '18,000.00'],
+  ['2026', 'A1', 'BAJAJ', 'QUTE', '2024', '16,200.00'],
+  ['2026', 'A1', 'BAJAJ', 'QUTE', '2023', '14,400.00'],
+  ['2026', 'A1', 'BYD', 'FO COMFORT', '2025', '32,440.00'],
+  ['2026', 'A2', 'TOYOTA', 'AGYA 1.0L E AT', '2025', '30,310.00'],
+  ['2026', 'A3', 'ALFA ROMEO', '145 16 V', '2025', '86,430.00'],
+  ['2026', 'A3', 'ALFA ROMEO', '147 2.0 SSP 3P', '2025', '104,780.00'],
+  ['2026', 'CAMIONES', 'AUTOCRAFT', 'EXOR', '2025', '45,850.00'],
+  ['2026', 'CAMIONETAS', 'ASIA', 'COMBI AM825 25', '2025', '104,740.00'],
+  ['2026', 'BUSES Y OMNIBUSES', 'AGRALE', 'MA 8.5', '2025', '135,890.00']
+];
+
+/* Las tres ediciones de `publicacion/cuadros-2026.csv`, con su huella y
+   su doble firma verbatim. La edición es la unidad que se publica: una
+   fila del cuadro no se corrige, se publica otra edición. */
+const CUADROS = [
+  { id: 'unitarios', label: 'Valores unitarios', conteo: '24', total: 24,
+    campo: 'valoresUnitarios', min: '860px', ambito: 'VALUACION',
+    nota: 'El Anexo I.2 de la R.M. 277-2025-VIVIENDA: la Costa. Es una matriz de categoría por año de construcción, no sólo de categoría, y la letra que sale de aquí es lo que multiplica los metros construidos del predio.',
+    edicion: [
+      ['tipo', 'TABLA_VALORES_UNITARIOS', 1], ['clave', 'ANEXO-I.2-COSTA', 1],
+      ['vigencia', '2026-01-01 → 2026-12-31', 0],
+      ['documento fuente', 'Resolución Ministerial N.º 277-2025-VIVIENDA', 0],
+      ['sha256 del derivado', '0540c3af64fd015b905135d0274c07ffec2f52dbfe4764ff27823e6e7c775261', 2],
+      ['transcribió · verificó', 'JNA · HNA', 0]
+    ],
+    cols: [['Partida', 0, 'partida'], ['Categoría', 0, 'categoria'], ['Desde', 1, 'anioConstruccionDesde'], ['Hasta', 1, 'anioConstruccionHasta'], ['Valor por m² (S/)', 1, 'valorM2'], ['Documento fuente', 0, 'documentoFuente']],
+    fuente: 'R.M. 277-2025-VIVIENDA',
+    filas: VALORES_UNITARIOS,
+    pie: 'Una región por edición: la R.M. anual publica un cuadro por región —Lima Metropolitana y Callao, Costa, Sierra y Selva— y la tabla no tiene columna de región, así que las cuatro chocarían en `valor_unitario_uq`. La región viaja en la CLAVE de la edición, y con ADR-0017 eso es la forma correcta y no una limitación. La J existe sólo en el Anexo I.4 (Selva) y sólo en muros; la H no tiene muros. Por eso son 24 celdas y no 30.' },
+  { id: 'depreciacion', label: 'Depreciación', conteo: '492', total: 492,
+    campo: 'depreciaciones', min: '820px', ambito: 'VALUACION',
+    nota: 'El Anexo I del Reglamento Nacional de Tasaciones. El uso es la tabla a la que pertenece la fila, con el número que usa la propia norma: 01 vivienda, 02 tiendas y depósitos, 03 oficinas, 04 salud, industria y educación. Qué tabla le toca a un predio es criterio, y no vive aquí.',
+    edicion: [
+      ['tipo', 'TABLA_DEPRECIACION', 1], ['clave', 'ANEXO-I', 1],
+      ['vigencia', '2016-07-23 → sin fin', 0],
+      ['documento fuente', 'Resolución Ministerial N.º 172-2016-VIVIENDA', 0],
+      ['sha256 del derivado', '5e919b370b10473570187c33edefd15a6dd372653db5d77b25fc51e31deb6be6', 2],
+      ['transcribió · verificó', 'JNA · HNA', 0]
+    ],
+    cols: [['Uso', 0, 'uso'], ['Material', 0, 'material'], ['Estado de conservación', 0, 'estadoConservacion'], ['Antigüedad hasta', 1, 'antiguedadHasta'], ['Depreciación %', 1, 'porcentaje'], ['Documento fuente', 0, 'documentoFuente']],
+    fuente: 'R.M. 172-2016-VIVIENDA',
+    filas: DEPRECIACIONES,
+    pie: 'Se dibujan 14 de las 492 filas. El tramo abierto —«más de 50 años»— lleva `antiguedadHasta` nulo y se enseña como «—», no como 0: leerlo como cero convierte el tramo que todo lo cubre en uno que no cubre nada, y sin ningún error de por medio.' },
+  { id: 'referenciales', label: 'Valores referenciales', conteo: '54 129', total: 54129,
+    campo: 'valoresReferenciales', min: '900px', ambito: 'OBLIGACION',
+    nota: 'El anexo del MEF con el valor referencial de los vehículos. Es la única de las tres tablas que no interviene en la valuación de un predio: sirve para la base imponible del patrimonio vehicular, que es obligación y no valuación (ADR-0024).',
+    edicion: [
+      ['tipo', 'TABLA_VALORES_REFERENCIALES', 1], ['clave', '2026', 1],
+      ['vigencia', '2026-01-01 → 2026-12-31', 0],
+      ['documento fuente', 'Resolución Ministerial N.° 008-2026-EF/15', 0],
+      ['sha256 del derivado', '239a75a03ef76550018e844c990f4c1bb1a35390cab1b0163e05bd1a0121098a', 2],
+      ['transcribió · verificó', 'JNA · HNA', 0]
+    ],
+    cols: [['Ejercicio', 1, 'ejercicio'], ['Categoría', 0, 'categoria'], ['Marca', 0, 'marca'], ['Modelo', 0, 'modelo'], ['Año de fabricación', 1, 'anioFabricacion'], ['Valor (S/)', 1, 'valor']],
+    fuente: 'R.M. 008-2026-EF/15',
+    filas: VALORES_REFERENCIALES,
+    pie: 'Se dibujan 10 de las 54 129 filas: 18 043 líneas del anexo por tres años de fabricación. «OTROS MODELOS» es una fila de verdad y aparece en cada categoría con un valor distinto, así que la categoría es parte de la identidad y no una etiqueta.' }
+];
+
+/* Las ediciones del conjunto. La v1 de 2026 es la que el repositorio
+   sella de verdad; las otras dos están dibujadas (ver la cabecera). */
+const EDICIONES = [
+  { id: 3, ejercicio: '2027', version: 1, estado: 'ABIERTO', vigente: false,
+    fechaSellado: '', usuarioSellado: '', parametros: 0, cuadros: 0, detalles: 0,
+    contexto: 'Sin ningún parámetro todavía. D-11 no se hereda: el «% actualización» de 2027 necesita su propia lectura del art. 12 y sus dos firmas.' },
+  { id: 2, ejercicio: '2026', version: 2, estado: 'SELLADO', vigente: true,
+    fechaSellado: '2026-09-06 15:22', usuarioSellado: 'hneyra', parametros: 33, cuadros: 3, detalles: 36,
+    contexto: 'La versión que rige 2026. Añade la edición vehicular, que la versión 1 no llevaba: corregir un conjunto sellado exige una versión nueva, no una corrección (ADR-0007).' },
+  { id: 1, ejercicio: '2026', version: 1, estado: 'SELLADO', vigente: false,
+    fechaSellado: '2026-09-06 10:00', usuarioSellado: 'hneyra', parametros: 33, cuadros: 2, detalles: 35,
+    contexto: 'El primer sello de 2026: 33 parámetros y los dos cuadros de la valuación. Sigue existiendo y sigue sirviendo, porque cada determinación guarda con qué conjunto se calculó (ADR-0025 §3).' }
+];
+
+/* Las diez filas del mapa normativo sin archivo del corpus. Se nombran
+   una a una porque «faltan cosas» no es una lista: quien selle el
+   conjunto de SU municipalidad tiene que poder ver si alguna es suya. */
+const SIN_ARCHIVO = [
+  ['11', 'Tasas de limpieza pública, relleno sanitario, parques y jardines y serenazgo', 'D-02b'],
+  ['12', 'Criterios de distribución del costo del servicio', 'D-02b'],
+  ['13', 'Descuento por pago anual adelantado', 'D-02b'],
+  ['14', 'Inafectaciones de arbitrios', 'D-02b'],
+  ['18', 'Anuncios y propaganda: tasas por tipo y dimensión', 'D-02b'],
+  ['19', 'Interés moratorio (TIM), que fija una ordenanza municipal', 'D-02b'],
+  ['23', 'Costas y gastos del procedimiento coactivo', 'D-02c'],
+  ['25', 'Cuadro único de infracciones y sanciones administrativas (CUIS)', 'D-02b'],
+  ['26', 'Descuentos por pronto pago de papeletas', 'D-02c'],
+  ['28', 'Interés del convenio de fraccionamiento y número máximo de cuotas', 'D-02b']
+];
+
+const DECISIONES = [
+  { id: 'D-02b', estado: 'Abierta', tono: 'bad', titulo: 'Valores de ordenanza local con su ratificación provincial',
+    detalle: 'Ocho de las diez filas sin archivo del corpus. Bloquea sellar un ejercicio COMPLETO en una municipalidad concreta; no bloquea lo de norma nacional, que ya está.' },
+  { id: 'D-02c', estado: 'Abierta', tono: 'bad', titulo: 'Lo que fija un acto propio que no es ordenanza ratificada',
+    detalle: 'El arancel de costas coactivas y el CUIS. Bloquea coactiva y sanciones.' },
+  { id: 'D-11', estado: 'Cerrada para 2026', tono: 'ok', titulo: 'El «% actualización» del art. 12',
+    detalle: 'Cerrada el 2026-09-06 y SÓLO para 2026: el fundamento es un hecho —ese año se publicaron los aranceles y los precios unitarios, así que el supuesto del art. 12 no se cumple y no hay actualización que aplicar—. Sigue ABIERTA para cualquier otro ejercicio: no se hereda.' },
+  { id: 'D-03d', estado: 'Abierta', tono: 'warn', titulo: 'Redondeo del importe a pagar en el cierre de caja',
+    detalle: 'Puede no ser el del cálculo (ADR-0018 fija el del cálculo). Bloquea el cierre de caja, no el sello.' }
+];
+
+/* Los cuatro pasos de la ficha de una edición. Uno es lectura y tres son
+   escritura, y los tres piden observación: sin ella no se guarda (regla
+   10, ADR-0008). El mínimo son 5 caracteres, que es lo que exige
+   `auditoria_observacion_ck` en la base. */
+const OBS_AYUDA = 'Sin observación no se guarda (regla 10). Al menos 5 caracteres, y como mucho 500: es lo que admite la columna.';
+const PASOS = [
+  { id: 'parametros', label: 'Parámetros del conjunto', escritura: false,
+    nota: 'Lo que este conjunto contiene, tal como se compuso. Lleva la vigencia de cada fila y no el valor ya resuelto: un conjunto sellado guarda a propósito el histórico de una llave —la UIT aparece cinco veces— y quien resuelve cuál rige es el lector, contra el ejercicio del conjunto.',
+    campos: [
+      { k: 'id', l: 'Identificador', n: 'conjuntoId', t: 'ro' },
+      { k: 'ejercicio', l: 'Ejercicio', n: 'ejercicio', t: 'ro' },
+      { k: 'version', l: 'Versión', n: 'version', t: 'ro' },
+      { k: 'estado', l: 'Estado', n: 'estado', t: 'ro', ayuda: 'ABIERTO o SELLADO. Son dos y el paso entre ellos va en una sola dirección.' },
+      { k: 'fechaSellado', l: 'Fecha de sellado', n: 'fechaSellado', t: 'ro' },
+      { k: 'usuarioSellado', l: 'Usuario que selló', n: 'usuarioSellado', t: 'ro', ayuda: 'El acto administrativo del que cuelga la reproducibilidad del ejercicio queda con fecha y con nombre.' }
+    ],
+    tabla: { titulo: 'Parámetros', min: '1080px', accion: 'Exportar el manifiesto',
+      vacioTexto: 'Este conjunto no tiene ningún parámetro todavía. Agréguelos por su llave —tipo, clave y desde cuándo rige— y sólo entonces se podrá sellar.',
+      cols: [['Tipo', 0, 'tipo'], ['Clave', 0, 'clave'], ['Valor numérico', 1, 'valorNumerico'], ['Valor de texto', 0, 'valorTexto'], ['Vigente desde', 0, 'vigenciaDesde'], ['Vigente hasta', 0, 'vigenciaHasta'], ['Documento fuente', 0, 'documentoFuente']],
+      nota: 'La clave va vacía cuando el tipo tiene un solo valor —la UIT no tiene clave; TRAMO_PREDIAL tiene tres—. Y `vigenciaHasta` vacío no es un olvido: es una norma sin fecha de fin.' } },
+  { id: 'abrir', label: 'Abrir versión', escritura: true, verbo: 'Abrir la versión',
+    nota: 'Una versión nueva del ejercicio, para componerla desde cero o para corregir lo que un conjunto ya sellado no admite. La versión NO se recibe: se calcula. Quien corrige un conjunto sellado no tiene por qué saber cuántas versiones hubo antes, y dejárselo elegir es la forma de acabar con dos versiones 2.',
+    campos: [
+      { k: 'abEjercicio', l: 'Ejercicio', n: 'ejercicio', t: 'sel', o: ['', '2026', '2027', '2028'], ayuda: 'Entre 1990 y 2100. Fuera de rango lo rechaza el constructor del ejercicio, y eso es un 422 que nombra el rango: no es lo mismo que «ese ejercicio no está sellado».' },
+      { k: 'abVersion', l: 'Versión que se asignará', n: 'version', t: 'ro', ayuda: 'La última del ejercicio más uno. La calcula el servidor.' },
+      { k: 'abObs', l: 'Observación', n: 'observacion', t: 'area', ancho: 1, ph: 'Por qué se abre esta versión', ayuda: OBS_AYUDA }
+    ] },
+  { id: 'agregar', label: 'Agregar parámetro', escritura: true, verbo: 'Agregar el parámetro',
+    nota: 'Incorpora al conjunto un parámetro YA PUBLICADO, nombrándolo por lo que es y no por el identificador que le tocó en la base. El mismo valor tiene identificadores distintos en «stg» y en «prod», así que un archivo escrito con números entra en el ambiente equivocado sin fallar: sella un juego de parámetros que no es el que dice.',
+    campos: [
+      { k: 'agConjunto', l: 'Conjunto', n: 'conjuntoId', t: 'ro' },
+      { k: 'agTipo', l: 'Tipo', n: 'tipo', t: 'sel', o: ['', 'UIT', 'TRAMO_PREDIAL', 'TRAMO_PREDIAL_LIMITE', 'DEDUCCION_PENSIONISTA', 'DEDUCCION_ADULTO_MAYOR', 'PREDIAL_MINIMO', 'PLAZO', 'ALCABALA_ALICUOTA', 'ALCABALA_TRAMO_INAFECTO_UIT', 'ESPECTACULO_ALICUOTA', 'FACTOR_OFICIALIZACION', 'PORCENTAJE_DE_ACTUALIZACION'] },
+      { k: 'agClave', l: 'Clave', n: 'clave', opcional: true, ph: 'Vacía si el tipo tiene un solo valor', ayuda: 'La UIT no lleva clave. TRAMO_PREDIAL lleva 1, 2 o 3.' },
+      { k: 'agVigencia', l: 'Vigente desde', n: 'vigenciaDesde', t: 'date', ayuda: 'Forma parte de la llave: la UIT de 2026 y la de 2027 comparten tipo y clave, y son filas distintas. Sin la fecha habría que elegir una, y elegirla en silencio es el modo de falla que ARQ-09 §3 describe.' },
+      { k: 'agObs', l: 'Observación', n: 'observacion', t: 'area', ancho: 1, ph: 'Por qué entra este parámetro en el conjunto', ayuda: OBS_AYUDA }
+    ] },
+  { id: 'sellar', label: 'Sellar', escritura: true, verbo: 'Sellar el conjunto',
+    nota: 'A partir de aquí rige, y no se modifica: ni el conjunto ni su contenido. Lo impide un disparador de la base, no una validación de la aplicación. Es el acto administrativo del que cuelga la reproducibilidad de todo lo que se emita con él, y por eso queda con fecha y con nombre.',
+    campos: [
+      { k: 'seConjunto', l: 'Conjunto', n: 'conjuntoId', t: 'ro' },
+      { k: 'seResumen', l: 'Lo que se congela', n: 'filas', t: 'ro' },
+      { k: 'seObs', l: 'Observación', n: 'observacion', t: 'area', ancho: 1, ph: 'Qué se sella y por qué', ayuda: OBS_AYUDA }
+    ] }
+];
+
+/* Los `ETag` son de EJEMPLO, con la forma correcta: 64 hexadecimales. La
+   huella real es el sha256 de los bytes que emite el servidor, y por eso
+   el cliente la recalcula y la compara en vez de confiar en ella. */
+const SNAPSHOTS = {
+  '2-VALUACION': { etag: '3a63fce3a3660cb28b9b7aa6e16818cc3b6c08e1deeb4414b7ca2172521e325a', p: 33, vu: 24, dep: 492, vr: 0 },
+  '2-OBLIGACION': { etag: 'eebbf72d0b9bdefa0a2f3a1ca226268d3ebc38d3a2e3120b236d87adddd2d96b', p: 33, vu: 0, dep: 0, vr: 54129 },
+  '1-VALUACION': { etag: 'a63415cf9f95e1a6d8079caecb152bee5824ace8d72460a1133da972d8c36a49', p: 33, vu: 24, dep: 492, vr: 0 },
+  '1-OBLIGACION': { etag: 'cd13f3ef7c22837113295862b4d798111fe44be17fe50477c4621000b34b81b5', p: 33, vu: 0, dep: 0, vr: 0 }
+};
+
+const ICO_MOD = {};
+
+/* El árbol de la izquierda. `Normativa` con sus cuatro submódulos, y los
+   doce de siempre para que se pueda abrir una pestaña ajena. */
+const ARBOL = [
+  ['Inicio', 'Panel de recaudación', 'inicio',
+    [['ini-panel', 'Panel'], ['ini-flujo', 'Recaudación'], ['ini-parado', 'Trabajo parado'], ['ini-cierre', 'Cierre del día']]],
+  ['Normativa', 'Parámetros sellados y corpus', 'normativa',
+    [['nor-panel', 'Panel'], ['nor-ediciones', 'Ediciones'], ['nor-cuadros', 'Cuadros de valuación'], ['nor-publicacion', 'Publicación']]],
+  ['Catastro', 'Predios y valuación', 'catastro',
+    [['cat-panel', 'Panel'], ['cat-pred', 'Predios'], ['cat-terr', 'Territorio'], ['cat-val', 'Valores del ejercicio']]],
+  ['Rentas · Registro', 'Predial y contribuyentes', 'rentas',
+    [['ren-panel', 'Panel'], ['ren-contrib', 'Contribuyentes'], ['ren-det', 'Determinación'], ['ren-val', 'Valores']]],
+  ['Fiscalización', 'Detección y actas', 'fisc',
+    [['fis-panel', 'Panel'], ['fis-actas', 'Actas'], ['fis-prog', 'Programas y cruces'], ['fis-res', 'Resultados']]],
+  ['Tránsito', 'Papeletas y vehículos', 'transito',
+    [['tra-panel', 'Panel'], ['tra-pap', 'Papeletas'], ['tra-veh', 'Vehículos y depósito'], ['tra-cua', 'Cuadros y plazos']]],
+  ['Infracciones administrativas', 'Sanciones administrativas', 'infra',
+    [['inf-panel', 'Panel'], ['inf-exp', 'Expedientes'], ['inf-cuis', 'CUIS y reincidencia'], ['inf-esc', 'Escalas y plazos']]],
+  ['Tesorería', 'Caja y recaudación', 'tesoreria',
+    [['tes-panel', 'Panel'], ['tes-rec', 'Recibos'], ['tes-caj', 'Cajas y arqueo'], ['tes-tar', 'Tarifario y cierre']]],
+  ['Consultas', 'Ventanilla y constancias', 'consultas',
+    [['con-panel', 'Panel'], ['con-contrib', 'Contribuyentes'], ['con-obj', 'Consultas por objeto'], ['con-doc', 'Documentos y beneficios']]],
+  ['Valores', 'Emisión y notificación', 'valores-mod',
+    [['val-panel', 'Panel'], ['val-val', 'Valores'], ['val-cart', 'Cartera y lotes'], ['val-tip', 'Tipos y prescripción']]],
+  ['Coactiva', 'Expedientes y medidas', 'coactiva',
+    [['coa-panel', 'Panel'], ['coa-exp', 'Expedientes'], ['coa-cart', 'Cartera y medidas'], ['coa-cost', 'Costas y plazos']]],
+  ['Autorizaciones y licencias', 'Licencias y anuncios', 'autoriz',
+    [['aut-panel', 'Panel'], ['aut-sol', 'Solicitudes'], ['aut-cat', 'Catálogos y padrones'], ['aut-tram', 'Trámites y plazos']]],
+  ['Seguridad', 'Usuarios y permisos', 'seguridad',
+    [['seg-panel', 'Panel'], ['seg-acc', 'Accesos'], ['seg-aud', 'Auditoría'], ['seg-sis', 'Sistema']]]
+];
+
+ARBOL.forEach((m) => {
+  const fila = MODULOS.find((x) => x[0] === m[0]);
+  ICO_MOD[m[0]] = fila ? fila[1] : [];
+});
+
+const HOJAS = {};
+ARBOL.forEach((m) => m[3].forEach((h) => { HOJAS[h[0]] = { mod: m[0], nota: m[1], label: h[1] }; }));
+
+/* Las cuatro secciones del módulo, con el slug que va al hash. */
+const SECS = [
+  ['nor-panel', 'Panel', '', 'panel'],
+  ['nor-ediciones', 'Ediciones', '', 'ediciones'],
+  ['nor-cuadros', 'Cuadros de valuación', '3', 'cuadros'],
+  ['nor-publicacion', 'Publicación', '', 'publicacion']
+];
+
+class Component extends DCLogic {
+  state = {
+    secOpen: true, abiertas: ['nor-panel'], desplegado: 'Normativa',
+    sucias: {}, porCerrar: null, panelVar: 'a', datosVar: 'sellado',
+    filtro: '', sesion: false,
+    dest: 'nor-panel', edicion: null, paso: 0, vals: {}, intento: false,
+    q: '', chip: 'Todas', orden: 'Ejercicio',
+    cuadroTab: 0, pubConjunto: 2, pubAmbito: 'VALUACION',
+    ejercicio: '2026', lanzador: false, pal: false, pq: '',
+    aviso: true, avisoAbierto: false, toast: ''
+  };
+
+  componentDidMount() {
+    this.aplicar();
+    const inicial = this.destDeHash();
+    if (inicial) this.setState({ dest: inicial });
+    else this.marcarHash(this.state.dest);
+    this._hash = () => {
+      const d = this.destDeHash();
+      if (d && d !== this.state.dest) this.setState({ dest: d, edicion: null });
+    };
+    window.addEventListener('hashchange', this._hash);
+    this._tecla = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        this.setState((s) => ({ pal: !s.pal, pq: '', lanzador: false }));
+      } else if (e.key === 'Escape') {
+        this.setState({ pal: false, lanzador: false, porCerrar: null, sesion: false });
+      }
+    };
+    window.addEventListener('keydown', this._tecla);
+  }
+  componentDidUpdate() { this.aplicar(); }
+  componentWillUnmount() {
+    window.removeEventListener('keydown', this._tecla);
+    window.removeEventListener('hashchange', this._hash);
+    if (this._reloj) clearTimeout(this._reloj);
+  }
+
+  aplicar() {
+    if (this.state.toast && this.state.toast !== this._ultimo) {
+      this._ultimo = this.state.toast;
+      if (this._reloj) clearTimeout(this._reloj);
+      this._reloj = setTimeout(() => { this._ultimo = ''; this.setState({ toast: '' }); }, 3400);
+    }
+  }
+
+  marcarHash(dest) {
+    const slug = (SECS.find((x) => x[0] === dest) || [])[3] || (HOJAS[dest] ? dest : null);
+    if (!slug) return;
+    try {
+      if (window.location.hash.slice(1) !== slug) {
+        window.history.replaceState(null, '', '#' + slug);
+      }
+    } catch (e) { /* sin permiso de historial: el hash es un extra */ }
+  }
+
+  destDeHash() {
+    const slug = (window.location.hash || '').slice(1);
+    const fila = SECS.find((x) => x[3] === slug);
+    if (fila) return fila[0];
+    return HOJAS[slug] ? slug : null;
+  }
+
+  ir(dest, extra) {
+    this.marcarHash(dest);
+    this.setState((s) => Object.assign({
+      dest: dest, lanzador: false, pal: false,
+      abiertas: s.abiertas.indexOf(dest) >= 0 ? s.abiertas : s.abiertas.concat([dest])
+    }, extra || {}));
+  }
+
+  pedirCierre(dest) {
+    if (this.state.sucias[dest]) { this.setState({ porCerrar: dest }); return; }
+    this.cerrarPestana(dest);
+  }
+
+  cerrarPestana(dest) {
+    this.setState((s) => {
+      const i = s.abiertas.indexOf(dest);
+      if (i < 0) return {};
+      const quedan = s.abiertas.filter((x) => x !== dest);
+      let activa = s.dest;
+      if (s.dest === dest) {
+        activa = quedan.length === 0 ? null : quedan[Math.max(i - 1, 0)];
+        if (activa) this.marcarHash(activa);
+      }
+      const sucias = Object.assign({}, s.sucias);
+      delete sucias[dest];
+      return { abiertas: quedan, dest: activa, edicion: null, sucias: sucias, porCerrar: null };
+    });
+  }
+
+  set(k, v) {
+    this.setState((s) => ({
+      vals: Object.assign({}, s.vals, { [k]: v }),
+      sucias: s.dest === null ? s.sucias : Object.assign({}, s.sucias, { [s.dest]: true })
+    }));
+  }
+  val(k, d) { const v = this.state.vals[k]; return v === undefined ? d : v; }
+
+  /* Con el conmutador en «recién implantada» no hay ninguna edición: los
+     cuadros nacionales y las 33 filas del corpus están publicados igual
+     —son de norma nacional y no de una municipalidad—, pero el conjunto
+     es de cada municipalidad y esta todavía no ha compuesto ninguno. */
+  ediciones() { return this.state.datosVar === 'sellado' ? EDICIONES : []; }
+
+  cols(defs) {
+    return defs.map((x) => ({
+      label: x[0], style: x[1] ? THN : TH,
+      campo: x[2] || '', campoStyle: x[2] ? CODIGO_TH : 'display:none'
+    }));
+  }
+  colsSimples(defs) { return defs.map((x) => ({ label: x[0], style: x[1] ? THN : TH })); }
+  filas(rows, defs) {
+    return rows.map((r) => ({
+      celdas: r.map((c, j) => ({ texto: c, style: j === 0 ? TD1 : (defs[j] && defs[j][1] ? TDN : TD) }))
+    }));
+  }
+  /* Un `valorTexto` es la transcripción verbatim de la norma y puede
+     ocupar tres líneas. En una celda se recorta; en la base, no. */
+  corto(t, n) { return t.length > n ? t.slice(0, n - 1) + '…' : t; }
+  numero(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
+
+  seleccionada() {
+    const s = this.state;
+    return this.ediciones().find((e) => e.id === s.edicion);
+  }
+  /* «nueva» no es una edición: es el formulario de abrir versión sin
+     ninguna abierta detrás, que es como empieza una municipalidad. */
+  esNueva() { return this.state.edicion === 'nueva'; }
+
+  /* Los valores de sólo lectura de la ficha, que son los del conjunto
+     elegido: aquí no hay ningún dato que no venga del servidor. */
+  datos(ed) {
+    if (!ed) {
+      return this.esNueva()
+        ? { abEjercicio: '', abVersion: 'La calcula el sistema al guardar' }
+        : {};
+    }
+    const snap = SNAPSHOTS[ed.id + '-VALUACION'];
+    return {
+      id: String(ed.id), ejercicio: ed.ejercicio, version: String(ed.version), estado: ed.estado,
+      fechaSellado: ed.fechaSellado === '' ? '—' : ed.fechaSellado,
+      usuarioSellado: ed.usuarioSellado === '' ? '—' : ed.usuarioSellado,
+      abEjercicio: '', abVersion: ed.ejercicio === '2027' ? '2' : String(ed.version + 1),
+      agConjunto: String(ed.id), agTipo: '', agClave: '', agVigencia: '',
+      seConjunto: String(ed.id),
+      seResumen: ed.parametros === 0 ? 'Ningún parámetro' : (ed.parametros + ' parámetros · ' + ed.cuadros + (ed.cuadros === 1 ? ' cuadro' : ' cuadros') + (snap ? '' : ''))
+    };
+  }
+
+  campo(f, d) {
+    const valor = this.val(f.k, d[f.k]);
+    const vacio = valor === undefined || valor === '';
+    const obligatorio = !f.opcional && f.t !== 'ro' && f.t !== 'chk';
+    const mal = obligatorio && vacio && this.state.intento;
+    return {
+      label: f.l, ph: f.ph || '', ayuda: f.ayuda || '',
+      campo: f.n || '', campoStyle: f.n ? CODIGO : 'display:none',
+      opcional: f.opcional === true, ancho: f.ancho ? '1' : '0',
+      valor: valor === undefined ? '' : valor,
+      opts: f.o || [], marcado: valor === true,
+      style: mal ? IN_MAL : IN,
+      areaStyle: mal ? AREA_MAL : AREA,
+      esTexto: f.t === undefined || f.t === 'text', esSel: f.t === 'sel', esFecha: f.t === 'date',
+      esArea: f.t === 'area', esChk: f.t === 'chk', esRo: f.t === 'ro',
+      on: f.t === 'chk' ? (e) => this.set(f.k, e.target.checked) : (e) => this.set(f.k, e.target.value)
+    };
+  }
+
+  faltan(p, d) {
+    return p.campos.filter((f) => {
+      if (f.opcional || f.t === 'ro' || f.t === 'chk') return false;
+      const v = this.val(f.k, d[f.k]);
+      return v === undefined || v === '';
+    }).length;
+  }
+
+  renderVals() {
+    const s = this.state;
+    const lista0 = this.ediciones();
+    const sel = this.seleccionada();
+    const nueva = this.esNueva();
+    const d = this.datos(sel);
+    /* Abriendo una versión no hay conjunto detrás, así que sólo cabe un
+       paso: el que la abre. Los otros tres necesitan un conjunto. */
+    const paso = nueva ? 1 : Math.min(s.paso, PASOS.length - 1);
+    const pasoDef = PASOS[paso];
+    const vacioTodo = s.datosVar !== 'sellado';
+
+    /* El ejercicio sellado que rige: la ÚLTIMA versión sellada, no una
+       cualquiera. Puede haber varias del mismo año. */
+    const selladosDe = (anio) => lista0.filter((e) => e.ejercicio === anio && e.estado === 'SELLADO');
+    const vigenteDe = (anio) => selladosDe(anio).sort((a, b) => b.version - a.version)[0];
+    const vig2026 = vigenteDe('2026');
+
+    /* La observación es la compuerta de las tres escrituras: al menos 5
+       caracteres una vez recortada, que es lo que exige la base. */
+    const claveObs = pasoDef.id === 'abrir' ? 'abObs' : (pasoDef.id === 'agregar' ? 'agObs' : 'seObs');
+    const obs = String(this.val(claveObs, '') || '').trim();
+    const obsCorta = obs.length < 5;
+    const pendientes = pasoDef.escritura ? this.faltan(pasoDef, d) : 0;
+
+    /* Las dos negativas del dominio, con el mensaje LITERAL que devuelve
+       el servidor. No se reescriben en lenguaje de interfaz: quien lea
+       esto aquí tiene que reconocerlo cuando lo reciba. */
+    const yaSellado = pasoDef.id === 'sellar' && sel !== undefined && sel.estado === 'SELLADO';
+    const vacioAlSellar = pasoDef.id === 'sellar' && sel !== undefined && sel.estado === 'ABIERTO' && sel.parametros === 0;
+    const cerradoAlAgregar = pasoDef.id === 'agregar' && sel !== undefined && sel.estado === 'SELLADO';
+    const negativa = yaSellado
+      ? { hay: true, titulo: 'El conjunto ya está sellado', codigo: '409 CONFLICTO',
+          mensaje: 'El conjunto ' + sel.id + ' ya esta sellado; corregirlo exige una version nueva (ADR-0007)',
+          explicacion: 'Y no lo rechaza esta comprobación sino el disparador y el índice único de la base: entre leer el estado y escribirlo cabe otra transacción. Un sellado no se deshace; se abre otra versión, que queda al lado de la anterior.',
+          salida: 'Abrir la versión ' + (sel.version + 1), salidaTexto: 'La versión anterior no se borra: cada determinación guarda con qué conjunto se calculó.',
+          ir: () => this.setState({ paso: 1, intento: false }) }
+      : (vacioAlSellar
+        ? { hay: true, titulo: 'El conjunto no tiene ningún parámetro', codigo: '409 CONFLICTO',
+            mensaje: 'El conjunto ' + sel.id + ' no tiene ningun parametro: sellarlo vacio diria que el ejercicio esta parametrizado cuando no lo esta',
+            explicacion: 'Un conjunto vacío sellado es peor que ninguno: la pantalla diría que el ejercicio está parametrizado y el cálculo no encontraría ni la UIT. Se rechaza antes de escribir, no después.',
+            salida: 'Agregar un parámetro', salidaTexto: 'Publicar el valor es de `rol_carga_parametros`; incorporarlo al conjunto, de aquí.',
+            ir: () => this.setState({ paso: 2, intento: false }) }
+        : (cerradoAlAgregar
+          ? { hay: true, titulo: 'Un conjunto sellado no admite un parámetro más', codigo: '409 CONFLICTO',
+              mensaje: 'El conjunto ' + sel.id + ' ya esta sellado; corregirlo exige una version nueva (ADR-0007)',
+              explicacion: 'Es lo que cuesta sellar antes de tiempo, y por eso lo que falta se cuenta ANTES: un conjunto sellado no se completa, se sustituye por una versión nueva y se recalcula lo que se emitió con él.',
+              salida: 'Abrir la versión ' + (sel.version + 1), salidaTexto: 'Es la salida, y no un rodeo: ADR-0007 la nombra en el propio mensaje.',
+              ir: () => this.setState({ paso: 1, intento: false }) }
+          : { hay: false, titulo: '', codigo: '', mensaje: '', explicacion: '', salida: '', salidaTexto: '', ir: () => {} }));
+
+    const bloqueado = pasoDef.escritura && (pendientes > 0 || obsCorta || negativa.hay);
+    const motivo = negativa.hay
+      ? negativa.titulo
+      : (pendientes > 0
+        ? (pendientes === 1 ? 'Queda 1 dato obligatorio sin llenar.' : 'Quedan ' + pendientes + ' datos obligatorios sin llenar.')
+        : (obsCorta ? 'Sin observación no se guarda: al menos 5 caracteres (regla 10).' : ''));
+
+    /* La lista de ediciones: por ejercicio y versión descendentes, que es
+       el orden en que se lee «cuál rige». */
+    const q = s.q.trim().toLowerCase();
+    let lista = lista0.filter((e) => {
+      const texto = (e.ejercicio + ' v' + e.version + ' ' + e.id + ' ' + e.estado).toLowerCase();
+      const coincide = q === '' || texto.indexOf(q) >= 0;
+      const filtro = s.chip === 'Todas'
+        || (s.chip === 'Abiertas' && e.estado === 'ABIERTO')
+        || (s.chip === 'Selladas' && e.estado === 'SELLADO');
+      return coincide && filtro;
+    });
+    if (s.orden === 'Identificador') lista = lista.slice().sort((a, b) => b.id - a.id);
+    else if (s.orden === 'Sellado') lista = lista.slice().sort((a, b) => (b.fechaSellado || '').localeCompare(a.fechaSellado || ''));
+    else lista = lista.slice().sort((a, b) => (b.ejercicio + b.version).localeCompare(a.ejercicio + a.version));
+
+    const cuadro = CUADROS[Math.min(s.cuadroTab, CUADROS.length - 1)];
+
+    /* Publicación: el snapshot del conjunto elegido en el ámbito pedido. */
+    const pubEd = lista0.find((e) => e.id === s.pubConjunto && e.estado === 'SELLADO')
+      || lista0.filter((e) => e.estado === 'SELLADO')[0];
+    const snap = pubEd ? SNAPSHOTS[pubEd.id + '-' + s.pubAmbito] : null;
+    const totalFilas = snap ? snap.p + snap.vu + snap.dep + snap.vr : 0;
+
+    const acciones = [
+      ['Abrir una versión', 'Acción', () => this.nuevaVersion()],
+      ['Ver el panel de Normativa', 'Ir a', () => this.ir('nor-panel')],
+      ['Ver todas las ediciones', 'Ir a', () => this.ir('nor-ediciones', { edicion: null })],
+      ['Sellar el conjunto abierto', 'Ir a', () => this.abrirEdicion(3, 3)],
+      ['Cuadro de valores unitarios', 'Ir a', () => this.ir('nor-cuadros', { cuadroTab: 0 })],
+      ['Cuadro de depreciación', 'Ir a', () => this.ir('nor-cuadros', { cuadroTab: 1 })],
+      ['Valores referenciales de vehículos', 'Ir a', () => this.ir('nor-cuadros', { cuadroTab: 2 })],
+      ['Descargar el snapshot sellado', 'Ir a', () => this.ir('nor-publicacion')],
+      ['Ediciones abiertas', 'Filtro', () => this.ir('nor-ediciones', { edicion: null, chip: 'Abiertas' })]
+    ];
+    const pq = s.pq.trim().toLowerCase();
+    const resParam = PARAMETROS.filter((p) => pq !== '' && (p[0] + ':' + p[1]).toLowerCase().indexOf(pq) >= 0)
+      .map((p) => ({
+        label: p[0] + (p[1] === '' ? '' : ':' + p[1]), tipo: 'Llave',
+        nota: 'desde ' + p[4], ir: () => this.abrirEdicion(vig2026 ? vig2026.id : 2, 0)
+      }));
+    const resAcciones = acciones.filter((a) => pq === '' || a[0].toLowerCase().indexOf(pq) >= 0)
+      .map((a) => ({ label: a[0], tipo: a[1], nota: 'Normativa', ir: a[2] }));
+    const palRes = resParam.concat(resAcciones).slice(0, 9);
+    const tipoStyle = 'font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:' + TINTA_3 + '; background:' + SUP + '; border:1px solid ' + LINEA + '; border-radius:4px; padding:2px 7px; flex:0 0 auto';
+
+    const ajenaHoja = (s.dest !== null && !SECS.some((x) => x[0] === s.dest)) ? HOJAS[s.dest] : null;
+    const subtitulo = ajenaHoja
+      ? ajenaHoja.mod
+      : (s.dest === 'nor-ediciones'
+        ? (sel ? 'Conjunto ' + sel.id : lista0.length + (lista0.length === 1 ? ' edición' : ' ediciones'))
+        : (s.dest === 'nor-panel' ? 'Ejercicio ' + s.ejercicio
+          : (s.dest === 'nor-cuadros' ? 'Tres cuadros nacionales (ADR-0017)' : 'El conjunto sellado, entero y descargable')));
+
+    return {
+      entidad: this.props.entidad || 'Municipalidad Distrital de Catacaos',
+      ejercicio: s.ejercicio, anios: ['2026', '2027', '2025', '2024'],
+      onEjercicio: (e) => this.setState({ ejercicio: e.target.value, toast: 'Ejercicio ' + e.target.value + ': cambia de qué año se compone y se sella el conjunto.' }),
+
+      secOpen: s.secOpen,
+      secAria: s.secOpen ? 'true' : 'false',
+      seccionesTitulo: s.secOpen ? 'Ocultar las secciones' : 'Mostrar las secciones',
+      abrirSecciones: () => this.setState((x) => ({ secOpen: !x.secOpen, lanzador: false, pal: false })),
+      seccionesStyle: 'display:grid; place-items:center; width:40px; height:38px; border:0; border-radius:8px; cursor:pointer; color:#fff; flex:0 0 auto; background:' +
+        (s.secOpen ? 'rgba(255,255,255,.2)' : 'transparent'),
+
+      puntos: [0, 1, 2].reduce((a, r) => a.concat([0, 1, 2].map((c) => ({ x: 6 + c * 6, y: 6 + r * 6 }))), []),
+      lanzador: s.lanzador,
+      lanzadorStyle: 'display:grid; place-items:center; width:40px; height:38px; border:0; border-radius:8px; cursor:pointer; color:#fff; flex:0 0 auto; background:' +
+        (s.lanzador ? 'rgba(255,255,255,.2)' : 'transparent'),
+      abrirLanzador: () => this.setState((x) => ({ lanzador: !x.lanzador, pal: false, secOpen: false })),
+      cerrarLanzador: () => this.setState({ lanzador: false }),
+      modulos: MODULOS.map((m) => {
+        const actual = m[0] === 'Normativa';
+        return {
+          label: m[0], actual: actual ? 'true' : 'false',
+          icon: m[1].map((p) => ({ d: p })),
+          ir: () => this.setState({ lanzador: false, toast: actual ? 'Ya está en Normativa.' : 'Abriría el módulo ' + m[0] + '.' }),
+          iconStyle: 'display:grid; place-items:center; width:32px; height:32px; border-radius:8px; flex:0 0 auto; background:' +
+            (actual ? AZUL : AZUL_SUAVE) + '; color:' + (actual ? '#fff' : '#004670'),
+          style: 'display:flex; align-items:center; gap:10px; width:100%; border:0; border-radius:8px; padding:10px; cursor:pointer; background:' +
+            (actual ? AZUL_SUAVE : 'transparent') + '; color:' + TINTA + '; font-weight:' + (actual ? '700' : '400')
+        };
+      }),
+
+      pal: s.pal, pq: s.pq,
+      palRes: palRes.map((r) => Object.assign({}, r, { tipoStyle: tipoStyle })),
+      palPie: palRes.length + (palRes.length === 1 ? ' resultado' : ' resultados'),
+      onPq: (e) => this.setState({ pq: e.target.value }),
+      abrirPal: () => this.setState({ pal: true, pq: '', lanzador: false, secOpen: false }),
+      cerrarPal: () => this.setState({ pal: false }),
+
+      filtro: s.filtro, hayFiltro: s.filtro.trim() !== '',
+      onFiltro: (e) => this.setState({ filtro: e.target.value }),
+      limpiarFiltro: () => this.setState({ filtro: '' }),
+      filtroConteo: (() => {
+        const f = s.filtro.trim().toLowerCase();
+        if (f === '') return '';
+        let mods = 0, hojas = 0;
+        ARBOL.forEach((m) => {
+          const casaMod = m[0].toLowerCase().indexOf(f) >= 0;
+          const casan = m[3].filter((h) => h[1].toLowerCase().indexOf(f) >= 0).length;
+          if (casaMod || casan > 0) mods++;
+          hojas += casaMod ? m[3].length : casan;
+        });
+        if (mods === 0) return 'Sin coincidencias';
+        return mods + (mods === 1 ? ' módulo' : ' módulos') + ' · ' + hojas + (hojas === 1 ? ' submódulo' : ' submódulos');
+      })(),
+      sinCoincidencias: (() => {
+        const f = s.filtro.trim().toLowerCase();
+        if (f === '' || s.panelVar === 'c') return false;
+        return !ARBOL.some((m) => m[0].toLowerCase().indexOf(f) >= 0
+          || m[3].some((h) => h[1].toLowerCase().indexOf(f) >= 0));
+      })(),
+
+      panelOpciones: [
+        ['a', 'A', 'Acordeón con chevrón hacia abajo'],
+        ['b', 'B', 'Sin control de despliegue: manda el realce'],
+        ['c', 'C', 'Riel de módulos y lista de submódulos']
+      ].map((o) => {
+        const on = s.panelVar === o[0];
+        return {
+          label: o[1], on: on ? 'true' : 'false', titulo: o[2],
+          ir: () => this.setState({ panelVar: o[0] }),
+          style: 'flex:1; border:1px solid ' + (on ? AZUL : LINEA) + '; border-radius:5px; padding:3px 0; cursor:pointer; font-size:11.5px; font-weight:700; background:' +
+            (on ? AZUL : '#fff') + '; color:' + (on ? '#fff' : TINTA_3)
+        };
+      }),
+      /* El segundo conmutador: con qué datos se dibuja. Un diseño que
+         sólo se ve bien lleno es un diseño que no se ha visto. */
+      datosOpciones: [
+        ['sellado', '2026 sellado', 'El ejercicio 2026 con su conjunto sellado'],
+        ['vacio', 'Recién implantada', 'Una municipalidad que todavía no ha compuesto ningún conjunto']
+      ].map((o) => {
+        const on = s.datosVar === o[0];
+        return {
+          label: o[1], on: on ? 'true' : 'false', titulo: o[2],
+          ir: () => this.setState({ datosVar: o[0], edicion: null, paso: 0, vals: {}, intento: false }),
+          style: 'flex:1; border:1px solid ' + (on ? AZUL : LINEA) + '; border-radius:5px; padding:3px 6px; cursor:pointer; font-size:11px; font-weight:700; white-space:nowrap; background:' +
+            (on ? AZUL : '#fff') + '; color:' + (on ? '#fff' : TINTA_3)
+        };
+      }),
+
+      panel: (() => {
+        const v = s.panelVar;
+        const f = s.filtro.trim().toLowerCase();
+        const visibles = ARBOL.filter((x) => f === '' || x[0].toLowerCase().indexOf(f) >= 0
+          || x[3].some((h) => h[1].toLowerCase().indexOf(f) >= 0));
+        const m = visibles.find((x) => x[0] === s.desplegado) || visibles[0] || ARBOL[0];
+        return {
+          esA: v === 'a', esB: v === 'b', esC: v === 'c',
+          hayCola: v !== 'c',
+          modLabel: m[0], modNota: m[1],
+          asideStyle: 'flex:0 0 ' + (v === 'c' ? '292px' : '252px') + '; width:' + (v === 'c' ? '292px' : '252px') +
+            '; background:#fff; border-right:1px solid ' + LINEA + '; display:flex; flex-direction:column; overflow:hidden',
+          hojas: ((f === '' || m[0].toLowerCase().indexOf(f) >= 0) ? m[3]
+            : m[3].filter((h) => h[1].toLowerCase().indexOf(f) >= 0)).map((h) => {
+            const on = s.dest === h[0];
+            const ya = s.abiertas.indexOf(h[0]) >= 0;
+            return {
+              label: h[1] + (s.sucias[h[0]] ? ' *' : ''), actual: on ? 'true' : 'false',
+              marca: (ya && !on) ? 'abierta' : '',
+              marcaStyle: 'font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:' + TINTA_3 + '; flex:0 0 auto',
+              barraStyle: 'width:3px; height:16px; border-radius:2px; flex:0 0 auto; background:' + (on ? AZUL : 'transparent'),
+              styleB: 'display:flex; align-items:center; gap:9px; width:100%; border:0; border-radius:6px; padding:7px 9px 7px 6px; cursor:pointer; background:' +
+                (on ? AZUL_SUAVE : 'transparent') + '; color:' + (on ? '#004670' : TINTA_2) + '; font-weight:' + (on ? '700' : '400'),
+              ir: () => this.ir(h[0])
+            };
+          })
+        };
+      })(),
+
+      arbolModulos: (() => {
+        const f = s.filtro.trim().toLowerCase();
+        return ARBOL.filter((m) => f === '' || m[0].toLowerCase().indexOf(f) >= 0
+          || m[3].some((h) => h[1].toLowerCase().indexOf(f) >= 0)).map((m) => {
+        const casaMod = f !== '' && m[0].toLowerCase().indexOf(f) >= 0;
+        const hojasVisibles = (f === '' || casaMod) ? m[3]
+          : m[3].filter((h) => h[1].toLowerCase().indexOf(f) >= 0);
+        const abierto = f !== '' ? true : s.desplegado === m[0];
+        const nAbiertas = m[3].filter((h) => s.abiertas.indexOf(h[0]) >= 0).length;
+        return {
+          label: m[0], nota: m[1],
+          abierto: abierto, abiertoAria: abierto ? 'true' : 'false',
+          conteo: nAbiertas > 0 ? String(nAbiertas) : '',
+          icon: (ICO_MOD[m[0]] || []).map((p) => ({ d: p })),
+          toggle: () => this.setState((x) => ({
+            desplegado: (x.panelVar !== 'c' && x.desplegado === m[0]) ? null : m[0]
+          })),
+          chevronStyle: 'display:grid; place-items:center; width:16px; height:16px; flex:0 0 auto; color:#93A3AF; transform:rotate(' +
+            (abierto ? '180' : '0') + 'deg); transition:transform .16s ease',
+          conteoStyle: 'font-size:9.5px; font-weight:700; border-radius:999px; padding:1px 6px; flex:0 0 auto; background:' +
+            (abierto ? '#fff' : AZUL_SUAVE) + '; color:#004670',
+          styleB: 'display:flex; align-items:center; gap:9px; width:100%; border:0; border-radius:7px; padding:8px 9px; cursor:pointer; background:' +
+            (abierto ? AZUL_SUAVE : 'transparent') + '; color:' + (abierto ? '#004670' : TINTA) +
+            '; font-weight:' + (abierto ? '700' : '400'),
+          iconStyleB: 'display:grid; place-items:center; width:24px; height:24px; border-radius:6px; flex:0 0 auto; background:' +
+            (abierto ? '#fff' : '#F2F6F9') + '; color:' + (abierto ? AZUL : TINTA_3),
+          rielStyle: 'position:relative; display:grid; place-items:center; width:40px; height:38px; border:0; border-radius:8px; cursor:pointer; flex:0 0 auto; background:' +
+            (abierto ? AZUL : 'transparent') + '; color:' + (abierto ? '#fff' : TINTA_3),
+          rielPastilla: 'position:absolute; top:2px; right:2px; min-width:15px; height:15px; border-radius:999px; display:grid; place-items:center; font-size:9px; font-weight:700; background:#C0492F; color:#fff',
+          iconStyle: 'display:grid; place-items:center; width:24px; height:24px; border-radius:6px; flex:0 0 auto; background:' +
+            (abierto ? AZUL : '#F2F6F9') + '; color:' + (abierto ? '#fff' : TINTA_3),
+          style: 'display:flex; align-items:center; gap:8px; width:100%; border:0; border-radius:7px; padding:7px 8px; cursor:pointer; background:' +
+            (abierto ? '#E4F4FD' : 'transparent') + '; color:' + (abierto ? '#004670' : TINTA),
+          hojas: hojasVisibles.map((h) => {
+            const on = s.dest === h[0];
+            const yaAbierta = s.abiertas.indexOf(h[0]) >= 0;
+            return {
+              label: h[1] + (s.sucias[h[0]] ? ' *' : ''), actual: on ? 'true' : 'false',
+              marca: (yaAbierta && !on) ? 'abierta' : '',
+              marcaStyle: 'font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:' + TINTA_3 + '; flex:0 0 auto',
+              barraStyle: 'width:3px; height:16px; border-radius:2px; flex:0 0 auto; background:' + (on ? AZUL : 'transparent'),
+              style: 'display:flex; align-items:center; gap:8px; width:100%; border:0; border-radius:6px; padding:7px 9px; cursor:pointer; background:' +
+                (on ? AZUL_SUAVE : 'transparent') + '; color:' + (on ? '#004670' : TINTA_2) + '; font-weight:' + (on ? '700' : '400'),
+              styleB: 'display:flex; align-items:center; gap:9px; width:100%; border:0; border-radius:6px; padding:7px 9px 7px 6px; cursor:pointer; background:' +
+                (on ? AZUL_SUAVE : 'transparent') + '; color:' + (on ? '#004670' : TINTA_2) + '; font-weight:' + (on ? '700' : '400'),
+              ir: () => this.ir(h[0])
+            };
+          })
+        };
+        });
+      })(),
+
+      cola: (vacioTodo
+        ? [['Ejercicios sin conjunto', '4', 'bad'], ['Ediciones abiertas', '0', 'warn'], ['Filas sin archivo del corpus', '10', 'warn']]
+        : [['Filas sin archivo del corpus', '10', 'warn'], ['Ediciones abiertas', '1', 'warn'], ['Ejercicios sin sellar', '1', 'bad']]
+      ).map((c) => ({
+        label: c[0], n: c[1],
+        ir: () => this.ir('nor-ediciones', { edicion: null, chip: c[0] === 'Ediciones abiertas' ? 'Abiertas' : 'Todas' }),
+        puntoStyle: 'width:7px; height:7px; border-radius:50%; flex:0 0 auto; background:' +
+          (c[2] === 'bad' ? '#C0492F' : '#C08A00')
+      })),
+
+      titulo: s.dest === null ? 'Sin pestañas abiertas'
+        : (ajenaHoja ? ajenaHoja.label
+          : (s.dest === 'nor-panel' ? 'Panel de Normativa'
+            : (SECS.find((x) => x[0] === s.dest) || ['', 'Normativa'])[1])),
+      subtitulo: subtitulo,
+
+      aviso: s.aviso && !s.avisoAbierto,
+      avisosN: '1',
+      avisoAria: '1 aviso del sistema',
+      avisoAbierto: s.aviso && s.avisoAbierto,
+      avisoTexto: vacioTodo
+        ? 'Esta municipalidad no tiene ningún conjunto de parámetros. Hasta que se componga y se selle uno, toda operación que calcule contestará que el ejercicio no está parametrizado, y lo dirá nombrando el año.'
+        : 'El ejercicio 2027 no tiene conjunto sellado. D-11 no se hereda: el «% actualización» de 2027 necesita su propia lectura del artículo 12 y sus dos firmas distintas, igual que la tuvo el de 2026.',
+      verAviso: () => this.setState({ avisoAbierto: true }),
+      cerrarAviso: () => this.setState({ aviso: false, avisoAbierto: false }),
+
+      sesionAbierta: s.sesion,
+      sesionAria: s.sesion ? 'true' : 'false',
+      abrirSesion: () => this.setState((x) => ({ sesion: !x.sesion, lanzador: false, pal: false })),
+      cerrarSesion: () => this.setState({ sesion: false }),
+      sesionStyle: 'display:flex; align-items:center; gap:8px; border:0; border-radius:7px; padding:3px 6px 3px 3px; cursor:pointer; background:' +
+        (s.sesion ? 'rgba(255,255,255,.16)' : 'transparent'),
+      sesionCaret: 'display:grid; place-items:center; width:15px; height:15px; flex:0 0 auto; color:#9FC6DF; transform:rotate(' +
+        (s.sesion ? '180' : '0') + 'deg); transition:transform .15s ease',
+      haySucias: Object.keys(s.sucias).length > 0,
+      avisoSucias: 'Hay ' + Object.keys(s.sucias).length +
+        (Object.keys(s.sucias).length === 1 ? ' pestaña con cambios sin guardar. Al cerrar sesión se pierden, y con ellos la observación.'
+          : ' pestañas con cambios sin guardar. Al cerrar sesión se pierden, y con ellos las observaciones.'),
+      sesionOpciones: [
+        ['Mi perfil', ['M12 7.4a3 3 0 1 1-6 0 3 3 0 0 1 6 0', 'M3.6 20c0-3 2.4-4.6 5.4-4.6s5.4 1.6 5.4 4.6'], 0],
+        ['Cambiar contraseña', ['M7 11V8a5 5 0 0 1 10 0v3', 'M5.5 11h13v9.5h-13z'], 0],
+        ['Cerrar sesión', ['M9.5 20H6A1.5 1.5 0 0 1 4.5 18.5v-13A1.5 1.5 0 0 1 6 4h3.5', 'M14 8l4 4-4 4', 'M18 12H9'], 1]
+      ].map((o) => ({
+        label: o[0], icon: o[1].map((dd) => ({ d: dd })),
+        ir: () => this.setState({
+          sesion: false,
+          toast: o[2] ? 'Cerraría la sesión de hneyra.' : 'Abriría ' + o[0].toLowerCase() + '.'
+        }),
+        style: 'display:flex; align-items:center; gap:10px; width:100%; border:0; border-radius:6px; padding:9px 9px; cursor:pointer; background:transparent; color:' +
+          (o[2] ? '#8F2A17' : TINTA_2) + '; font-weight:' + (o[2] ? '600' : '400')
+      })),
+
+      INSok: INS.ok, INSwarn: INS.warn,
+
+      /* ── PANEL ──────────────────────────────────────────────── */
+      esPanel: s.dest === 'nor-panel',
+      cifras: (vacioTodo
+        ? [
+          { etiqueta: 'Ejercicios sellados', valor: '0', delta: '', nota: 'Ninguno todavía: esta municipalidad no ha compuesto ningún conjunto.' },
+          { etiqueta: 'Parámetros publicados', valor: '33', delta: '', nota: 'De norma nacional, ya publicados. Publicarlos no es componerlos.' },
+          { etiqueta: 'Cuadros nacionales', valor: '3', delta: '', nota: 'Valores unitarios, depreciación y valores referenciales.' },
+          { etiqueta: 'Corpus verificado', valor: '60', delta: '', nota: 'Archivos a doble firma. Seis verificadores los revisan en cada PR.' }
+        ]
+        : [
+          { etiqueta: 'Ejercicios sellados', valor: '1', delta: '2026', nota: 'El 2026, desde el 6 de septiembre. Con él se puede emitir.' },
+          { etiqueta: 'Parámetros del conjunto', valor: '33', delta: '', nota: 'Las 33 filas del derivado del corpus, con su vigencia y su fuente.' },
+          { etiqueta: 'Cuadros en el conjunto', valor: '3', delta: '', nota: 'Los tres nacionales. La versión 1 llevaba dos.' },
+          { etiqueta: 'Filas sin archivo', valor: '10', delta: '', nota: 'De acto propio de la municipalidad. `normativa` no las publica.' }
+        ]
+      ).map((c) => ({
+        etiqueta: c.etiqueta, valor: c.valor, nota: c.nota, delta: c.delta,
+        deltaStyle: 'font-size:11.5px; font-weight:700; border-radius:4px; padding:1px 6px; background:#DCEFE3; color:#1F5B39'
+      })),
+
+      estado: (() => {
+        const hay = !vacioTodo && vig2026 !== undefined;
+        const cols = [['Ejercicio', 0, 'ejercicio'], ['¿Sellado?', 0, 'sellado'], ['Conjunto', 1, 'conjuntoId'], ['Versión', 1, 'version'], ['Qué se puede hacer', 0, '']];
+        const filas = ['2026', '2027', '2025'].map((anio) => {
+          const v = vacioTodo ? undefined : vigenteDe(anio);
+          return [anio, v ? 'sí' : 'no', v ? String(v.id) : '—', v ? String(v.version) : '—',
+            v ? 'Emitir y recalcular con este conjunto' : 'Nada que calcule: falta componer y sellar'];
+        });
+        return {
+          marcoStyle: 'background:#fff; border:1px solid ' + (hay ? LINEA : '#E8C86A') + '; border-radius:8px; overflow:hidden',
+          iconoStyle: 'display:grid; place-items:center; width:34px; height:34px; border-radius:50%; flex:0 0 auto; background:' +
+            (hay ? '#DCEFE3' : '#FFF4D9') + '; color:' + (hay ? '#1F5B39' : '#7A5200'),
+          icono: hay ? 'M5 12.5l4.5 4.5L19 7' : 'M12 7.6V13M12 16.4h.02',
+          titulo: hay ? 'El ejercicio 2026 está sellado' : 'Ningún ejercicio está sellado',
+          insignia: hay ? INS.ok : INS.warn,
+          etiqueta: hay ? 'Se puede emitir' : 'No se puede emitir',
+          texto: hay
+            ? 'Conjunto ' + vig2026.id + ', versión ' + vig2026.version + ', sellado el ' + vig2026.fechaSellado + ' por ' + vig2026.usuarioSellado + '. Lo que faltaba no era una cifra sino la segunda firma de ADR-0007 sobre el «% actualización», y su intervalo tuvo precio medido: mientras duró, la valuación no salía de 0 predios de 23. A partir del sello, toda cifra emitida con este conjunto se puede volver a producir, hoy y dentro de diez años.'
+            : 'Y no es un descuido: es el estado de quien empieza. Lo que la ley fija ya está publicado —33 parámetros y los tres cuadros nacionales, de norma nacional y comunes a todas las municipalidades—; lo que falta es el acto de ESTA municipalidad: abrir una versión, componerla con las llaves que necesita y sellarla. Hasta entonces ninguna operación que calcule puede correr, y lo dirá nombrando el ejercicio en vez de devolver una cifra por omisión.',
+          accion: hay ? 'Ver el conjunto ' + vig2026.id : 'Abrir la primera versión',
+          ir: () => (hay ? this.abrirEdicion(vig2026.id, 0) : this.nuevaVersion()),
+          cols: this.cols(cols),
+          filas: this.filas(filas, cols),
+          pie: 'Es lo que contesta `GET /api/v1/seguridad/parametros/ejercicios/{ejercicio}` antes de que nadie rellene un formulario. «No hay conjunto sellado» es una respuesta, no un error: lo que sí sale distinto es un ejercicio fuera del rango 1990–2100, que es un 422 nombrando el rango.'
+        };
+      })(),
+
+      decisionesNota: vacioTodo ? '4 en el registro' : '3 abiertas · 1 cerrada para 2026',
+      decisiones: DECISIONES.map((x) => ({
+        id: x.id, titulo: x.titulo, detalle: x.detalle,
+        estado: x.estado, insignia: INS[x.tono]
+      })),
+
+      sinArchivoN: '10 filas',
+      sinArchivoCols: this.colsSimples([['Fila', 0], ['Qué', 0], ['Parte de', 0]]),
+      sinArchivo: this.filas(SIN_ARCHIVO, [['', 0], ['', 0], ['', 0]]),
+
+      irEdiciones: () => this.ir('nor-ediciones', { edicion: null }),
+      sinActividad: vacioTodo,
+      actividad: vacioTodo ? [] : [
+        ['Sellado', 'ok', 'conjunto 2', 'Se sella el ejercicio 2026 con la edición vehicular dentro', 'hneyra', 'hoy 15:22'],
+        ['Alta', 'info', 'conjunto 2', 'Se abre la versión 2 de 2026: un sellado no admite un parámetro más', 'hneyra', 'hoy 14:58'],
+        ['Sellado', 'ok', 'conjunto 1', 'Se sella el ejercicio 2026 (catastro#8, AC-3)', 'hneyra', 'hoy 10:00'],
+        ['Alta', 'info', 'conjunto 1', 'Se parametriza el ejercicio 2026: 33 parámetros y 2 cuadros', 'hneyra', 'hoy 09:41']
+      ].map((a) => ({
+        tipo: a[0], insignia: INS[a[1]], objeto: a[2], detalle: a[3], quien: a[4], cuando: a[5]
+      })),
+
+      /* ── EDICIONES ──────────────────────────────────────────── */
+      esEdiciones: s.dest === 'nor-ediciones',
+      q: s.q, hayQ: s.q !== '',
+      onQ: (e) => this.setState({ q: e.target.value }),
+      limpiarQ: () => this.setState({ q: '' }),
+      chips: ['Todas', 'Abiertas', 'Selladas'].map((c) => {
+        const on = s.chip === c;
+        return {
+          label: c, on: on ? 'true' : 'false',
+          ir: () => this.setState({ chip: c }),
+          style: 'border:1px solid ' + (on ? AZUL : LINEA) + '; border-radius:999px; padding:3px 10px; cursor:pointer; font-size:12px; background:' +
+            (on ? AZUL_SUAVE : '#fff') + '; color:' + (on ? '#004670' : TINTA_3) + '; font-weight:' + (on ? '600' : '400')
+        };
+      }),
+      orden: s.orden, ordenes: ['Ejercicio', 'Identificador', 'Sellado'],
+      onOrden: (e) => this.setState({ orden: e.target.value }),
+      conteo: lista.length + ' de ' + lista0.length,
+      listaVacia: lista.length === 0,
+      vacio: {
+        titulo: vacioTodo ? 'Ninguna edición todavía' : 'Ninguna edición coincide',
+        texto: vacioTodo
+          ? 'Esta municipalidad no ha compuesto ningún conjunto. Los 33 parámetros y los tres cuadros nacionales ya están publicados: lo que falta es abrir una versión, incorporarlos y sellarla.'
+          : 'Pruebe con el año, con «v2» o con el identificador del conjunto. También puede quitar el filtro de estado.',
+        fichaTitulo: vacioTodo ? 'No hay ningún conjunto que abrir' : 'Elija una edición de la lista',
+        fichaTexto: vacioTodo
+          ? 'Empiece por abrir una versión del ejercicio con el que vaya a emitir. La versión la asigna el sistema; usted escribe el ejercicio y por qué la abre.'
+          : 'El conjunto se abre aquí al lado, con sus parámetros y las tres operaciones que admite. Ninguna de las tres se guarda sin observación.'
+      },
+      filas: lista.map((e) => {
+        const on = s.edicion === e.id;
+        return {
+          titulo: 'Ejercicio ' + e.ejercicio + ' · versión ' + e.version,
+          detalle: e.estado === 'SELLADO'
+            ? e.parametros + ' parámetros y ' + e.cuadros + (e.cuadros === 1 ? ' cuadro' : ' cuadros')
+            : 'En composición, todavía se puede corregir',
+          sello: e.fechaSellado === '' ? 'sin sellar' : e.fechaSellado + ' · ' + e.usuarioSellado,
+          detalles: 'id ' + e.id,
+          estado: e.estado, insignia: e.estado === 'SELLADO' ? INS.ok : INS.warn,
+          vigente: e.vigente,
+          vigenteStyle: INS.info,
+          actual: on ? 'true' : 'false',
+          ir: () => this.abrirEdicion(e.id, 0),
+          style: 'display:block; width:100%; text-align:left; border:0; border-bottom:1px solid ' + LINEA_2 +
+            '; border-left:3px solid ' + (on ? AZUL : 'transparent') + '; background:' + (on ? AZUL_SUAVE : 'transparent') +
+            '; padding:11px 13px; cursor:pointer'
+        };
+      }),
+      sinSeleccion: sel === undefined && !nueva,
+      hayFicha: sel !== undefined || nueva,
+      ficha: {
+        codigo: sel ? 'conjunto ' + sel.id : 'sin conjunto',
+        estado: sel ? sel.estado : 'Borrador',
+        insignia: sel ? (sel.estado === 'SELLADO' ? INS.ok : INS.warn) : INS.warn,
+        titulo: sel ? 'Ejercicio ' + sel.ejercicio + ' · versión ' + sel.version + (sel.vigente ? ' · vigente' : '') : 'Versión nueva',
+        contexto: sel ? sel.contexto : 'Nada se registra hasta que la observación esté escrita: la versión la asigna el sistema, y el identificador del conjunto sale al guardar.',
+        acciones: (nueva
+          ? []
+          : (sel && sel.estado === 'ABIERTO'
+            ? [['Agregar parámetro', 0, 2], ['Sellar el conjunto', 1, 3]]
+            : [['Descargar el snapshot', 0, -1], ['Abrir una versión nueva', 0, 1]])
+        ).map((a) => ({
+          label: a[0],
+          ir: () => {
+            if (a[2] === -1) { this.ir('nor-publicacion', { pubConjunto: sel.id }); return; }
+            this.setState({ paso: a[2], intento: false });
+          },
+          style: a[1]
+            ? 'border:0; border-radius:6px; padding:8px 16px; background:' + AZUL + '; color:#fff; font-size:13px; font-weight:600; cursor:pointer'
+            : 'border:1px solid ' + LINEA + '; border-radius:6px; padding:7px 13px; background:#fff; font-size:13px; cursor:pointer'
+        }))
+      },
+      tabs: (nueva ? [PASOS[1]] : PASOS).map((p) => {
+        const i = PASOS.indexOf(p);
+        const on = paso === i;
+        const marca = (p.id === 'sellar' && sel && sel.estado === 'SELLADO') ? 'sellado'
+          : (p.id === 'parametros' && sel ? String(sel.parametros) : '');
+        return {
+          label: p.label, actual: on ? 'true' : 'false',
+          marca: marca,
+          marcaStyle: 'font-size:10.5px; font-weight:700; border-radius:999px; padding:1px 7px; background:' +
+            (marca === 'sellado' ? '#DCEFE3' : AZUL_SUAVE) + '; color:' + (marca === 'sellado' ? '#1F5B39' : '#004670'),
+          ir: () => this.setState({ paso: i, intento: false }),
+          style: 'display:flex; align-items:center; gap:7px; border:0; border-bottom:2px solid ' + (on ? AZUL : 'transparent') +
+            '; background:transparent; padding:11px 12px 9px; cursor:pointer; font-size:13.5px; white-space:nowrap; color:' +
+            (on ? TINTA : TINTA_3) + '; font-weight:' + (on ? '700' : '400')
+        };
+      }),
+      paso: {
+        nota: pasoDef.nota,
+        esEscritura: pasoDef.escritura === true,
+        hayCampos: !negativa.hay || pasoDef.id === 'parametros',
+        campos: pasoDef.campos.map((f) => this.campo(f, d)),
+        hayTabla: pasoDef.tabla !== undefined,
+        tabla: pasoDef.tabla ? {
+          marcoStyle: 'margin-top:18px; background:#fff; border:1px solid ' + LINEA + '; border-radius:8px; overflow:hidden',
+          titulo: pasoDef.tabla.titulo, min: pasoDef.tabla.min, nota: pasoDef.tabla.nota,
+          conteo: sel && sel.parametros > 0 ? sel.parametros + ' filas' : '',
+          cols: this.cols(pasoDef.tabla.cols),
+          filas: this.filas((sel && sel.parametros > 0)
+            ? PARAMETROS.map((p) => [p[0], p[1] === '' ? '—' : this.corto(p[1], 30), p[2] === '' ? '—' : p[2], p[3] === '' ? '—' : this.corto(p[3], 52), p[4], p[5] === '' ? '—' : p[5], this.corto(p[6], 42)])
+            : [], pasoDef.tabla.cols),
+          vacia: !(sel && sel.parametros > 0),
+          accion: pasoDef.tabla.accion,
+          vacioTexto: pasoDef.tabla.vacioTexto
+        } : null
+      },
+      negativa: Object.assign({}, negativa, {
+        codigoStyle: 'font-size:10.5px; font-weight:700; letter-spacing:.05em; color:#8F2A17; background:#FFF9F8; border:1px solid #A8321E; border-radius:4px; padding:1px 6px'
+      }),
+      cierre: (() => {
+        if (!pasoDef.escritura || negativa.hay || (sel === undefined && !nueva)) {
+          return { hay: false, nota: '', lineas: [], aviso: '', borde: LINEA, fondo: SUP, color: TINTA_2 };
+        }
+        const V = 'M5 12.5l4.5 4.5L19 7';
+        const X = 'M12 7.5V13M12 16.5h.02';
+        const ok = 'display:grid; place-items:center; width:24px; height:24px; border-radius:50%; flex:0 0 auto; background:#DCEFE3; color:#1F5B39';
+        const pend = 'display:grid; place-items:center; width:24px; height:24px; border-radius:50%; flex:0 0 auto; background:#FFF4D9; color:#7A5200';
+        const puede = !bloqueado;
+        const lineas = pasoDef.id === 'sellar'
+          ? [
+            { titulo: 'El conjunto ' + sel.id + ' queda inmutable', detalle: 'Ni él ni su contenido se modifican. Lo impide un disparador de la base, no una validación de la aplicación.', valor: 'Para siempre', icono: V, iconoStyle: ok },
+            { titulo: 'Pasa a ser el vigente del ejercicio ' + sel.ejercicio, detalle: 'La lectura toma la última versión sellada. Las anteriores siguen existiendo y siguen sirviendo para recalcular.', valor: 'versión ' + sel.version, icono: V, iconoStyle: ok },
+            { titulo: 'No admitirá un parámetro más', detalle: 'Si falta una llave, la salida es abrir otra versión y recalcular lo que se emitió. Por eso lo que falta se cuenta ANTES.', valor: sel.parametros + ' filas', icono: sel.parametros > 0 ? V : X, iconoStyle: sel.parametros > 0 ? ok : pend },
+            { titulo: 'Queda con fecha y con nombre', detalle: 'Es el acto administrativo del que cuelga la reproducibilidad del ejercicio, y va a la bitácora con su observación.', valor: 'Auditoría', icono: V, iconoStyle: ok }
+          ]
+          : (pasoDef.id === 'abrir'
+            ? [
+              { titulo: 'Se crea una versión nueva, no se toca ninguna', detalle: 'La versión la calcula el servidor: la última del ejercicio más uno.', valor: 'ABIERTO', icono: V, iconoStyle: ok },
+              { titulo: 'Nace vacía', detalle: 'Sin parámetros dentro no se puede sellar, y eso es correcto: sellarla vacía diría que el ejercicio está parametrizado.', valor: '0 filas', icono: X, iconoStyle: pend },
+              { titulo: 'El alta queda en la bitácora', detalle: 'Con su observación, su usuario y su hora.', valor: 'Auditoría', icono: V, iconoStyle: ok }
+            ]
+            : [
+              { titulo: 'Se incorpora un parámetro YA publicado', detalle: 'No se crea ninguna cifra: se elige, por su llave, una que `rol_carga_parametros` publicó antes.', valor: 'Por llave', icono: V, iconoStyle: ok },
+              { titulo: 'La llave tiene que resolver a UNA fila', detalle: 'Si no hay ninguna, 404 nombrando la llave; si hay dos, 409: quedarse con una sería sellar un valor que nadie eligió.', valor: 'Exactamente 1', icono: V, iconoStyle: ok },
+              { titulo: 'Resolver y agregar van en la misma transacción', detalle: 'Entre leer el identificador y usarlo cabe otra escritura, y lo que se incorporaría ya no sería lo que se leyó.', valor: 'Atómico', icono: V, iconoStyle: ok }
+            ]);
+        return {
+          hay: true,
+          nota: pasoDef.id === 'sellar'
+            ? 'Sellar es el acto del que cuelga todo lo que se emita con este conjunto. Lo que sigue es lo que cambia al pulsar el botón.'
+            : 'Lo que cambia al pulsar el botón, dicho antes de pulsarlo.',
+          lineas: lineas,
+          aviso: puede
+            ? (pasoDef.id === 'sellar'
+              ? 'Todo listo. Al sellar, el ejercicio ' + sel.ejercicio + ' queda parametrizado y se puede emitir con él.'
+              : 'Todo listo. La operación queda en la bitácora con la observación que escribió.')
+            : 'No se puede todavía. ' + motivo,
+          fondo: puede ? '#DCEFE3' : '#FBE4E0',
+          borde: puede ? '#1F5B39' : '#A8321E',
+          color: puede ? '#1F5B39' : '#8F2A17'
+        };
+      })(),
+      descartar: () => this.setState({ vals: {}, intento: false, toast: 'Se descartó lo escrito.' }),
+      pasoNota: negativa.hay
+        ? 'El servidor rechazaría esta operación, y su mensaje está arriba tal como llega.'
+        : (bloqueado ? motivo : 'Queda en la bitácora con su observación, su usuario y su hora (regla 10).'),
+      bloqueado: bloqueado ? 'true' : 'false',
+      motivo: bloqueado ? motivo : '',
+      botonLabel: pasoDef.verbo || 'Guardar',
+      enviarStyle: 'border:0; border-radius:6px; padding:10px 22px; background:' + AZUL + '; color:#fff; font-size:13.5px; font-weight:600; cursor:pointer; opacity:' +
+        (bloqueado ? '.55' : '1'),
+      enviar: () => {
+        if (bloqueado) { this.setState({ intento: true, toast: motivo }); return; }
+        this.setState({ vals: {}, intento: false, toast: pasoDef.verbo + ': registrado con su observación.' });
+      },
+
+      /* ── CUADROS DE VALUACIÓN ───────────────────────────────── */
+      esCuadros: s.dest === 'nor-cuadros',
+      cuadroTabs: CUADROS.map((c, i) => {
+        const on = s.cuadroTab === i;
+        return {
+          label: c.label, actual: on ? 'true' : 'false', conteo: c.conteo,
+          conteoStyle: 'font-size:10.5px; font-weight:700; border-radius:999px; padding:1px 7px; background:' +
+            (on ? AZUL_SUAVE : '#F2F6F9') + '; color:' + (on ? '#004670' : TINTA_3),
+          ir: () => this.setState({ cuadroTab: i }),
+          style: 'display:flex; align-items:center; gap:8px; border:0; border-bottom:2px solid ' + (on ? AZUL : 'transparent') +
+            '; background:transparent; padding:12px 14px 10px; cursor:pointer; font-size:14px; white-space:nowrap; color:' +
+            (on ? TINTA : TINTA_3) + '; font-weight:' + (on ? '700' : '400')
+        };
+      }),
+      cuadro: {
+        nota: cuadro.nota,
+        min: cuadro.min,
+        edicion: cuadro.edicion.map((e) => ({
+          etiqueta: e[0], valor: e[1],
+          valorStyle: e[2] === 2
+            ? 'display:block; margin-top:3px; font-size:11.5px; line-height:1.45; color:' + TINTA_2 + '; word-break:break-all'
+            : (e[2] === 1
+              ? 'display:block; margin-top:3px; font-size:12.5px; font-weight:700; color:#004670'
+              : 'display:block; margin-top:3px; font-size:13px; line-height:1.4; color:' + TINTA_2 + '; text-wrap:pretty')
+        })),
+        cols: this.cols(cuadro.cols),
+        filas: this.filas(cuadro.filas.map((f) => f.concat([cuadro.fuente])), cuadro.cols),
+        pie: cuadro.pie
+      },
+
+      /* ── PUBLICACIÓN ────────────────────────────────────────── */
+      esPublicacion: s.dest === 'nor-publicacion',
+      pub: {
+        campoStyle: CODIGO,
+        ruta: pubEd
+          ? 'GET /api/v1/conjuntos/' + pubEd.id + '/snapshot?ambito=' + s.pubAmbito
+          : 'GET /api/v1/conjuntos?ejercicio=' + s.ejercicio,
+        conjuntos: lista0.filter((e) => e.estado === 'SELLADO')
+          .map((e) => e.id + ' — ' + e.ejercicio + ' v' + e.version + (e.vigente ? ' (vigente)' : '')),
+        conjunto: pubEd ? (pubEd.id + ' — ' + pubEd.ejercicio + ' v' + pubEd.version + (pubEd.vigente ? ' (vigente)' : '')) : '',
+        onConjunto: (e) => this.setState({ pubConjunto: parseInt(e.target.value, 10) }),
+        ambitos: ['VALUACION', 'OBLIGACION'].map((a) => {
+          const on = s.pubAmbito === a;
+          return {
+            label: a, on: on ? 'true' : 'false',
+            titulo: a === 'VALUACION' ? 'Lo que catastro necesita para decir cuánto vale un predio' : 'Lo que rentas necesita para decir cuánto se debe por él',
+            ir: () => this.setState({ pubAmbito: a }),
+            style: 'border:1px solid ' + (on ? AZUL : BORDE_CAMPO) + '; border-radius:6px; padding:9px 14px; cursor:pointer; font-size:13px; font-weight:700; background:' +
+              (on ? AZUL : '#fff') + '; color:' + (on ? '#fff' : TINTA_3)
+          };
+        }),
+        descargar: () => this.setState({
+          toast: snap
+            ? 'Descargado el conjunto ' + pubEd.id + ' en ' + s.pubAmbito + ': ' + this.numero(totalFilas) + ' filas.'
+            : 'No hay ningún conjunto sellado que descargar.'
+        }),
+        hay: snap !== null && snap !== undefined,
+        vacio: snap === null || snap === undefined,
+        vacioMensaje: 'El ejercicio ' + s.ejercicio + ' no tiene un conjunto de parametros sellado. Calcular con uno abierto produciria una cifra que manana puede ser otra, y el contribuyente ya tendria el recibo (ADR-0007)',
+        vacioTexto: 'Es el mensaje del dominio, tal como llega. No dice «error del servicio» ni «inténtelo más tarde»: dice qué falta y quién lo arregla, que es componer y sellar el conjunto de este ejercicio.',
+        cabeceras: snap ? [
+          { etiqueta: 'ETag', valor: '"' + snap.etag + '"' },
+          { etiqueta: 'Cache-Control', valor: 'public, max-age=31536000, immutable' },
+          { etiqueta: 'Content-Type', valor: 'application/json' },
+          { etiqueta: 'conjuntoId', valor: String(pubEd.id) },
+          { etiqueta: 'ejercicio · version', valor: pubEd.ejercicio + ' · ' + pubEd.version },
+          { etiqueta: 'ambito', valor: s.pubAmbito },
+          { etiqueta: 'filas', valor: this.numero(totalFilas) }
+        ] : [],
+        huella: {
+          titulo: 'sha256 recalculado sobre los bytes recibidos: coincide con el ETag',
+          detalle: 'La huella es de los bytes que se sirven, no de una serialización canónica aparte: una canónica exigiría dos implementaciones que tienen que coincidir —una aquí y otra en cada consumidor—, y dos algoritmos que deben dar lo mismo son dos que un día dejan de darlo. El cliente hace sha256(cuerpo) y compara; no hay nada que mantener sincronizado.'
+        },
+        filas: snap ? this.numero(totalFilas) + ' filas' : '',
+        listas: snap ? [
+          { campo: 'parametros', n: this.numero(snap.p), tono: snap.p > 0 ? 'ok' : 'warn',
+            porque: 'Van en los DOS ámbitos: son 33 filas, y una valuación que necesitara el «% actualización» tendría que pedir otro snapshot para una cifra.' },
+          { campo: 'valoresUnitarios', n: this.numero(snap.vu), tono: snap.vu > 0 ? 'ok' : 'info',
+            porque: snap.vu > 0 ? 'El Anexo I.2 de la Costa, 24 celdas.' : 'El ámbito OBLIGACION no los lleva: quien dice cuánto se debe no valúa el predio.' },
+          { campo: 'depreciaciones', n: this.numero(snap.dep), tono: snap.dep > 0 ? 'ok' : 'info',
+            porque: snap.dep > 0 ? 'El Anexo I del RNT, 492 filas.' : 'El ámbito OBLIGACION no las lleva, por lo mismo.' },
+          { campo: 'valoresReferenciales', n: this.numero(snap.vr), tono: snap.vr > 0 ? 'ok' : 'info',
+            porque: snap.vr > 0
+              ? 'El anexo vehicular del MEF: 18 043 líneas por tres años de fabricación.'
+              : (s.pubAmbito === 'VALUACION'
+                ? 'El ámbito VALUACION no los lleva: el vehicular es obligación, no valuación (ADR-0024).'
+                : 'Este conjunto no lleva la edición vehicular: la versión 1 se selló sin ella. Está en la versión 2.') }
+        ].map((l) => ({
+          campo: l.campo, n: l.n, porque: l.porque,
+          insignia: INS[l.tono],
+          campoStyle: CODIGO
+        })) : [],
+        listasPie: 'La huella DEPENDE del ámbito, porque son bytes distintos. Lo que no cambia es la identidad —conjuntoId, ejercicio y versión—, y es lo que las dos corridas comparan para saber que calcularon con el mismo juego de valores.',
+        razones: [
+          { icono: 'M7 11V8a5 5 0 0 1 10 0v3M5.5 11h13v9.5h-13z', titulo: 'Lo sellado no cambia',
+            detalle: 'Un disparador de la base vuelve inmutable el conjunto y su contenido en cuanto se sella. No hay invalidación que diseñar, ni ventana de inconsistencia, ni TTL que ajustar.' },
+          { icono: 'M12 3.6 20.4 8 12 12.4 3.6 8z', titulo: 'La caché se indexa por contenido',
+            detalle: 'Por el conjuntoId y su huella, no por tiempo. Y por eso el recálculo no pasa por la red: parte del conjuntoId que la determinación guardó, y ese conjunto ya está en la caché.' },
+          { icono: 'M5 12.5l4.5 4.5L19 7', titulo: 'El orden de las filas es total',
+            detalle: 'Las tres consultas de los cuadros llevan ORDER BY completo: si el orden dependiera del plan, el ETag cambiaría sin que cambiara el conjunto, y todo snapshot cacheado se leería como corrupto.' }
+        ],
+        consumidoresCols: this.colsSimples([['Quién', 0], ['Qué ámbito pide', 0], ['Cuándo', 0], ['Qué hace con él', 0]]),
+        consumidores: this.filas([
+          ['catastro', 'VALUACION', 'Una vez por corrida de valuación', 'Dice cuánto vale un predio'],
+          ['rentas', 'OBLIGACION', 'Una vez por emisión', 'Dice cuánto se debe por él'],
+          ['rentas', 'VALUACION', 'Mientras siga llevando catastro dentro', 'Pide DOS snapshots del MISMO conjunto: la identidad es la misma']
+        ], [['', 0], ['', 0], ['', 0], ['', 0]])
+      },
+
+      /* ── MARCO ──────────────────────────────────────────────── */
+      esAjena: s.dest !== null && !SECS.some((x) => x[0] === s.dest),
+      ajena: (() => {
+        const h = HOJAS[s.dest] || { mod: '—', nota: '', label: '—' };
+        return {
+          label: h.label, mod: h.mod, nota: h.nota,
+          icon: (ICO_MOD[h.mod] || []).map((p) => ({ d: p })),
+          texto: 'Este marco abre cada submódulo como pestaña, de cualquier módulo. La pantalla de «' +
+            h.label + '» está diseñada en el archivo de ' + h.mod +
+            ': lo que se prueba aquí es la navegación entre varias cosas abiertas a la vez.',
+          cerrar: () => this.cerrarPestana(s.dest)
+        };
+      })(),
+
+      pestanas: s.abiertas.map((k) => {
+        const hoja = HOJAS[k] || { mod: 'Normativa', label: k };
+        const propio = SECS.some((x) => x[0] === k);
+        const on = s.dest === k;
+        return {
+          label: hoja.label + (s.sucias[k] ? ' *' : ''), actual: on ? 'true' : 'false',
+          icon: (propio ? ICO_SEC[k] : (ICO_MOD[hoja.mod] || [])).map((p) => ({ d: p })),
+          cerrarAria: s.sucias[k]
+            ? 'Cerrar ' + hoja.label + ' — tiene cambios sin guardar'
+            : 'Cerrar ' + hoja.label,
+          ir: () => this.ir(k),
+          cerrar: () => this.pedirCierre(k),
+          marcoStyle: 'display:flex; align-items:center; gap:2px; flex:0 0 auto; padding:0 6px 0 0; border-right:1px solid ' + LINEA_2 +
+            '; background:' + (on ? '#fff' : 'transparent') +
+            '; border-top:2px solid ' + (on ? AZUL : 'transparent'),
+          iconStyle: 'display:grid; place-items:center; flex:0 0 auto; color:' + (on ? AZUL : TINTA_3),
+          style: 'display:flex; align-items:center; gap:8px; border:0; background:transparent; padding:11px 8px 11px 13px; cursor:pointer; font-size:13.5px; color:' +
+            (on ? TINTA : TINTA_3) + '; font-weight:' + (on ? '700' : '400'),
+          cerrarStyle: 'display:grid; place-items:center; width:22px; height:22px; border:0; border-radius:5px; background:transparent; cursor:pointer; color:' +
+            (on ? TINTA_3 : '#93A3AF') + '; flex:0 0 auto'
+        };
+      }),
+      accionLabel: 'Abrir versión',
+      hayAccion: s.dest === 'nor-ediciones' || s.dest === 'nor-panel',
+      hayPestanas: s.abiertas.length > 0 && s.dest !== null,
+      sinPestanas: s.abiertas.length === 0 || s.dest === null,
+      nuevaVersion: () => this.nuevaVersion(),
+
+      porCerrar: s.porCerrar !== null,
+      confirmar: (() => {
+        const k = s.porCerrar;
+        const h = k ? (HOJAS[k] || { label: k, mod: 'Normativa' }) : { label: '', mod: '' };
+        return {
+          label: h.label, mod: h.mod,
+          cerrar: () => this.cerrarPestana(k),
+          cancelar: () => this.setState({ porCerrar: null }),
+          guardar: () => {
+            this.setState({ toast: 'Cambios guardados en ' + h.label + '.' });
+            this.cerrarPestana(k);
+          }
+        };
+      })(),
+
+      toast: s.toast
+    };
+  }
+
+  /* Abrir una versión es la única alta de este módulo, y también la
+     salida de las dos negativas: un conjunto sellado no se corrige. */
+  nuevaVersion() {
+    this.ir('nor-ediciones', {
+      edicion: 'nueva', paso: 1, vals: {}, intento: false,
+      toast: 'Versión nueva: el número lo calcula el sistema. Escriba el ejercicio y por qué la abre.'
+    });
+  }
+  abrirEdicion(id, paso) {
+    this.ir('nor-ediciones', { edicion: id, paso: paso, vals: {}, intento: false });
+  }
+}
+
+</script>
+</body>
+</html>
