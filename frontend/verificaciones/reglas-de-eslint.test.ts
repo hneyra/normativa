@@ -58,17 +58,15 @@ function archivoDeLaMuestra(clave: string): string | null {
   return null;
 }
 
-async function mensajesDe(archivo: string, rutaJuzgada: string): Promise<string[]> {
-  const codigo = readFileSync(archivo, 'utf8');
-  const [resultado] = await eslint.lintText(codigo, { filePath: rutaJuzgada });
-  return (resultado?.messages ?? []).map((m) => m.message);
-}
-
 /** Lo que ESLint dice de ese texto, juzgado en la ruta que se le da. */
 async function mensajesDelTexto(codigo: string, rutaJuzgada: string): Promise<string[]> {
   const [resultado] = await eslint.lintText(codigo, { filePath: rutaJuzgada });
   return (resultado?.messages ?? []).map((m) => m.message);
 }
+
+/** Lo mismo, para una muestra: se lee del disco y se juzga en la ruta que se le da. */
+const mensajesDe = (archivo: string, rutaJuzgada: string) =>
+  mensajesDelTexto(readFileSync(archivo, 'utf8'), rutaJuzgada);
 
 describe('cada prohibicion tiene su muestra, y ESLint la senala', () => {
   it.each(PROHIBICIONES.map((p) => ({ ...p })))('$clave', async ({ clave, message }) => {
