@@ -1,0 +1,21 @@
+{
+  "extends": "./tsconfig.base.json",
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "verificaciones/**/*.ts",
+    // `.tsx` tambien: `verificaciones/tipos/barreras-de-tipos.tsx` es una prueba DEL
+    // COMPILADOR —`@ts-expect-error` falla cuando no hay error— y sin esta linea `tsc` ni
+    // lo abriria, asi que las barreras de tipo dejarian de comprobarse en silencio.
+    "verificaciones/**/*.tsx",
+    "eslint.prohibiciones.mjs",
+    "vitest.setup.ts",
+    "*.config.ts"
+  ],
+  // Las muestras violan las reglas A PROPOSITO y varias no compilan. Se lintan desde la
+  // prueba, con su texto y una ruta sintetica; el compilador no tiene nada que hacer aqui.
+  "exclude": ["verificaciones/muestras/**", "dist", "node_modules"],
+  "compilerOptions": {
+    "types": ["vite/client", "node", "@testing-library/jest-dom"]
+  }
+}
