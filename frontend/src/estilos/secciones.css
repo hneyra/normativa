@@ -23,12 +23,6 @@
    columnas con el documento fuente entero dentro es ancha de verdad.
    ============================================================================ */
 
-.kn-seccion {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
 .kn-seccion__pie {
   font-size: 12px;
   line-height: 1.55;
@@ -54,6 +48,153 @@
 
 .kn-tarjeta__titulo {
   margin: 0 0 6px;
+   Las secciones del modulo propio.
+   ----------------------------------------------------------------------------
+   Va DETRAS de `marco.css` en `estilos.css` por el mismo motivo que `marco.css`
+   va detras de `componentes.css`: compone con lo que hay debajo. Una seccion
+   coloca `Aviso`, `Boton`, `Insignia` y `Esqueleto` dentro de sus paneles, y
+   para colocarlos hay que llegar despues.
+
+   LOS VALORES SALEN DEL ARTBOARD. Los tamanos, los rellenos y los filos son los
+   de `NormativaV6.dc.html` en sus secciones `nor-cuadros` y `nor-publicacion`;
+   los colores son SIEMPRE tokens, nunca hexadecimales, porque un hexadecimal
+   escrito aqui no cambiaria con el tema y se quedaria claro sobre papel oscuro.
+
+   EL DESPLAZAMIENTO HORIZONTAL ES DE LA TABLA, NO DE LA PAGINA (#15 AC8). Es la
+   unica regla de este archivo que sostiene un criterio de aceptacion, asi que se
+   escribe donde se pueda encontrar:
+
+     · `.kn-tabla__marco` lleva `overflow-x: auto`;
+     · `.kn-tabla` lleva el `min-width`, dentro de ese marco;
+     · `.kn-seccion` y `.kn-seccion__cuerpo` llevan `min-width: 0`, que es lo que
+       impide que un hijo ancho estire al padre en una caja flexible — sin eso,
+       `overflow` del marco no llega a activarse nunca y el lienzo se desplaza.
+
+   El cuadro de valores referenciales tiene SIETE columnas: no cabe en un
+   portatil de ventanilla, asi que esto no es el caso extremo sino el caso.
+   ============================================================================ */
+
+/* ── El armazon de una seccion ───────────────────────────────────────────── */
+
+.kn-seccion {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 14px;
+}
+
+.kn-seccion__cuerpo {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 14px;
+  max-width: 1100px;
+}
+
+/* ── Las pestanas de los tres cuadros ────────────────────────────────────── */
+
+.kn-seccion__pestanas {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  min-width: 0;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--linea);
+}
+
+.kn-seccion__pestana {
+  display: flex;
+  align-items: center;
+  gap: var(--hueco-boton);
+  flex: 0 0 auto;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  padding: 12px 14px 10px;
+  cursor: pointer;
+  font-size: var(--texto-control);
+  white-space: nowrap;
+  color: var(--tinta-3);
+}
+
+.kn-seccion__pestana--actual {
+  border-bottom-color: var(--azul);
+  color: var(--tinta);
+  font-weight: 700;
+}
+
+.kn-seccion__conteo {
+  font-size: 10.5px;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 1px 7px;
+  background: var(--sup);
+  color: var(--tinta-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.kn-seccion__pestana--actual .kn-seccion__conteo {
+  background: var(--info-fondo);
+  color: var(--info-tinta);
+}
+
+/* ── Bandas, notas y prosa ───────────────────────────────────────────────── */
+
+.kn-seccion__banda {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.kn-seccion__nota {
+  margin: 0;
+  flex: 1;
+  min-width: 240px;
+  font-size: var(--texto-celda);
+  line-height: var(--linea-prosa);
+  color: var(--tinta-2);
+  max-width: 84ch;
+  text-wrap: pretty;
+}
+
+.kn-seccion__marcas {
+  display: flex;
+  align-items: center;
+  gap: var(--hueco-rotulo);
+  flex: 0 0 auto;
+}
+
+.kn-seccion__prosa {
+  display: block;
+  margin: 0;
+  font-size: var(--texto-etiqueta);
+  line-height: var(--linea-prosa);
+  color: var(--tinta-3);
+  max-width: 96ch;
+  text-wrap: pretty;
+}
+
+.kn-seccion__prosa--pie {
+  padding: 11px 15px;
+  background: var(--sup);
+  border-top: 1px solid var(--linea-2);
+  max-width: none;
+}
+
+.kn-seccion__pie {
+  margin: 0;
+  padding: 11px 15px;
+  border-top: 1px solid var(--linea-2);
+  background: var(--sup);
+  font-size: var(--texto-etiqueta);
+  line-height: var(--linea-prosa);
+  color: var(--tinta-3);
+  text-wrap: pretty;
+}
+
+.kn-seccion__titulo {
+  margin: 0;
   font-size: 14.5px;
   font-weight: 700;
   color: var(--tinta);
@@ -95,6 +236,8 @@
 /* ── Tablas ──────────────────────────────────────────────────────────────── */
 
 .kn-tabla__marco {
+  min-width: 0;
+  max-width: 100%;
   overflow-x: auto;
   border: 1px solid var(--linea-2);
   border-radius: 6px;
@@ -361,6 +504,82 @@
 
 .kn-ediciones__ficha {
   flex: 1;
+.kn-seccion__alarma {
+  color: var(--mal-tinta);
+  font-weight: 600;
+}
+
+/* El bloque que dice algo que hay que ver antes de usar la cifra de al lado. */
+.kn-seccion__alerta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hueco-rotulo);
+  border: 1px solid var(--atencion-tinta);
+  border-radius: var(--radio);
+  background: var(--atencion-fondo);
+  padding: 13px 15px;
+}
+
+.kn-seccion__alerta .kn-seccion__titulo,
+.kn-seccion__alerta .kn-seccion__prosa {
+  color: var(--atencion-tinta);
+}
+
+/* ── El selector de ambito ───────────────────────────────────────────────── */
+
+.kn-seccion__ambito {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.kn-seccion__ambito-rotulo {
+  display: flex;
+  align-items: baseline;
+  gap: var(--hueco-rotulo);
+  font-size: var(--texto-etiqueta);
+  font-weight: 600;
+  color: var(--tinta-2);
+}
+
+.kn-seccion__ambito-botones {
+  display: flex;
+  align-items: center;
+  gap: var(--hueco-rotulo);
+}
+
+.kn-seccion__ambito-boton {
+  border: 1px solid var(--borde-boton);
+  border-radius: var(--radio);
+  padding: 9px 14px;
+  cursor: pointer;
+  font-size: var(--texto-etiqueta);
+  font-weight: 700;
+  background: var(--superficie);
+  color: var(--tinta-3);
+}
+
+.kn-seccion__ambito-boton--actual {
+  border-color: var(--azul);
+  background: var(--azul);
+  color: var(--sobre-azul);
+}
+
+.kn-seccion__ambito-nota {
+  flex: 1;
+  min-width: 240px;
+  font-size: var(--texto-menudo);
+  line-height: var(--linea-ayuda);
+  color: var(--tinta-3);
+  text-wrap: pretty;
+}
+
+/* ── Paneles ─────────────────────────────────────────────────────────────── */
+
+.kn-seccion__panel {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
   background: var(--superficie);
   border: 1px solid var(--linea);
@@ -691,4 +910,316 @@
     max-width: none;
     width: 100%;
   }
+.kn-seccion__panel-cabecera {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 15px;
+  border-bottom: 1px solid var(--linea-2);
+}
+
+.kn-seccion__panel-cabecera .kn-seccion__titulo {
+  flex: 1;
+  min-width: 0;
+}
+
+.kn-seccion__panel-cuerpo {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 14px 15px;
+}
+
+.kn-seccion__panel .kn-seccion__prosa {
+  padding: 11px 15px;
+}
+
+.kn-seccion__ruta {
+  font-size: var(--texto-menudo);
+  color: var(--tinta-3);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── La ficha de la edicion y sus campos ─────────────────────────────────── */
+
+.kn-seccion__edicion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hueco-rotulo);
+  border: 1px solid var(--linea);
+  border-radius: var(--radio);
+  background: var(--superficie);
+  padding: 13px 15px;
+}
+
+.kn-seccion__campos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(178px, 1fr));
+  gap: 10px 16px;
+  margin: 0;
+}
+
+.kn-seccion__campo {
+  min-width: 0;
+}
+
+.kn-seccion__campo dt {
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--tinta-3);
+}
+
+.kn-seccion__campo dd {
+  margin: 3px 0 0;
+  font-size: var(--texto-celda);
+  line-height: var(--linea-apretada);
+  color: var(--tinta-2);
+  text-wrap: pretty;
+}
+
+/* ── Las lineas de la respuesta ──────────────────────────────────────────── */
+
+.kn-seccion__lineas {
+  margin: 0;
+}
+
+.kn-seccion__linea {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 15px;
+  border-bottom: 1px solid var(--linea-2);
+}
+
+.kn-seccion__linea dt {
+  flex: 0 0 132px;
+  font-size: var(--texto-menudo);
+  font-weight: 600;
+  color: var(--tinta-3);
+  padding-top: 2px;
+}
+
+.kn-seccion__origen {
+  display: block;
+  font-weight: 400;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--tinta-3);
+}
+
+.kn-seccion__linea dd {
+  margin: 0;
+}
+
+.kn-seccion__valor {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--texto-etiqueta);
+  line-height: 1.5;
+  color: var(--tinta);
+  word-break: break-all;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── La comprobacion de la huella ────────────────────────────────────────── */
+
+.kn-seccion__comprobacion {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 12px 15px;
+}
+
+.kn-seccion__comprobacion--ok {
+  background: var(--ok-fondo);
+  color: var(--ok-tinta);
+}
+
+.kn-seccion__comprobacion--atencion {
+  background: var(--atencion-fondo);
+  color: var(--atencion-tinta);
+}
+
+.kn-seccion__comprobacion--mal {
+  background: var(--mal-fondo);
+  color: var(--mal-tinta);
+}
+
+.kn-seccion__comprobacion--info {
+  background: var(--info-fondo);
+  color: var(--info-tinta);
+}
+
+.kn-seccion__comprobacion .kn-seccion__prosa,
+.kn-seccion__comprobacion .kn-seccion__comprobacion-titulo {
+  color: inherit;
+  padding: 0;
+}
+
+.kn-seccion__comprobacion-icono {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  background: var(--superficie);
+  color: var(--info-tinta);
+}
+
+.kn-seccion__comprobacion-titulo {
+  display: block;
+  font-size: var(--texto-celda);
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+
+/* ── «Que viene y que no» y «Por que se puede guardar» ───────────────────── */
+
+.kn-seccion__lista {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 11px 15px;
+  border-bottom: 1px solid var(--linea-2);
+}
+
+/* `const CODIGO` del artboard (linea 1137), con sus colores pasados a token: el
+   nombre de un campo del JSON o de una tabla de la base, dentro de la prosa. No
+   lleva familia monoespaciada porque el artboard no se la pone. */
+.kn-seccion__campo-json,
+.kn-seccion code {
+  display: inline-block;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--info-tinta);
+  background: var(--azul-suave);
+  border-radius: 3px;
+  padding: 1px 5px;
+  letter-spacing: 0.01em;
+}
+
+/* Dentro de un bloque de color, el codigo hereda su tinta: el azul del chip
+   sobre ambar o sobre verde no llega al 4.5:1 de WCAG 1.4.3. */
+.kn-seccion__alerta code,
+.kn-seccion__comprobacion code {
+  color: inherit;
+  background: transparent;
+  padding: 0;
+  font-weight: 700;
+}
+
+/* ── La tabla ────────────────────────────────────────────────────────────── */
+
+/* AC8: el desplazamiento vive AQUI. Ver la cabecera del archivo. */
+.kn-tabla__marco {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--linea);
+  border-radius: var(--radio);
+  background: var(--superficie);
+}
+
+.kn-tabla {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.kn-tabla--unitarios {
+  min-width: 900px;
+}
+
+.kn-tabla--depreciacion {
+  min-width: 900px;
+}
+
+.kn-tabla--referenciales {
+  min-width: 1080px;
+}
+
+.kn-tabla--consumidores {
+  min-width: 620px;
+}
+
+.kn-tabla__th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  text-align: left;
+  vertical-align: bottom;
+  padding: var(--relleno-celda);
+  background: var(--sup);
+  border-bottom: 1px solid var(--linea);
+  white-space: nowrap;
+}
+
+.kn-tabla__th--cifra {
+  text-align: right;
+}
+
+.kn-tabla__rotulo {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--tinta-3);
+}
+
+/* `const CODIGO_TH` del artboard (linea 1138): el nombre del campo bajo el
+   rotulo de la columna. **Con `--tinta-3` y no con el `#93A3AF` del artboard**,
+   por lo mismo que `base.css` cambia el del `::placeholder`: esto es TEXTO, y
+   #93A3AF sobre papel blanco da 2.59:1 donde WCAG 1.4.3 pide 4.5:1. `--tinta-3`
+   da 5.51:1 y tambien es un color del artboard. */
+.kn-tabla__campo {
+  display: block;
+  margin-top: 3px;
+  font-size: 9.5px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--tinta-3);
+}
+
+.kn-tabla__dominio {
+  display: block;
+  margin-top: 2px;
+  font-size: 10.5px;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--tinta-3);
+}
+
+.kn-tabla__tr {
+  border-top: 1px solid var(--linea-2);
+}
+
+.kn-tabla__tr:hover {
+  background: var(--realce);
+}
+
+.kn-tabla__td {
+  padding: var(--relleno-celda);
+  font-size: var(--texto-celda);
+  color: var(--tinta);
+  vertical-align: top;
+  text-wrap: pretty;
+}
+
+/* Las cifras a la derecha y en cifras tabulares: es lo que hace que una columna
+   se pueda comparar de un vistazo. */
+.kn-tabla__td--cifra {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.kn-tabla__sin-dato {
+  color: var(--tinta-3);
 }

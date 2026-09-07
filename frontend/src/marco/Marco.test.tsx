@@ -480,7 +480,11 @@ describe('AC7 — el estado de la seccion vive en el marco', () => {
     render(<Marco />);
     await ensuciar(usuario);
 
-    await usuario.click(submodulo('Publicación'));
+    // «Panel» y no «Publicación»: desde #15 la seccion de Publicacion esta CONSTRUIDA y no
+    // ofrece campo de observacion, porque en ella no se escribe nada —sirve un conjunto ya
+    // sellado, o sea inmutable—. Lo que este caso mide sigue siendo lo mismo: dos secciones
+    // con hueco tienen dos observaciones distintas, no una compartida.
+    await usuario.click(submodulo('Panel'));
 
     expect(screen.getByLabelText('Observación')).toHaveValue('');
   });

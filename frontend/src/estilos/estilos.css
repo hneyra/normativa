@@ -31,12 +31,9 @@
            una seccion sin construir se colocan desde alli, y para colocarlos hay
            que llegar despues.
 
-     8     `secciones.css` (#14), la ultima, por el mismo motivo elevado al
-           cuadrado: las secciones componen con los ocho componentes Y con el
-           lienzo del marco, que es donde viven. Lo que #15 anada a las dos
-           secciones que faltan entra en esta misma hoja, no en otra: dos hojas
-           de pantallas volverian a dejar el orden de la cascada en manos del
-           orden de los `@import`.
+     8     `secciones.css` (#14, #15), el ultimo, por el mismo motivo: una seccion
+           coloca `Aviso`, `Boton`, `Insignia` y `Esqueleto` dentro de sus
+           paneles y de sus tablas, y para colocarlos hay que llegar despues.
    ============================================================================ */
 
 @import './tokens/colors.css';

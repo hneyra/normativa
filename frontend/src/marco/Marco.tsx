@@ -373,11 +373,11 @@ export function Marco() {
               despachar({ tipo: 'pedir-cierre', destino });
             }}
             alAbrir={abrir}
+            ejercicio={ejercicio}
+            alAvisar={fijarToast}
             alEnsuciar={() => {
               despachar({ tipo: 'ensuciar' });
             }}
-            alAvisar={fijarToast}
-            ejercicio={ejercicio}
             observacion={activa === null ? '' : (observaciones[activa] ?? '')}
             alEscribirObservacion={(texto) => {
               if (activa !== null) {

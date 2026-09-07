@@ -1,7 +1,13 @@
 import { useEffect, useState } from 'react';
 
-import { ErrorDeLaApi, solicitarSnapshot, type SnapshotVerificado } from '../api/cliente.ts';
-import { RUTAS, pedirCalculo, pedirLista, pedirUno, type Ambito, type SnapshotResource } from './lecturas.ts';
+import { ErrorDeLaApi, type SnapshotVerificado } from '../api/cliente.ts';
+import {
+  pedirCalculo,
+  pedirLista,
+  pedirSnapshotDe,
+  pedirUno,
+  type SnapshotResource,
+} from './lecturas.ts';
 
 /**
  * **Los tres nombres empiezan por `use` y no por `usar`, y es la excepcion declarada de la regla
@@ -27,6 +33,20 @@ export interface Recurso<T> {
   readonly dato: T | null;
   readonly cargando: boolean;
   readonly error: string | null;
+  /**
+   * El fallo tal cual, cuando lo que fallo fue la API.
+   *
+   * `error` es lo que se ENSENA y esto es lo que se DECIDE con. Hacen falta los dos: el texto ya
+   * lleva el codigo delante y sirve para dictarlo por telefono, pero no lleva el miembro
+   * `parametroQueFalta`, y ese miembro es **lo unico que separa dos 404 que se arreglan de
+   * maneras opuestas** — «ese ejercicio no esta publicado», que se arregla componiendo y
+   * sellando el conjunto, y «esa ruta no existe», que no lo arregla nadie desde la pantalla
+   * (`FaltaPublicar`, cuyo javadoc dice que esa diferencia «es lo unico que los separa»).
+   *
+   * Nulo cuando no hubo fallo, y tambien cuando el que hubo no vino de la API: un fallo que no
+   * es un `ErrorDeLaApi` no tiene codigo del catalogo que leer.
+   */
+  readonly fallo: ErrorDeLaApi | null;
 }
 
 /**
@@ -50,7 +70,7 @@ function mensajeDe(fallo: unknown): string {
  * `false` la pantalla parpadearia su estado vacio en el primer fotograma.
  */
 function alEmpezar<T>(hayRuta: boolean): Recurso<T> {
-  return { dato: null, cargando: hayRuta, error: null };
+  return { dato: null, cargando: hayRuta, error: null, fallo: null };
 }
 
 /**
@@ -70,24 +90,29 @@ function usePeticion<T>(
 
   useEffect(() => {
     if (ruta === null) {
-      fijar({ dato: null, cargando: false, error: null });
+      fijar({ dato: null, cargando: false, error: null, fallo: null });
       return;
     }
 
     const control = new AbortController();
     let vivo = true;
-    fijar({ dato: null, cargando: true, error: null });
+    fijar({ dato: null, cargando: true, error: null, fallo: null });
 
     pedir(ruta, control.signal).then(
       (dato) => {
         if (vivo) {
-          fijar({ dato, cargando: false, error: null });
+          fijar({ dato, cargando: false, error: null, fallo: null });
         }
       },
       (fallo: unknown) => {
         // Abortar no es fallar: es que la pantalla ya no quiere esa respuesta.
         if (vivo && !control.signal.aborted) {
-          fijar({ dato: null, cargando: false, error: mensajeDe(fallo) });
+          fijar({
+            dato: null,
+            cargando: false,
+            error: mensajeDe(fallo),
+            fallo: fallo instanceof ErrorDeLaApi ? fallo : null,
+          });
         }
       },
     );
@@ -126,25 +151,18 @@ export function useCalculo<T>(ruta: string | null): Recurso<T> {
 }
 
 /**
- * Pide el snapshot de un conjunto y **comprueba su huella antes de entregarlo** (ADR-0025).
+ * Pide el snapshot de un conjunto **con su huella ya comprobada**. Con `ruta` nula no pide nada.
  *
- * No pasa por `useUno`, y esa es toda la razon de que exista: `pedirUno` devuelve el cuerpo tal
- * cual, y el snapshot se cachea un ano con `Cache-Control: immutable` — una copia corrupta no se
- * volveria a pedir nunca. El `sha256` de los bytes servidos tiene que cuadrar con el `ETag`, y
- * quien lo pide recibe la huella junto al recurso porque es lo que se guarda con la fila de la
- * cache.
- *
- * Con `conjuntoId` nulo no pide nada, que es como se encadena con la lectura que lo resuelve
- * **sin romper la regla de los hooks**. Y con un conjunto sin sellar tampoco hay que llamarla:
- * `SnapshotController` contesta 404 nombrandolo, porque lo que se pide es un documento que
- * todavia no existe.
+ * No es `useUno` con otro tipo, y por eso es un hook aparte: lo que devuelve no es el recurso
+ * sino el `SnapshotVerificado` entero —el objeto, los bytes que se verificaron, el `sha256` que
+ * se recalculo y el `Cache-Control` que llego—, porque la pantalla de Publicacion tiene que
+ * poder ensenar la COMPROBACION y no solo su resultado (#15 AC5). Y la ruta nula es como se
+ * encadena con la lectura que resuelve el `conjuntoId`: hasta que `GET /conjuntos?ejercicio=`
+ * no contesta no hay snapshot que pedir, y una peticion a `/conjuntos/null/snapshot` seria un
+ * 404 que no dice nada.
  */
-export function useSnapshot(
-  conjuntoId: number | null,
-  ambito: Ambito,
-): Recurso<SnapshotVerificado<SnapshotResource>> {
-  return usePeticion<SnapshotVerificado<SnapshotResource>>(
-    conjuntoId === null ? null : RUTAS.snapshot(conjuntoId, ambito),
-    (donde, senal) => solicitarSnapshot<SnapshotResource>(donde, { senal }),
+export function useSnapshot(ruta: string | null): Recurso<SnapshotVerificado<SnapshotResource>> {
+  return usePeticion<SnapshotVerificado<SnapshotResource>>(ruta, (donde, senal) =>
+    pedirSnapshotDe(donde, senal),
   );
 }

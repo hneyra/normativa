@@ -143,8 +143,9 @@ export function Ediciones({
   // Un conjunto sin sellar **no tiene snapshot**: `SnapshotController` contesta 404 nombrandolo,
   // porque lo que se pide es un documento que todavia no existe. Asi que no se pide.
   const snapshot = useSnapshot(
-    elegida !== null && elegida.estado === SELLADO ? elegida.id : null,
-    AMBITOS[0],
+    elegida !== null && elegida.estado === SELLADO
+      ? RUTAS.snapshot(elegida.id, AMBITOS[0])
+      : null,
   );
   const parametros = snapshot.dato?.recurso.parametros ?? [];
 
