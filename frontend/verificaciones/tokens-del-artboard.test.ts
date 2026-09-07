@@ -145,6 +145,14 @@ describe('AC1 — los cinco archivos de tokens, y un solo punto de entrada', () 
     expect(limpio.indexOf('./componentes.css')).toBeGreaterThan(limpio.indexOf('./tokens/base.css'));
   });
 
+  it('«marco.css» va DESPUES de los componentes: el marco los COLOCA', () => {
+    // El `Boton` del dialogo de cierre, el `Campo` del hueco y el `Aviso` de una seccion sin
+    // construir se posicionan desde `marco.css`, y a igualdad de especificidad gana el
+    // ultimo que llega. Con la hoja del marco antes, colocarlos exigiria `!important`.
+    const limpio = sinComentarios(entrada);
+    expect(limpio.indexOf('./marco.css')).toBeGreaterThan(limpio.indexOf('./componentes.css'));
+  });
+
   it('nadie mas importa una hoja de estilos: el punto de entrada es uno', () => {
     // Si cada componente trajera la suya, el orden de la cascada lo decidiria el orden en
     // que Vite resuelve los modulos, que cambia con un `import` movido de sitio.
@@ -233,17 +241,20 @@ describe('AC2 — los valores coinciden con el artboard', () => {
 });
 
 describe('AC2 (c) — los componentes no pintan: solo usan tokens', () => {
-  it.each(['componentes.css', 'tokens/base.css'])('«%s» no escribe ni un color a mano', (hoja) => {
-    const css = sinComentarios(leer(join(RAIZ, 'src/estilos', hoja)));
-    const colores = css.match(/#[0-9a-f]{3,8}\b|\brgba?\(|\bhsla?\(/gi) ?? [];
+  it.each(['componentes.css', 'tokens/base.css', 'marco.css'])(
+    '«%s» no escribe ni un color a mano',
+    (hoja) => {
+      const css = sinComentarios(leer(join(RAIZ, 'src/estilos', hoja)));
+      const colores = css.match(/#[0-9a-f]{3,8}\b|\brgba?\(|\bhsla?\(/gi) ?? [];
 
-    expect(
-      colores,
-      `«${hoja}» tiene un color escrito a mano. Todo color sale de \`tokens/colors.css\`:\n` +
-        'es lo que hace que el tema oscuro exista sin tocar un componente, y lo que hace\n' +
-        'que la prueba de contraste mida lo que la pantalla ensena y no otra cosa.',
-    ).toEqual([]);
-  });
+      expect(
+        colores,
+        `«${hoja}» tiene un color escrito a mano. Todo color sale de \`tokens/colors.css\`:\n` +
+          'es lo que hace que el tema oscuro exista sin tocar un componente, y lo que hace\n' +
+          'que la prueba de contraste mida lo que la pantalla ensena y no otra cosa.',
+      ).toEqual([]);
+    },
+  );
 
   it('y tampoco los pinta un componente de React', () => {
     // El otro sitio por donde se cuela un color: un `style={{ color: '#005284' }}` en el

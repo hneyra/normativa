@@ -26,8 +26,13 @@
    properties y se queda como CSS con custom properties: cada capa de traduccion
    es un sitio donde el valor del artboard se puede reescribir a ojo.
 
-   Las hojas del marco (#12) y de las pantallas (#14, #15) se encadenaran aqui
-   detras, en ese orden, por el mismo motivo: componen con lo que hay debajo.
+     7     `marco.css` (#12), detras de los componentes, porque COMPONE con ellos:
+           el `Boton` del dialogo de cierre, el `Campo` del hueco y el `Aviso` de
+           una seccion sin construir se colocan desde alli, y para colocarlos hay
+           que llegar despues.
+
+   La hoja de las pantallas (#14, #15) se encadenara aqui detras, por el mismo
+   motivo: compone con lo que hay debajo.
    ============================================================================ */
 
 @import './tokens/colors.css';
@@ -36,3 +41,4 @@
 @import './tokens/spacing.css';
 @import './tokens/base.css';
 @import './componentes.css';
+@import './marco.css';
