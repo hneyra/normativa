@@ -218,6 +218,90 @@ sí, antes de escribirlo:**
 | 4 | No falta ninguna cifra que una regla vaya a pedir | Cada `‹llave›` que una regla nombre y no esté produce un **422 nombrando la llave**. Eso es correcto en una consulta y es un desastre en una emisión masiva |
 | 5 | Nada de lo que falta es de este ejercicio | Ver «Lo que hoy no se publica, y por qué», arriba: lo que espera a D-02b y D-02c **no** puede entrar hoy, y sellar sin ello es sellar un ejercicio incompleto |
 
+### Los cinco puntos, contestados uno a uno
+
+**Esta lista no se contesta en un párrafo, y hasta el 2026-09-07 se contestaba así.** El párrafo
+que seguía a la tabla respondía a los puntos 1, 2, 4 y 5 y **saltaba el 3**, y nada lo decía: un
+párrafo no tiene forma de declarar que se dejó un punto sin mirar. Ahora hay **una respuesta por
+punto**, y lo comprueba una prueba que lee **este mismo archivo** —`ElEjercicio2026SeSellaTest`,
+`laListaDeAntesDeSellarEstaContestadaPuntoPorPunto`—: un punto nuevo sin respuesta, o una respuesta
+que se borre, salen en rojo **nombrando el número**.
+
+| | Respuesta |
+|---|---|
+| 1 | **Sí.** Contra `stg` real, `PUBLICADAS=22 RECHAZADAS=0` el 2026-08-29, y la segunda corrida informa las 22 como «ya estaba publicado» sin mover una fila. Las **33** de hoy las compone `ElEjercicio2026SeSellaTest` contra PostgreSQL real, con `rechazadas()` vacío |
+| 2 | **Sí.** Los tres cuadros son publicables desde `catastro#8`, y los **dos** de los que depende valorizar un predio —valores unitarios (H-14) y depreciación (H-15)— entran en el conjunto: son 2 de los 35 detalles compuestos. Lo que sigue esperando a #388 es el **despliegue** del vehicular, que es otra cosa que poder publicarlo |
+| 3 | **NO, y sellar sin él es una decisión tomada.** El detalle, su consecuencia medida y por qué este repositorio no lo puede comprobar, abajo |
+| 4 | **Sí, para lo de norma nacional**, que es lo único que este repositorio publica. Lo que falta es de acto propio de la municipalidad y son las diez filas del punto 5 — cada una produce, cuando una regla la pida, un **422 nombrando su llave** en vez de una cifra inventada |
+| 5 | **Sí, y las diez que no pueden entrar se nombran una a una**, para que quien selle pueda ver si alguna es suya. Abajo |
+
+#### El punto 3: el arancel de la municipalidad NO está cargado
+
+**Lo que se sabe.** El derivado del arancel de Catacaos existe —`arancel_2026.csv`, 65 582 B, junto
+a su `vias.csv` para el catálogo vial que `RegistrarArancel` necesita antes— y **nunca se ha cargado
+contra el `stg` partido**: lo que está probado contra `stg` es del 2026-08-29, es del monolito, y
+dice, en «Lo que sí está probado, contra `stg` real» —más abajo—, «lo que **no** se hizo, a propósito: `--sellar`».
+
+**Y hoy sigue sin poderse correr, aunque el issue que lo bloqueaba esté cerrado.** Esto se midió el
+2026-09-07 en vez de repetirlo:
+[`hneyra/infrastructure#11`](https://github.com/hneyra/infrastructure/issues/11) **se cerró ese
+mismo día** con su PR #34 (`fd30d7b`), y con él los **tres** guiones de `infra/carga-de-datos/` de
+aquel repositorio ya resuelven por sistema y ambiente el deployment del que sale la imagen, la base
+y el namespace del Job. Quedan dos cosas, y las dos están del lado del paso 4:
+
+- **`cargar-arancel-vial.sh` no es ninguno de esos tres.** Vive en `hneyra/catastro` y quedó
+  **declarado pendiente y no arreglado**, en la lista `GUIONES_PENDIENTES` de `infrastructure`
+  —`"catastro/infra/carga-de-datos/cargar-arancel-vial.sh": "hneyra/infrastructure#10"`—, junto a
+  otros trece de tres repositorios.
+- **Y aunque estuviera arreglado, la corrida se pararía antes**: la credencial de
+  `rol_carga_parametros` —la única que puede escribir un valor normativo— sigue **sólo en el espacio
+  de nombres de la plataforma** y no alcanza al del Job. Es el AC-2 de aquel issue, que su propio
+  cierre declara **no cumplido**, con una guarda allí que lo mide y que **se pondrá roja el día que
+  aterrice**. La mitad que falta es una entrada de `claves()` en el descriptor de **este**
+  repositorio, y no es de este issue.
+
+Mientras eso siga así, el punto 3 **no se puede contestar corriéndolo**: sólo razonándolo, que es lo
+que este párrafo hace.
+
+**Y este repositorio no lo puede comprobar, ni podría.** `arancel` no es una de las 19 tablas de su
+esquema: está en el reparto como tabla de `catastro`, así que la undécima regla —ningún SQL cruza la
+frontera de sistema— prohíbe consultarla desde aquí. Es decir, **la prueba que sella no puede
+verificar la precondición que esta lista exige**. Lo que sí puede afirmar es la frontera, y la
+afirma: `elPasoCuatroNoSePuedeComprobarDesdeAqui` le pregunta a `information_schema` —un catálogo,
+no una tabla de nadie— y comprueba que la tabla del paso 4 **no está en este esquema**, con las
+tablas propias presentes como contraste, para que «no está» no pueda ser cierto sobre la nada.
+
+**La consecuencia está medida, y del otro lado de la frontera.** `ValorizacionDelPredio` de
+`catastro` comprueba el arancel como **cuarta precondición** —después de los dos cuadros y **antes**
+del `% actualización`— y sin él devuelve `SinValorizar` con la llave `ARANCEL:‹ejercicio›` y el
+motivo «La via del predio no tiene arancel publicado para el ejercicio (D-02b, de ordenanza local
+con su ratificacion provincial): sin el no hay valor de terreno». Su censo del padrón de
+demostración lo escribe como premisa suya, con todas las letras: «El arancel de cada vía **se supone
+publicado** … el padrón de demostración NO trae ninguno … **Sin la premisa, los 23 predios saldrían
+por `ARANCEL:2026`** y el censo no diría nada de lo demás».
+
+**Eso cambia cómo hay que leer la cifra que este repositorio cita.** El «**4 de 23**» que la firma
+del `% actualización` desbloqueó se mide **suponiendo el arancel publicado**. En una instalación de
+verdad, con este conjunto sellado y sin correr el paso 4, la corrida no da 4 de 23: da **0 de 23, y
+los 23 por `ARANCEL:2026`** —antes de llegar al `% actualización` y antes de llegar a RT-004—. La
+firma de §1.6 sigue valiendo exactamente lo que se midió; lo que no vale es leer «4 de 23» como una
+promesa sobre una municipalidad que no ha cargado su arancel.
+
+**La decisión, escrita: se sella igual, y por tres motivos.** (a) El arancel es de **ordenanza
+local** (D-02b) y su carga es un acto de cada municipalidad contra **su** conjunto: este repositorio
+no la podría hacer nunca, ni con los guiones arreglados, porque no es suya. (b) Sellar no cierra
+ninguna puerta —`conjunto_uq` lleva la versión, y `selladoVigenteDe` toma la última—, así que la
+salida existe y su precio es recalcular el padrón, no una fila perdida. (c) Lo que este sello
+desbloquea es lo de **norma nacional** —los dos cuadros de la valuación y las 33 filas—, que es
+justamente lo que `catastro` no podía leer de ninguna otra forma.
+
+**Lo que NO se hace es dar el punto 3 por contestado.** Quien selle el conjunto de su municipalidad
+tiene que correr `cargar-arancel-vial.sh --conjunto-id N` **entre abrir y sellar**, y este
+repositorio **no puede comprobar que lo hizo**: eso lo decide quien ve los dos lados. Por eso el
+punto sigue en la lista, con su respuesta escrita, en vez de desaparecer de ella.
+
+#### El punto 5: lo que no puede entrar hoy, nombrado una a una
+
 **El punto 5 es el que decide, y de las tres cosas que faltaban quedan las de ordenanza local.**
 Los valores unitarios (H-14) tienen desde `catastro#8` su archivo de filas, su huella y su sitio en
 `FilaDelManifiesto.CUADROS`; el `% actualización` (D-11) tiene desde el 2026-09-06 sus dos firmas y

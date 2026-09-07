@@ -44,4 +44,10 @@ tasks.test {
     inputs
         .file(delCorpus.resolve("fuentes/depreciacion-rnt-2016/depreciacion.csv"))
         .withPathSensitivity(PathSensitivity.RELATIVE)
+    // #7: la lista «Antes de sellar» y sus respuestas. Sin esta linea, borrarle la respuesta al
+    // punto 3 deja `test` en UP-TO-DATE y la guarda no se pone roja: DEJA DE CORRER, en verde.
+    // Medido antes de escribirla, que es lo que la hace algo mas que una precaucion.
+    inputs
+        .file(delCorpus.resolve("publicacion/README.md"))
+        .withPathSensitivity(PathSensitivity.RELATIVE)
 }
