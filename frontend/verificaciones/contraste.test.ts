@@ -50,14 +50,19 @@ interface Par {
   readonly porque?: string;
 }
 
-/** Todo par de tokens que un componente de `src/ds/` —o el reinicio— pone junto. */
+/**
+ * Todo par de tokens que un componente de `src/ds/`, el reinicio o el marco (`src/marco/`)
+ * pone junto.
+ */
 const PARES: readonly Par[] = [
   // —— Texto (1.4.3) ——
   {
     frente: '--tinta',
     fondo: '--superficie',
     criterio: 'texto',
-    donde: 'Aviso: el titulo; Boton secundario: el rotulo; Campo: lo que se teclea',
+    donde:
+      'Aviso: el titulo; Boton secundario: el rotulo; Campo: lo que se teclea. Y, del ' +
+      'reves, el aviso flotante del marco: `--superficie` sobre `--tinta`',
   },
   { frente: '--tinta', fondo: '--fondo', criterio: 'texto', donde: 'el texto sobre el lienzo' },
   {
@@ -132,6 +137,30 @@ const PARES: readonly Par[] = [
     fondo: '--superficie',
     criterio: 'texto',
     donde: 'Aviso: el «Copiada» de la traza',
+  },
+  {
+    frente: '--sobre-barra',
+    fondo: '--azul-oscuro',
+    criterio: 'texto',
+    donde: 'Marco: el nombre de la entidad y el de la sesion, sobre la barra global',
+  },
+  {
+    frente: '--sobre-barra-2',
+    fondo: '--azul-oscuro',
+    criterio: 'texto',
+    donde: 'Marco: la segunda linea de la entidad, el papel de la sesion y el rotulo «Ejercicio»',
+  },
+  {
+    frente: '--info-tinta',
+    fondo: '--azul-suave',
+    criterio: 'texto',
+    donde: 'Marco: el selector de ejercicio, el avatar, el submodulo activo y la pastilla',
+  },
+  {
+    frente: '--tinta-2',
+    fondo: '--realce',
+    criterio: 'texto',
+    donde: 'Marco: la fila de un submodulo del arbol con el puntero encima',
   },
 
   // —— No textual (1.4.11) ——
@@ -233,44 +262,85 @@ const PARES: readonly Par[] = [
 ];
 
 /**
- * Los tokens de color que NINGUN componente pone junto a otro todavia, con su motivo.
+ * Los tokens de color que no forman par medible con ningun otro, con su motivo.
  *
  * **Existe para que la cobertura sea comprobable.** Sin esta lista, un token nuevo al que
  * nadie le escribiera su par quedaria sin medir y la prueba seguiria en verde: mediria los
  * pares que hay, que es exactamente lo que no basta. Con ella, `PARES` y `SIN_PAR` tienen
  * que cubrir entre las dos **todos** los tokens de `colors.css`.
+ *
+ * Son de dos clases, y la distincion importa: los que NADIE pone junto a otro todavia, y
+ * los que si se dibujan pero **no son un color** —capas translucidas y velos—, sobre los
+ * que esta calculadora, que lee hexadecimales, daria una cifra que el navegador no pinta.
  */
 const SIN_PAR: ReadonlyArray<{ readonly token: string; readonly porque: string }> = [
   {
     token: '--linea',
     porque:
-      'El filo por omision del artboard (`const LINEA`). Ningun componente base lo pone: el ' +
-      'filo de un boton es `--borde-boton` y el de un campo `--borde-campo`, separados a ' +
-      'proposito porque esos SI identifican un control. Lo usara el marco (#12) para el ' +
-      'borde de una tarjeta y el subrayado de una cabecera, y entonces se le escribe su par.',
+      'El filo por omision del artboard (`const LINEA`). Es el que SEPARA —el borde de la ' +
+      'ficha ajena del marco, el filo derecho del panel, el de una caja flotante—, y eso no ' +
+      'identifica ningun control: WCAG 1.4.11 no lo alcanza. El filo que si identifica uno ' +
+      'es `--borde-boton` para un boton y para la caja de filtro del arbol, y ' +
+      '`--borde-campo` para lo que se escribe; los dos tienen su par y estan medidos.',
   },
   {
     token: '--linea-2',
     porque:
-      'El filo mas tenue (`const LINEA_2`), el de entre filas. Mismo caso: no lo pone ningun ' +
-      'componente base. Su valor si esta en uso, como `--esqueleto`, y ese par si se mide.',
+      'El filo mas tenue (`const LINEA_2`), el de entre filas: separa la cabecera de un menu ' +
+      'de sus opciones y una pestana de la siguiente. Mismo caso que `--linea` y por el ' +
+      'mismo motivo —separar no es identificar—. Su valor si esta en uso, como `--esqueleto`, ' +
+      'y ese par si se mide.',
   },
   {
-    token: '--azul-suave',
+    token: '--barra-control',
     porque:
-      'El relleno detras de un texto en azul (`const AZUL_SUAVE`): el codigo de campo que ' +
-      'el artboard pone junto a cada etiqueta, y el fondo de `INS.info`. Lo segundo si esta ' +
-      'medido, pero por su propio token —`--info-fondo`, que vale lo mismo y se llama por su ' +
-      'uso—; y el realce del boton fantasma es `--realce`, que es lo que el artboard escribe ' +
-      'en su `style-hover`. Asi que hoy no lo pone ningun componente base.',
+      'El relleno de un control de la barra global en reposo, y **no es un color sino una ' +
+      'capa**: `rgba(255,255,255,.09)` sobre `--azul-oscuro`. Esta calculadora lee ' +
+      'hexadecimales de seis digitos y componer alfa sobre el fondo daria una cifra que no ' +
+      'es la que el navegador pinta. Lo que si esta medido es lo que se LEE encima: ' +
+      '`--sobre-barra` y `--sobre-barra-2` sobre `--azul-oscuro`, y ese par no cambia por ' +
+      'una capa de un nueve por ciento de blanco — al contrario, la aclara y sube el ratio.',
+  },
+  {
+    token: '--barra-realce',
+    porque:
+      'La misma capa translucida al 20 %: el control pulsado y el filo del buscador. Mismo ' +
+      'motivo que `--barra-control` —es alfa sobre `--azul-oscuro`, no un color—, y mismo ' +
+      'consuelo: el texto de encima esta medido contra el fondo mas oscuro de los dos, que ' +
+      'es el caso peor.',
+  },
+  {
+    token: '--barra-hover',
+    porque:
+      'La tercera capa, la del puntero encima (18 %). Ademas de ser alfa y no color, es ' +
+      'informacion que solo existe para quien ya esta apuntando con el raton: el mismo ' +
+      'control se alcanza con el tabulador, y entonces lo que lo senala es el ' +
+      '`:focus-visible` del reinicio, que si esta medido.',
+  },
+  {
+    token: '--velo',
+    porque:
+      'El velo del dialogo de cierre: `rgba(0,54,90,.4)` sobre lo que haya debajo. **No ' +
+      'lleva texto encima** —el texto va dentro del dialogo, sobre `--superficie`, y ese ' +
+      'par si esta medido—, asi que no hay nada que leer a traves de el. Su trabajo es ' +
+      'apagar el fondo lo justo para que el dialogo se lea como lo unico activo.',
+  },
+  {
+    token: '--velo-paleta',
+    porque:
+      'El velo de la paleta de comandos, `rgba(22,35,44,.38)`. Es otro que el del dialogo ' +
+      'porque el artboard los escribe distintos —uno tapa con el azul de la marca y el ' +
+      'otro con la tinta—, y por lo demas mismo caso: nada se lee encima de el.',
   },
   {
     token: '--acento',
     porque:
       'El celeste de la marca. **No se usa como indicador de foco a proposito**: sobre papel ' +
-      'blanco da 2.12:1 y WCAG 1.4.11 pide 3:1, asi que el foco lo pinta `--azul`. Queda ' +
-      'para lo decorativo del marco, que es donde el artboard mas lo usa, y alli tendra su ' +
-      'par el dia que se dibuje.',
+      'blanco da 2.12:1 y WCAG 1.4.11 pide 3:1, asi que el foco lo pinta `--azul`. El marco ' +
+      'lo tuvo un momento —el visto del aviso flotante, que el artboard pinta de celeste—, y ' +
+      'se le quito: el toast se INVIERTE con el tema, y `--acento` sobre `--tinta` da 7.54:1 ' +
+      'en claro y **1.39:1** en oscuro, o sea un icono que desaparece en la mitad de los ' +
+      'temas. Hoy no lo pone nadie.',
   },
 ];
 

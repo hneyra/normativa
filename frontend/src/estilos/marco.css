@@ -1,0 +1,1223 @@
+/* ============================================================================
+   El marco V6: la barra global, el arbol, las pestanas y el lienzo.
+   ----------------------------------------------------------------------------
+   Se construye UNA vez y lo usan las cuatro secciones de Normativa. Va despues
+   de `componentes.css` porque compone con los ocho componentes base —el `Boton`
+   del dialogo, el `Campo` del hueco, el `Aviso` de la seccion sin construir— y a
+   igualdad de especificidad tiene que poder colocarlos.
+
+   **Ni un hexadecimal, ni un `rgba()`: todo color sale de `tokens/colors.css`**,
+   igual que en `componentes.css`, y lo comprueba la misma prueba —el `it.each`
+   de `tokens-del-artboard.test.ts` incluye este archivo—. Es lo que hace que el
+   tema oscuro exista sin tocar una linea de aqui.
+
+   Los PIXELES si son literales, y a proposito: son los del artboard, con sus
+   medios pixeles (13.5, 12.5, 10.5) y sus rellenos impares (7px 9px). V6 no esta
+   en una rejilla de cuatros y redondearlo seria reescribir el diseno a ojo. Solo
+   se asciende a token lo que tres sitios repiten, que es lo que `spacing.css`
+   dice de si mismo.
+
+   **252 px de panel, y no 292.** Los 292 eran de la variante `c`, el riel de
+   iconos con la lista al lado, que no se porta. Lo comprueba
+   `verificaciones/marco-sin-selector.test.ts` leyendo este archivo: una medida
+   que se queda de una variante que no existe no la ve nadie en una revision.
+   ============================================================================ */
+
+.kn-marco {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--fondo);
+}
+
+/* ── La barra global (AC3) ─────────────────────────────────────────────────
+   52 px de alto sobre `--azul-oscuro`. */
+
+.kn-marco__barra {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 52px;
+  padding: 0 12px 0 8px;
+  background: var(--azul-oscuro);
+  color: var(--sobre-barra);
+  z-index: 50;
+}
+
+.kn-marco__control {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 38px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--sobre-barra);
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.kn-marco__control--activo {
+  background: var(--barra-realce);
+}
+
+/* El aviso y el buscador: caja mas pequena, con filo, como en el artboard. */
+.kn-marco__control--filo {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--barra-realce);
+  border-radius: var(--radio);
+  background: var(--barra-control);
+}
+
+.kn-marco__control:hover {
+  background: var(--barra-hover);
+}
+
+.kn-marco__globo {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border: 1.5px solid var(--azul-oscuro);
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-size: 10.5px;
+  font-weight: var(--peso-titulo);
+  background: var(--mal-tinta);
+  color: var(--superficie);
+}
+
+.kn-marco__entidad {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  line-height: 1.15;
+}
+
+.kn-marco__entidad-nombre {
+  font-size: 14.5px;
+  font-weight: var(--peso-titulo);
+  color: var(--sobre-barra);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kn-marco__entidad-nota {
+  font-size: 10.5px;
+  color: var(--sobre-barra-2);
+}
+
+.kn-marco__ejercicio {
+  display: flex;
+  align-items: center;
+  gap: var(--hueco-rotulo);
+  border: 1px solid var(--barra-realce);
+  border-radius: var(--radio);
+  padding: 3px 4px 3px 10px;
+  background: var(--barra-control);
+  flex: 0 0 auto;
+}
+
+.kn-marco__ejercicio-rotulo {
+  font-size: 11px;
+  font-weight: var(--peso-fuerte);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--sobre-barra-2);
+}
+
+.kn-marco__ejercicio-selector {
+  border: 0;
+  border-radius: var(--radio-menudo);
+  padding: 3px 7px;
+  background: var(--azul-suave);
+  color: var(--info-tinta);
+  font-size: 13px;
+  font-weight: var(--peso-fuerte);
+  cursor: pointer;
+}
+
+.kn-marco__relativo {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+/* ── El lanzador de modulos ───────────────────────────────────────────────── */
+
+.kn-marco__velo {
+  position: fixed;
+  inset: 0;
+  z-index: 82;
+  border: 0;
+  padding: 0;
+  background: var(--velo);
+  cursor: default;
+}
+
+.kn-marco__velo--paleta {
+  background: var(--velo-paleta);
+}
+
+/* El velo de un menu no oscurece nada: solo recoge el clic de fuera. */
+.kn-marco__velo--claro {
+  z-index: 80;
+  background: transparent;
+}
+
+.kn-marco__lanzador {
+  position: absolute;
+  z-index: 81;
+  top: 44px;
+  right: 0;
+  width: min(560px, calc(100vw - 20px));
+  background: var(--superficie);
+  border: 1px solid var(--linea);
+  border-radius: 10px;
+  box-shadow: var(--sombra-menu);
+  overflow: hidden;
+  color: var(--tinta);
+}
+
+/* El AC3 pone el lanzador a la izquierda, junto a la hamburguesa; el artboard lo
+   dibuja a la derecha. Colgado del borde izquierdo, su caja tiene que caer hacia
+   la derecha o se sale de la pantalla. */
+.kn-marco__lanzador--izquierda {
+  right: auto;
+  left: 0;
+}
+
+.kn-marco__lanzador-cabecera {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--linea-2);
+}
+
+.kn-marco__lanzador-titulo {
+  margin: 0;
+  flex: 1;
+  font-size: 15px;
+  font-weight: var(--peso-titulo);
+}
+
+.kn-marco__lanzador-nota {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--tinta-3);
+}
+
+.kn-marco__lanzador-rejilla {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  padding: 6px;
+}
+
+.kn-marco__lanzador-modulo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  border: 0;
+  border-radius: 8px;
+  padding: 10px;
+  background: transparent;
+  color: var(--tinta);
+  cursor: pointer;
+  text-align: left;
+}
+
+.kn-marco__lanzador-modulo:hover {
+  background: var(--realce);
+}
+
+.kn-marco__lanzador-modulo--actual {
+  background: var(--azul-suave);
+  font-weight: var(--peso-titulo);
+}
+
+.kn-marco__lanzador-icono {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  flex: 0 0 auto;
+  background: var(--azul-suave);
+  color: var(--info-tinta);
+}
+
+.kn-marco__lanzador-icono--actual {
+  background: var(--azul);
+  color: var(--sobre-azul);
+}
+
+.kn-marco__lanzador-rotulo {
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+  line-height: 1.3;
+}
+
+.kn-marco__lanzador-pie {
+  margin: 0;
+  padding: 11px 16px;
+  border-top: 1px solid var(--linea-2);
+  background: var(--sup);
+  font-size: 12.5px;
+  color: var(--tinta-3);
+}
+
+/* ── La sesion ────────────────────────────────────────────────────────────── */
+
+.kn-marco__sesion {
+  position: relative;
+  border-left: 1px solid var(--barra-realce);
+  padding-left: 12px;
+  flex: 0 0 auto;
+}
+
+.kn-marco__sesion-boton {
+  display: flex;
+  align-items: center;
+  gap: var(--hueco-boton);
+  border: 0;
+  border-radius: var(--radio-grande);
+  padding: 3px 6px 3px 3px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.kn-marco__sesion-boton:hover,
+.kn-marco__sesion-boton--activo {
+  background: var(--barra-hover);
+}
+
+.kn-marco__avatar {
+  width: 27px;
+  height: 27px;
+  border-radius: 50%;
+  background: var(--azul-suave);
+  color: var(--info-tinta);
+  display: grid;
+  place-items: center;
+  font-size: 11.5px;
+  font-weight: var(--peso-titulo);
+  flex: 0 0 auto;
+}
+
+.kn-marco__avatar--grande {
+  width: 34px;
+  height: 34px;
+  font-size: 13px;
+}
+
+.kn-marco__sesion-quien {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+  text-align: left;
+}
+
+.kn-marco__sesion-nombre {
+  font-size: 12.5px;
+  font-weight: var(--peso-fuerte);
+  color: var(--sobre-barra);
+}
+
+.kn-marco__sesion-papel {
+  font-size: 10.5px;
+  color: var(--sobre-barra-2);
+}
+
+.kn-marco__caret {
+  display: grid;
+  place-items: center;
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+  color: var(--sobre-barra-2);
+  transition: transform 0.15s ease;
+}
+
+.kn-marco__caret--arriba {
+  transform: rotate(180deg);
+}
+
+.kn-marco__menu {
+  position: absolute;
+  z-index: 85;
+  top: 44px;
+  right: 0;
+  width: min(276px, calc(100vw - 24px));
+  background: var(--superficie);
+  border: 1px solid var(--linea);
+  border-radius: 9px;
+  box-shadow: var(--sombra-menu);
+  overflow: hidden;
+  color: var(--tinta);
+}
+
+.kn-marco__menu-cabecera {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 14px;
+  border-bottom: 1px solid var(--linea-2);
+}
+
+.kn-marco__menu-quien {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.kn-marco__menu-nombre {
+  font-size: 13.5px;
+  font-weight: var(--peso-titulo);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kn-marco__menu-papel {
+  font-size: 11.5px;
+  color: var(--tinta-3);
+}
+
+.kn-marco__menu-nota {
+  margin: 0;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--linea-2);
+  background: var(--sup);
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--tinta-3);
+}
+
+.kn-marco__menu-opciones {
+  padding: 5px;
+}
+
+.kn-marco__menu-opcion {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  border: 0;
+  border-radius: var(--radio);
+  padding: 9px;
+  background: transparent;
+  color: var(--tinta-2);
+  cursor: pointer;
+  text-align: left;
+}
+
+.kn-marco__menu-opcion:hover {
+  background: var(--realce);
+}
+
+.kn-marco__menu-opcion--salida {
+  color: var(--mal-tinta);
+  font-weight: var(--peso-fuerte);
+}
+
+.kn-marco__menu-rotulo {
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+}
+
+.kn-marco__menu-aviso {
+  margin: 0;
+  padding: 10px 14px;
+  border-top: 1px solid var(--linea-2);
+  background: var(--atencion-fondo);
+  font-size: var(--texto-menudo);
+  line-height: 1.5;
+  color: var(--atencion-tinta);
+}
+
+/* ── La paleta de comandos ────────────────────────────────────────────────── */
+
+.kn-marco__paleta {
+  position: fixed;
+  z-index: 83;
+  top: 12vh;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(620px, 92vw);
+  background: var(--superficie);
+  border: 1px solid var(--linea);
+  border-radius: 10px;
+  box-shadow: var(--sombra-dialogo);
+  overflow: hidden;
+  color: var(--tinta);
+}
+
+.kn-marco__paleta-cabecera {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--linea-2);
+  color: var(--tinta-3);
+}
+
+.kn-marco__paleta-entrada {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  padding: 2px 0;
+  font-size: var(--texto-titulo);
+  color: var(--tinta);
+  outline: none;
+}
+
+.kn-marco__tecla {
+  font-size: 11px;
+  color: var(--tinta-3);
+  border: 1px solid var(--linea);
+  border-radius: var(--radio-insignia);
+  padding: 2px 6px;
+}
+
+.kn-marco__paleta-lista {
+  max-height: 54vh;
+  overflow: auto;
+}
+
+.kn-marco__resultado {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-bottom: 1px solid var(--linea-2);
+  background: transparent;
+  padding: 11px 16px;
+  cursor: pointer;
+  color: var(--tinta);
+}
+
+.kn-marco__resultado--marcado {
+  background: var(--realce);
+}
+
+.kn-marco__tipo {
+  font-size: 10.5px;
+  font-weight: var(--peso-titulo);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--tinta-3);
+  background: var(--sup);
+  border: 1px solid var(--linea);
+  border-radius: var(--radio-menudo);
+  padding: 2px 7px;
+  flex: 0 0 auto;
+}
+
+.kn-marco__resultado-rotulo {
+  flex: 1;
+  min-width: 0;
+  font-size: 14.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kn-marco__resultado-nota {
+  font-size: 12.5px;
+  color: var(--tinta-3);
+  flex: 0 0 auto;
+}
+
+.kn-marco__paleta-pie {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 16px;
+  background: var(--sup);
+  font-size: var(--texto-menudo);
+  color: var(--tinta-3);
+}
+
+/* ── El cuerpo: panel + area de trabajo ───────────────────────────────────── */
+
+.kn-marco__cuerpo {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* 252 px: la medida de la variante A. Los 292 eran de la `c`. */
+.kn-marco__panel {
+  flex: 0 0 252px;
+  width: 252px;
+  background: var(--superficie);
+  border-right: 1px solid var(--linea);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.kn-marco__filtro {
+  flex: 0 0 auto;
+  padding: 10px 11px;
+  border-bottom: 1px solid var(--linea-2);
+}
+
+/* El filo es `--borde-boton` y no `--linea`, aunque en tema claro valgan lo mismo
+   —los dos son el `#D6DEE4` que el artboard escribe aqui—. Lo que separa a los
+   dos tokens es el contrato: `--linea` es un filo que separa cosas y
+   `--borde-boton` es un filo que IDENTIFICA un control, al que WCAG 1.4.11 le
+   pide 3:1. Esta caja lleva dentro un `input`, asi que es lo segundo, y con
+   `--linea` el dia que el tema oscuro afinara sus separadores este borde se
+   habria ido con ellos. */
+.kn-marco__buscador {
+  display: flex;
+  align-items: center;
+  gap: var(--hueco-rotulo);
+  border: 1px solid var(--borde-boton);
+  border-radius: var(--radio);
+  padding: 6px 9px;
+  background: var(--sup);
+  color: var(--tinta-3);
+}
+
+.kn-marco__entrada {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  font-size: var(--texto-etiqueta);
+  color: var(--tinta);
+  outline: none;
+}
+
+.kn-marco__quitar {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  color: var(--tinta-3);
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+}
+
+.kn-marco__conteo {
+  margin: 7px 2px 0;
+  font-size: 11px;
+  color: var(--tinta-3);
+}
+
+.kn-marco__arbol {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow: auto;
+  padding: 7px 7px 10px;
+}
+
+.kn-marco__modulo {
+  display: flex;
+  align-items: center;
+  gap: var(--hueco-boton);
+  width: 100%;
+  border: 0;
+  border-radius: var(--radio-grande);
+  padding: 7px 8px;
+  background: transparent;
+  color: var(--tinta);
+  cursor: pointer;
+}
+
+.kn-marco__modulo:hover {
+  background: var(--realce);
+}
+
+.kn-marco__modulo--abierto {
+  background: var(--azul-suave);
+  color: var(--info-tinta);
+}
+
+.kn-marco__icono-modulo {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radio);
+  flex: 0 0 auto;
+  background: var(--fondo);
+  color: var(--tinta-3);
+}
+
+.kn-marco__modulo--abierto .kn-marco__icono-modulo {
+  background: var(--azul);
+  color: var(--sobre-azul);
+}
+
+.kn-marco__rotulo-modulo {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  font-size: 13.5px;
+  font-weight: var(--peso-fuerte);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kn-marco__pastilla {
+  font-size: 9.5px;
+  font-weight: var(--peso-titulo);
+  border-radius: 999px;
+  padding: 1px 6px;
+  flex: 0 0 auto;
+  background: var(--azul-suave);
+  color: var(--info-tinta);
+}
+
+.kn-marco__modulo--abierto .kn-marco__pastilla {
+  background: var(--superficie);
+}
+
+.kn-marco__chevron {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  color: var(--tinta-4);
+  transition: transform 0.16s ease;
+}
+
+.kn-marco__chevron--arriba {
+  transform: rotate(180deg);
+}
+
+.kn-marco__hojas {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 2px 0 7px 15px;
+  margin-left: 16px;
+  border-left: 1px solid var(--linea-2);
+}
+
+.kn-marco__hoja {
+  display: flex;
+  align-items: center;
+  gap: var(--hueco-casilla);
+  width: 100%;
+  border: 0;
+  border-radius: var(--radio);
+  padding: 7px 9px;
+  background: transparent;
+  color: var(--tinta-2);
+  cursor: pointer;
+}
+
+.kn-marco__hoja:hover {
+  background: var(--realce);
+}
+
+.kn-marco__hoja--actual {
+  background: var(--azul-suave);
+  color: var(--info-tinta);
+  font-weight: var(--peso-titulo);
+}
+
+.kn-marco__rotulo-hoja {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  font-size: 13px;
+}
+
+.kn-marco__marca {
+  font-size: 9.5px;
+  font-weight: var(--peso-titulo);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--tinta-3);
+  flex: 0 0 auto;
+}
+
+.kn-marco__sin-coincidencias {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  padding: 24px 18px;
+}
+
+.kn-marco__sin-coincidencias p {
+  margin: 0;
+  font-size: 13px;
+  line-height: var(--linea-prosa);
+  color: var(--tinta-3);
+  text-align: center;
+}
+
+/* La cola de trabajo: siempre, sin condicion (era `hayCola = v !== 'c'`). */
+.kn-marco__cola {
+  flex: 0 0 auto;
+  padding: 11px;
+  border-top: 1px solid var(--linea-2);
+}
+
+.kn-marco__cola-titulo {
+  margin: 0 0 7px;
+  font-size: 10.5px;
+  font-weight: var(--peso-fuerte);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--tinta-3);
+}
+
+.kn-marco__cola-fila {
+  display: flex;
+  align-items: center;
+  gap: var(--hueco-casilla);
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-radius: var(--radio-menudo);
+  padding: 6px 7px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.kn-marco__cola-fila:hover {
+  background: var(--realce);
+}
+
+.kn-marco__punto {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+
+.kn-marco__punto--mal {
+  background: var(--mal-tinta);
+}
+
+.kn-marco__punto--atencion {
+  background: var(--atencion-tinta);
+}
+
+.kn-marco__cola-rotulo {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--texto-etiqueta);
+  color: var(--tinta-2);
+}
+
+.kn-marco__cola-n {
+  font-size: var(--texto-etiqueta);
+  font-weight: var(--peso-fuerte);
+  color: var(--tinta);
+  font-variant-numeric: var(--cifras);
+}
+
+/* ── El area de trabajo ───────────────────────────────────────────────────── */
+
+.kn-marco__area {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.kn-marco__pestanas {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: stretch;
+  padding: 0 12px 0 0;
+  min-height: 44px;
+  background: var(--fondo);
+  border-bottom: 1px solid var(--linea);
+  z-index: 40;
+  overflow-x: auto;
+}
+
+.kn-marco__pestana {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 0 0 auto;
+  padding: 0 6px 0 0;
+  border-right: 1px solid var(--linea-2);
+  border-top: 2px solid transparent;
+}
+
+.kn-marco__pestana--actual {
+  background: var(--superficie);
+  border-top-color: var(--azul);
+}
+
+.kn-marco__pestana-boton {
+  display: flex;
+  align-items: center;
+  gap: var(--hueco-boton);
+  border: 0;
+  background: transparent;
+  padding: 11px 8px 11px 13px;
+  cursor: pointer;
+  font-size: 13.5px;
+  color: var(--tinta-3);
+}
+
+.kn-marco__pestana--actual .kn-marco__pestana-boton {
+  color: var(--tinta);
+  font-weight: var(--peso-titulo);
+}
+
+.kn-marco__pestana-icono {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  color: var(--tinta-3);
+}
+
+.kn-marco__pestana--actual .kn-marco__pestana-icono {
+  color: var(--azul);
+}
+
+.kn-marco__pestana-rotulo {
+  white-space: nowrap;
+}
+
+.kn-marco__pestana-cerrar {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: var(--radio-menudo);
+  background: transparent;
+  cursor: pointer;
+  color: var(--tinta-4);
+  flex: 0 0 auto;
+}
+
+.kn-marco__pestana-cerrar:hover {
+  background: var(--linea-2);
+  color: var(--tinta);
+}
+
+.kn-marco__pestanas-resto {
+  flex: 1;
+  min-width: 8px;
+}
+
+.kn-marco__cabecera {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: baseline;
+  gap: var(--hueco-casilla);
+  flex-wrap: wrap;
+  padding: 0 16px;
+  min-height: 52px;
+  background: var(--superficie);
+  border-bottom: 1px solid var(--linea);
+}
+
+.kn-marco__titulo {
+  margin: 0;
+  font-size: 16.5px;
+  font-weight: var(--peso-titulo);
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kn-marco__subtitulo {
+  font-size: 13px;
+  color: var(--tinta-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── El aviso de servicio ──────────────────────────────────────────────────
+   Es una banda, no un aviso flotante: se queda hasta que se descarta, y por eso
+   tiene su boton «Descartar el aviso». Distinto del toast, que se va solo. */
+
+.kn-marco__aviso {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 11px 16px;
+  background: var(--atencion-fondo);
+  border-bottom: 1px solid var(--atencion-tinta);
+  color: var(--atencion-tinta);
+}
+
+.kn-marco__aviso-icono {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  display: grid;
+  place-items: center;
+}
+
+.kn-marco__aviso-texto {
+  margin: 0;
+  flex: 1;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.kn-marco__aviso-cerrar {
+  border: 0;
+  background: transparent;
+  padding: 2px;
+  cursor: pointer;
+  color: var(--atencion-tinta);
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+}
+
+/* ── El lienzo ────────────────────────────────────────────────────────────── */
+
+.kn-marco__lienzo {
+  flex: 1;
+  overflow: auto;
+  padding: 18px;
+}
+
+.kn-marco__lienzo--vacio {
+  display: grid;
+  place-items: center;
+  padding: var(--relleno-vacio);
+}
+
+.kn-marco__sin-pestanas {
+  max-width: 40ch;
+  text-align: center;
+  color: var(--tinta-4);
+}
+
+.kn-marco__sin-pestanas-titulo {
+  margin: 12px 0 0;
+  font-size: var(--texto-titulo);
+  font-weight: var(--peso-titulo);
+  color: var(--tinta);
+}
+
+.kn-marco__sin-pestanas-detalle {
+  margin: 7px 0 0;
+  font-size: 13.5px;
+  line-height: var(--linea-prosa);
+  color: var(--tinta-3);
+}
+
+/* La ficha de una hoja ajena (AC9). */
+.kn-marco__ficha {
+  max-width: 640px;
+  background: var(--superficie);
+  border: 1px solid var(--linea);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.kn-marco__ficha-cabecera {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--linea-2);
+}
+
+.kn-marco__ficha-icono {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radio-grande);
+  flex: 0 0 auto;
+  background: var(--azul-suave);
+  color: var(--info-tinta);
+}
+
+.kn-marco__ficha-quien {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.kn-marco__ficha-rotulo {
+  font-size: 15px;
+  font-weight: var(--peso-titulo);
+}
+
+.kn-marco__ficha-modulo {
+  font-size: 12.5px;
+  color: var(--tinta-3);
+}
+
+.kn-marco__ficha-texto {
+  margin: 0;
+  padding: 15px 16px;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--tinta-2);
+}
+
+.kn-marco__ficha-pie {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  border-top: 1px solid var(--linea-2);
+  background: var(--sup);
+}
+
+.kn-marco__ficha-nota {
+  margin: 0;
+  flex: 1;
+  min-width: 180px;
+  font-size: 12.5px;
+  color: var(--tinta-3);
+}
+
+/* El hueco de una seccion propia todavia sin construir (#14, #15). */
+.kn-marco__hueco {
+  max-width: 640px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.kn-marco__observacion {
+  background: var(--superficie);
+  border: 1px solid var(--linea);
+  border-radius: 8px;
+  padding: 15px 16px;
+}
+
+/* ── El dialogo de cierre con cambios sin guardar ─────────────────────────── */
+
+.kn-marco__dialogo {
+  position: fixed;
+  z-index: 89;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(556px, calc(100vw - 32px));
+  background: var(--superficie);
+  border-radius: 10px;
+  box-shadow: var(--sombra-dialogo);
+  overflow: hidden;
+  color: var(--tinta);
+}
+
+.kn-marco__dialogo-cuerpo {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 18px 20px 14px;
+}
+
+.kn-marco__dialogo-icono {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  background: var(--atencion-fondo);
+  color: var(--atencion-tinta);
+}
+
+.kn-marco__dialogo-texto {
+  flex: 1;
+  min-width: 0;
+}
+
+.kn-marco__dialogo-titulo {
+  margin: 0;
+  font-size: var(--texto-titulo);
+  font-weight: var(--peso-titulo);
+}
+
+.kn-marco__dialogo-detalle {
+  margin: 7px 0 0;
+  font-size: 13.5px;
+  line-height: var(--linea-prosa);
+  color: var(--tinta-2);
+}
+
+.kn-marco__dialogo-acciones {
+  display: flex;
+  align-items: center;
+  gap: var(--hueco-casilla);
+  flex-wrap: wrap;
+  padding: 13px 20px;
+  border-top: 1px solid var(--linea-2);
+  background: var(--sup);
+}
+
+/* Descartar es la salida destructiva: se dice con el color, no solo con el
+   texto, y va separada de las otras dos por el hueco flexible. */
+.kn-marco__descartar {
+  color: var(--mal-tinta);
+}
+
+.kn-marco__separador {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── El aviso flotante ──────────────────────────────────────────────────────
+   **El icono NO lleva el celeste del artboard, y esta medido.** El artboard le
+   pone `stroke="#52BDEF"` sobre un fondo `#16232C`, que en claro da 7.54:1 y se
+   ve muy bien. Pero el toast es una superficie que se INVIERTE con el tema —su
+   fondo es `--tinta` y su texto `--superficie`—, y en oscuro ese mismo par cae a
+   **1.39:1**: el visto desaparece del todo. Un icono que existe en un tema y no
+   en el otro es peor que un icono sin acento, asi que hereda el color del texto.
+   La medida esta en `verificaciones/contraste.test.ts`, que es donde se recalcula
+   sola. */
+
+.kn-marco__toast {
+  position: fixed;
+  z-index: 90;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  border-radius: var(--radio-grande);
+  background: var(--tinta);
+  color: var(--superficie);
+  font-size: var(--texto-control);
+  box-shadow: var(--sombra-flotante);
+  max-width: calc(100vw - 40px);
+}

@@ -73,6 +73,24 @@
   --radio-menudo: 5px;
   --radio: 6px;
 
+  /* El cuarto llega con el marco (#12): `border-radius:7px`, el de la fila de un
+     modulo del arbol y el del boton de sesion. No estaba antes porque ninguno de
+     los ocho componentes base lo usa, y un token sin consumidor no se puede
+     medir. */
+  --radio-grande: 7px;
+
+  /* —— Sombras ——
+     Tambien del marco, y tambien del artboard. Son TRES y el artboard escribe
+     cinco: `0 18px 48px rgba(0,54,90,.2)` en el lanzador y
+     `0 16px 42px rgba(0,54,90,.22)` en el menu de sesion son la misma cosa —una
+     caja colgada de la barra— y se unifican en `--sombra-menu`; `0 22px 56px`
+     con `.26` en la paleta y con `.28` en el dialogo son lo mismo por el mismo
+     motivo. Dos sombras que se distinguen en dos centesimas de alfa no son dos
+     decisiones. */
+  --sombra-flotante: 0 10px 30px rgba(0, 54, 90, 0.28);
+  --sombra-menu: 0 16px 42px rgba(0, 54, 90, 0.22);
+  --sombra-dialogo: 0 22px 56px rgba(0, 54, 90, 0.28);
+
   /* —— Foco ——
      El halo de un control enfocado: `box-shadow: 0 0 0 3px #D3EBFA`. El color es
      `--foco`, de `colors.css`, asi que este anillo cambia solo con el tema. */
