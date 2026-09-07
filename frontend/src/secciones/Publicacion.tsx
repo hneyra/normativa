@@ -18,13 +18,12 @@ import {
   RAZONES_DE_LA_CACHE,
   comprobacionDe,
   compararAmbitos,
-  esEjercicioSinPublicar,
   guardarComoArchivo,
   lineasDeLaRespuesta,
   listasDelSnapshot,
   nombreDelArchivo,
 } from './publicacion.ts';
-import { ejercicioPedido } from './seccion.ts';
+import { ejercicioPedido, esEjercicioSinPublicar } from './seccion.ts';
 
 /**
  * «Publicación»: el snapshot descargable de ADR-0025 §1, con lo que hace que se pueda confiar en

@@ -10,13 +10,13 @@ import {
   OPERACIONES_SIN_CONSUMIDOR,
   comprobacionDe,
   compararAmbitos,
-  esEjercicioSinPublicar,
   guardarComoArchivo,
   identidadDe,
   lineasDeLaRespuesta,
   listasDelSnapshot,
   nombreDelArchivo,
 } from './publicacion.ts';
+import { esEjercicioSinPublicar } from './seccion.ts';
 
 /**
  * Lo que la seccion de Publicacion AFIRMA, probado sin montar nada.

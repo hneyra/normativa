@@ -1,4 +1,3 @@
-import type { ErrorDeLaApi } from '../api/cliente.ts';
 import type { SnapshotVerificado } from '../api/cliente.ts';
 import type { Ambito, SnapshotResource } from '../datos/lecturas.ts';
 import type { Tono } from '../dominio/valores.ts';
@@ -339,23 +338,6 @@ function veredictoDe(identidadCoincide: boolean, huellaCambia: boolean): string 
     'catastro dentro— pide DOS snapshots del MISMO conjunto, y la identidad es lo que las dos ' +
     'corridas comparan.'
   );
-}
-
-// ── AC4: el 404 que no es una averia ────────────────────────────────────────────────────────
-
-/**
- * Si ese fallo es «ese ejercicio no está publicado» y no «esa ruta no existe».
- *
- * Los dos son **404** y por el numero no se distinguen. Lo que los distingue es el miembro
- * `parametroQueFalta` del cuerpo: `FaltaPublicar.noEncontrado` lo pone —lleva el ejercicio, y la
- * llave cuando el backend sabe cual es— y un 404 de ruta inexistente no lo lleva. Es lo mismo
- * que ya hacia el 422 de la misma familia, y es lo unico que un programa puede leer.
- *
- * La diferencia no es documental: uno lo arregla quien atiende —componiendo y sellando el
- * conjunto de ese ejercicio— y el otro no lo arregla nadie desde esta pantalla.
- */
-export function esEjercicioSinPublicar(fallo: ErrorDeLaApi): boolean {
-  return fallo.estado === 404 && fallo.faltaUnaCifraNormativa;
 }
 
 // ── AC7: quien se lleva esto ────────────────────────────────────────────────────────────────

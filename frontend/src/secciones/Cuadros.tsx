@@ -15,8 +15,7 @@ import {
   type CuadroDeValuacion,
   type IdDeCuadro,
 } from './cuadros.ts';
-import { esEjercicioSinPublicar } from './publicacion.ts';
-import { ejercicioPedido } from './seccion.ts';
+import { ejercicioPedido, esEjercicioSinPublicar } from './seccion.ts';
 
 /**
  * «Cuadros de valuación»: los tres cuadros nacionales de ADR-0017, tal como el conjunto sellado
@@ -121,6 +120,18 @@ export function Cuadros({ ejercicio }: CuadrosProps) {
         <FichaDeLaEdicion cuadro={cuadro} documento={fuente.documento} distintos={fuente.distintos} />
 
         {cuadro.id === 'unitarios' && <LaRegion />}
+
+        {pedido === null && (
+          <Aviso
+            tipo="error"
+            titulo="El ejercicio de trabajo no es un ejercicio"
+            detalle={
+              `«${ejercicio}» no es un año entre 1990 y 2100, que es lo que el constructor de ` +
+              'Ejercicio admite. No se pide nada: mandarlo produciría un 422 que hablaría del ' +
+              'parámetro y no de lo que pasa.'
+            }
+          />
+        )}
 
         {sinPublicar && (
           <Aviso
