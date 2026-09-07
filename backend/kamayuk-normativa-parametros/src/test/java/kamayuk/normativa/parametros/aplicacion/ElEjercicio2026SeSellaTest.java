@@ -14,7 +14,11 @@ import java.sql.SQLException;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import kamayuk.normativa.auditoria.AuditoriaJdbc;
 import kamayuk.normativa.auditoria.Origen;
 import kamayuk.normativa.auditoria.OrigenContext;
@@ -93,8 +97,36 @@ import org.springframework.transaction.interceptor.TransactionInterceptor;
  * puede publicar: entran en el conjunto de cada municipalidad que apruebe su ordenanza, en una
  * version posterior. Se cuentan aqui porque «faltan cosas» no es una lista, y quien selle tiene que
  * poder ver si alguna es suya.
+ *
+ * <h2>Y lo que este sello NO comprueba: el paso 4 (#7)</h2>
+ *
+ * <p>La lista «Antes de sellar» de {@code publicacion/README.md} tiene <b>cinco</b> puntos, y el
+ * <b>3</b> —«el arancel de la municipalidad esta cargado», con {@code cargar-arancel-vial.sh}
+ * contra ESE conjunto— <b>esta clase no lo puede ver, ni podria</b>: {@code arancel} no es una de
+ * las 19 tablas de este esquema, esta en el reparto como tabla de {@code catastro}, y la undecima
+ * regla —ningun SQL cruza la frontera de sistema— prohibe consultarla desde aqui. Hasta #7 se
+ * sellaba sin decirlo, que es la unica parte que estaba mal: no que se sellara, sino que el punto
+ * se quedara sin respuesta y nada lo dijera.
+ *
+ * <p>Lo que si se puede afirmar es <b>la frontera</b>, y {@code
+ * elPasoCuatroNoSePuedeComprobarDesdeAqui} la afirma: le pregunta a {@code information_schema} —un
+ * catalogo del motor, no una tabla de nadie— y comprueba que la tabla del paso 4 no esta en este
+ * esquema, con las tablas propias presentes como contraste para que «no esta» no pueda ser cierto
+ * sobre la nada. <b>El {@code --sellar} de verdad lo decide quien ve los dos lados</b>: quien selle
+ * el conjunto de su municipalidad corre el paso 4 entre abrir y sellar, y este repositorio no puede
+ * comprobar que lo hizo.
+ *
+ * <p><b>Y la consecuencia esta medida, del otro lado.</b> {@code ValorizacionDelPredio} comprueba
+ * el arancel como cuarta precondicion —despues de los dos cuadros y ANTES del {@code %
+ * actualizacion}— y sin el devuelve {@code SinValorizar} con la llave {@code ARANCEL:‹ejercicio›}.
+ * Su censo del padron lo escribe como premisa suya: «el arancel de cada via se supone publicado …
+ * sin la premisa, los 23 predios saldrian por {@code ARANCEL:2026}». O sea que el <b>4 de 23</b>
+ * que este repositorio cita se mide <b>suponiendo cargado el arancel</b>; sin cargarlo son <b>0 de
+ * 23</b>, y los 23 por esa llave.
  */
-@DisplayName("catastro#8 — El ejercicio 2026 se sella: 33 filas, dos cuadros, y lo que cuesta")
+@DisplayName(
+        "catastro#8 y #7 — El ejercicio 2026 se sella: 33 filas, dos cuadros, lo que cuesta y el"
+                + " paso 4 que no se puede ver")
 class ElEjercicio2026SeSellaTest {
 
     private static final Clock RELOJ =
@@ -115,6 +147,30 @@ class ElEjercicio2026SeSellaTest {
     private static final Path PARAMETROS = CORPUS.resolve("publicacion/parametros-2026.csv");
 
     private static final Path CUADROS = CORPUS.resolve("publicacion/cuadros-2026.csv");
+
+    /** La lista «Antes de sellar», que es lo que hay que poder contestar antes de escribirlo. */
+    private static final Path LISTA_DE_ANTES_DE_SELLAR = CORPUS.resolve("publicacion/README.md");
+
+    /**
+     * La tabla que llena el paso 4, y que este esquema NO tiene: es de {@code catastro}.
+     *
+     * <p>Escrita una vez y no dos: la afirmacion de la frontera y el mensaje que la explica leen
+     * esta misma constante, para que no puedan decir cosas distintas.
+     */
+    private static final String LA_TABLA_DEL_PASO_4 = "arancel";
+
+    /** El guion del paso 4, tal como la lista lo nombra. */
+    private static final String EL_GUION_DEL_PASO_4 = "cargar-arancel-vial.sh";
+
+    /** La llave con la que `catastro` se para cuando ese paso no se corrio (#7). */
+    private static final String LA_LLAVE_QUE_DEVUELVE_CATASTRO = "ARANCEL:";
+
+    /** Tres tablas propias, como contraste: si no salen, la consulta no mira este esquema. */
+    private static final List<String> TABLAS_DE_ESTE_SISTEMA =
+            List.of("conjunto_parametros", "parametro_tributario", "depreciacion");
+
+    /** Una fila numerada de una tabla de Markdown: {@code | 3 | …}. */
+    private static final Pattern FILA_NUMERADA = Pattern.compile("^\\|\\s*(\\d+)\\s*\\|");
 
     private static BaseDeDatosDePrueba base;
     private static long municipalidad;
@@ -378,6 +434,99 @@ class ElEjercicio2026SeSellaTest {
     }
 
     // ------------------------------------------------------------------
+    // #7 — El paso 4, que este sistema no puede comprobar y hasta ahora no decia
+    // ------------------------------------------------------------------
+
+    @Test
+    @DisplayName("el paso 4 no se puede comprobar desde aqui: su tabla no es de este esquema")
+    void elPasoCuatroNoSePuedeComprobarDesdeAqui() throws SQLException {
+        // La afirmacion es sobre LA FRONTERA y no un cruce: se le pregunta a `information_schema`,
+        // que es un catalogo del motor y no una tabla de ningun sistema. Consultar `arancel` desde
+        // aqui seria justo lo que la undecima regla prohibe, y por eso lo unico que se puede
+        // afirmar es que no esta.
+        Set<String> tablas = tablasDeEsteEsquema();
+
+        // El contraste va PRIMERO y a proposito: sin el, «arancel no esta» seria cierto tambien
+        // con la consulta rota, con el esquema vacio o con el nombre mal escrito, y esta prueba
+        // pasaria en verde sin haber mirado nada.
+        assertThat(tablas)
+                .as(
+                        "si esta consulta no encuentra las tablas de este sistema, no esta mirando"
+                                + " este esquema y «%s no esta» seria cierto sobre la nada: no se habria"
+                                + " medido nada",
+                        LA_TABLA_DEL_PASO_4)
+                .containsAll(TABLAS_DE_ESTE_SISTEMA)
+                .hasSizeGreaterThanOrEqualTo(19);
+
+        assertThat(tablas)
+                .as(
+                        "«%s» es de `catastro` y la carga el paso 4 (`%s --conjunto-id N`), entre"
+                                + " abrir y sellar. No esta en este esquema, asi que esta clase sella"
+                                + " sobre una precondicion que NO PUEDE VER: el `--sellar` de verdad lo"
+                                + " decide quien ve los dos lados (#7)",
+                        LA_TABLA_DEL_PASO_4, EL_GUION_DEL_PASO_4)
+                .doesNotContain(LA_TABLA_DEL_PASO_4);
+    }
+
+    @Test
+    @DisplayName("la lista «Antes de sellar» esta contestada punto por punto, y no en un parrafo")
+    void laListaDeAntesDeSellarEstaContestadaPuntoPorPunto() throws IOException {
+        // Hasta #7 el parrafo que seguia a la lista contestaba a los puntos 1, 2, 4 y 5 y saltaba
+        // el 3, y nada lo decia: un parrafo no tiene forma de declarar que se dejo un punto sin
+        // mirar. Esto lo tiene.
+        List<Integer> puntos = puntosDeLaSeccion("Antes de sellar");
+        List<Integer> respuestas = puntosDeLaSeccion("Los cinco puntos, contestados uno a uno");
+
+        // Los dos centinelas, por separado: una lista que se queda vacia hace que lo de abajo se
+        // cumpla sobre el conjunto vacio, y entonces el verde no significa nada.
+        assertThat(puntos)
+                .as(
+                        "no se leyo ni un punto de la lista «Antes de sellar» de %s: o la seccion"
+                                + " cambio de nombre o la tabla se fue, y esta comprobacion no midio"
+                                + " nada",
+                        LISTA_DE_ANTES_DE_SELLAR.getFileName())
+                .isNotEmpty();
+        assertThat(respuestas)
+                .as("no se leyo ni una respuesta: lo de abajo se cumpliria sobre el vacio")
+                .isNotEmpty();
+
+        assertThat(respuestas)
+                .as(
+                        "cada punto de «Antes de sellar» tiene su respuesta, y en su orden. El que"
+                                + " falte se queda sin contestar sin que nada lo diga, que es lo que"
+                                + " paso con el 3 hasta #7; y una respuesta de mas habla de un punto"
+                                + " que no existe")
+                .containsExactlyElementsOf(puntos);
+    }
+
+    @Test
+    @DisplayName("y la del punto 3 nombra el paso que no se corrio y lo que cuesta, no «falta»")
+    void laRespuestaDelPuntoTresNombraElPasoYSuConsecuencia() throws IOException {
+        String respuesta = seccionDe("El punto 3");
+
+        assertThat(respuesta)
+                .as(
+                        "no se encontro la seccion que contesta al punto 3 en %s: esta comprobacion"
+                                + " no midio nada",
+                        LISTA_DE_ANTES_DE_SELLAR.getFileName())
+                .isNotBlank();
+
+        assertThat(respuesta)
+                .as(
+                        "la respuesta tiene que nombrar el paso que no se corrio; sin el, «no esta"
+                                + " cargado» no dice que habria que correr")
+                .contains(EL_GUION_DEL_PASO_4);
+
+        assertThat(respuesta)
+                .as(
+                        "y la consecuencia MEDIDA, que es la llave con la que `catastro` se para"
+                                + " (`ValorizacionDelPredio`). Sin ella la respuesta es «faltan cosas»,"
+                                + " que es lo que este repositorio lleva prohibiendo desde que la lista"
+                                + " nombra sus diez filas una a una")
+                .contains(LA_LLAVE_QUE_DEVUELVE_CATASTRO);
+    }
+
+    // ------------------------------------------------------------------
 
     /**
      * Una cifra leida con la conexion de administracion, fuera de toda transaccion de aplicacion.
@@ -420,6 +569,81 @@ class ElEjercicio2026SeSellaTest {
             }
             return List.copyOf(ids);
         }
+    }
+
+    /**
+     * Las tablas de este esquema, preguntadas al catalogo del motor.
+     *
+     * <p><b>No es un cruce de frontera</b> y por eso se puede escribir aqui: {@code
+     * information_schema.tables} es una vista del catalogo de PostgreSQL, no una tabla de ningun
+     * sistema, y lo que se lee de ella son NOMBRES. Consultar {@code arancel} —que es de {@code
+     * catastro}— es lo que la undecima regla prohibe; preguntar si esta es justo lo contrario, y es
+     * la unica forma que este repositorio tiene de afirmar donde acaba.
+     */
+    private static Set<String> tablasDeEsteEsquema() throws SQLException {
+        Set<String> nombres = new LinkedHashSet<>();
+        try (Connection admin = base.conexionAdmin();
+                PreparedStatement sentencia =
+                        admin.prepareStatement(
+                                "SELECT table_name FROM information_schema.tables"
+                                        + " WHERE table_schema = 'public'");
+                ResultSet filas = sentencia.executeQuery()) {
+            while (filas.next()) {
+                nombres.add(filas.getString(1));
+            }
+        }
+        return nombres;
+    }
+
+    /**
+     * Los numeros de las filas numeradas de la primera tabla que sigue a un encabezado.
+     *
+     * <p>La seccion acaba en el encabezado siguiente, sea del nivel que sea: por eso las diez filas
+     * de D-02b/D-02c —que tambien son filas numeradas— no entran, viven bajo su propio {@code
+     * ####}. Si alguien las mueve dentro, esto sale rojo diciendo que sobran respuestas, que es
+     * mejor que contarlas en silencio.
+     */
+    private static List<Integer> puntosDeLaSeccion(String encabezado) throws IOException {
+        List<Integer> puntos = new java.util.ArrayList<>();
+        boolean dentro = false;
+        for (String linea : Files.readAllLines(LISTA_DE_ANTES_DE_SELLAR, StandardCharsets.UTF_8)) {
+            String texto = linea.strip();
+            if (texto.startsWith("#")) {
+                if (dentro) {
+                    break;
+                }
+                dentro = texto.contains(encabezado);
+                continue;
+            }
+            if (!dentro) {
+                continue;
+            }
+            Matcher fila = FILA_NUMERADA.matcher(texto);
+            if (fila.find()) {
+                puntos.add(Integer.parseInt(fila.group(1)));
+            }
+        }
+        return List.copyOf(puntos);
+    }
+
+    /** El cuerpo de la seccion cuyo encabezado contiene ese texto, sin el encabezado. */
+    private static String seccionDe(String encabezado) throws IOException {
+        StringBuilder cuerpo = new StringBuilder();
+        boolean dentro = false;
+        for (String linea : Files.readAllLines(LISTA_DE_ANTES_DE_SELLAR, StandardCharsets.UTF_8)) {
+            String texto = linea.strip();
+            if (texto.startsWith("#")) {
+                if (dentro) {
+                    break;
+                }
+                dentro = texto.contains(encabezado);
+                continue;
+            }
+            if (dentro) {
+                cuerpo.append(linea).append('\n');
+            }
+        }
+        return cuerpo.toString();
     }
 
     /** El campo {@code Estado} de la cabecera de un archivo del corpus, leido del archivo. */
