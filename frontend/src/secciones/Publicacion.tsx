@@ -406,21 +406,26 @@ function QuienSeLoLleva() {
 
       <p className="kn-seccion__prosa">
         Los dos declaran su contrato y consumen <strong>dos</strong> operaciones:{' '}
-        {OPERACIONES_CONSUMIDAS.map((operacion) => (
-          <code key={operacion} className="kn-seccion__campo-json">
-            {operacion}
-          </code>
-        ))}
-        . Ninguno consume {OPERACIONES_SIN_CONSUMIDOR.map((operacion) => (
-          <code key={operacion} className="kn-seccion__campo-json">
-            {operacion}
-          </code>
-        ))}
-        . Es lo que convierte «publicamos un JSON» en «esto es lo que se rompe si cambia»: un campo
-        que este sistema deje de publicar pone rojo el build de <strong>este</strong> repositorio,
-        no el del consumidor (ADR-0030 §4).
+        <Operaciones cuales={OPERACIONES_CONSUMIDAS} />. Ninguno consume{' '}
+        <Operaciones cuales={OPERACIONES_SIN_CONSUMIDOR} />. Es lo que convierte «publicamos un
+        JSON» en «esto es lo que se rompe si cambia»: un campo que este sistema deje de publicar
+        pone rojo el build de <strong>este</strong> repositorio, no el del consumidor (ADR-0030 §4).
       </p>
     </div>
+  );
+}
+
+/** Una lista de operaciones dentro de la prosa, separadas y no pegadas una a otra. */
+function Operaciones({ cuales }: { readonly cuales: readonly string[] }) {
+  return (
+    <>
+      {cuales.map((operacion, i) => (
+        <span key={operacion}>
+          {i > 0 && ' y '}
+          <code className="kn-seccion__campo-json">{operacion}</code>
+        </span>
+      ))}
+    </>
   );
 }
 

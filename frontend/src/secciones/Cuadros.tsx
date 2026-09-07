@@ -15,6 +15,7 @@ import {
   type CuadroDeValuacion,
   type IdDeCuadro,
 } from './cuadros.ts';
+import { esEjercicioSinPublicar } from './publicacion.ts';
 import { ejercicioPedido } from './seccion.ts';
 
 /**
@@ -68,6 +69,9 @@ export function Cuadros({ ejercicio }: CuadrosProps) {
     recurso === null ? null : estadoDelCuadro(ambito, cuadro, cuantasFilasDe(cuadro, recurso));
   const fuente = fuenteDelCuadro(filas);
   const fallosDeDominio = recurso === null ? [] : fueraDeDominio(cuadro, recurso);
+  // «Ese ejercicio no esta publicado» es una RESPUESTA, no una averia, y se lee distinto: lo
+  // arregla quien componga y selle el conjunto, no quien mire esta pantalla (AC4).
+  const sinPublicar = vigente.fallo !== null && esEjercicioSinPublicar(vigente.fallo);
 
   return (
     <section className="kn-seccion kn-seccion--cuadros" aria-label="Cuadros de valuación">
@@ -118,7 +122,15 @@ export function Cuadros({ ejercicio }: CuadrosProps) {
 
         {cuadro.id === 'unitarios' && <LaRegion />}
 
-        {vigente.error !== null && (
+        {sinPublicar && (
+          <Aviso
+            tipo="vacio"
+            titulo="Ese ejercicio no tiene un conjunto de parámetros sellado"
+            detalle={vigente.error ?? undefined}
+          />
+        )}
+
+        {vigente.error !== null && !sinPublicar && (
           <Aviso
             tipo="error"
             titulo="No se pudo resolver qué conjunto rige este ejercicio"
