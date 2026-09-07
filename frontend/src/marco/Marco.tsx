@@ -48,9 +48,11 @@ const VIDA_DEL_TOAST = 3400;
  * El aviso de servicio, del artboard.
  *
  * De los dos que el prototipo trae —uno por cada estado de su conmutador de datos— se porta
- * el de la municipalidad **recien implantada**, porque es el que describe donde esta hoy
- * este repositorio: `CLAUDE.md` lo dice sin rodeos, **ningun ejercicio esta sellado**. El
- * otro habla de un 2027 sin conjunto dando por supuesto que 2026 si lo tiene.
+ * el de la municipalidad **recien implantada**, y el motivo es el mismo que en
+ * `PanelDeModulos`: el conjunto es por municipalidad, y la que acaba de implantarse no tiene
+ * ninguno. Que el ejercicio 2026 este sellado —lo esta, desde el 2026-09-06— no le da uno:
+ * `conjunto_parametros` lleva `municipalidad_id` con RLS estricta. El otro aviso habla de un
+ * 2027 sin conjunto, que es un estado posterior y de otra municipalidad.
  */
 const AVISO_DE_SERVICIO =
   'Esta municipalidad no tiene ningún conjunto de parámetros. Hasta que se componga y se ' +

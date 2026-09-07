@@ -46,11 +46,15 @@ export interface PanelDeModulosProps {
  * calculo.
  *
  * El artboard trae DOS juegos, uno por cada estado del conmutador de datos, y se porta el de
- * la municipalidad **recien implantada**. No es una preferencia estetica: hoy, y lo dice el
- * repositorio en su propio `CLAUDE.md`, **ningun ejercicio esta sellado**, asi que ensenar
- * «Ejercicios sin sellar: 1» seria afirmar que hay uno que si lo esta. El dia que la cola
- * venga del backend (#13), viene con su operacion; hasta entonces es lo que el artboard
- * dibuja para el estado en el que este sistema esta.
+ * la municipalidad **recien implantada**. El motivo no es que no haya nada sellado —desde el
+ * 2026-09-06 el ejercicio 2026 SI lo esta, y `CLAUDE.md` lo declara—, sino que **el conjunto
+ * es por municipalidad**: `conjunto_parametros` lleva `municipalidad_id` con RLS estricta, y
+ * lo que `ElEjercicio2026SeSellaTest` sella lo sella para la suya. Una municipalidad recien
+ * implantada no tiene ninguno, y esa es la primera pantalla que va a ver: el implantador
+ * siembra sus accesos, no sus parametros.
+ *
+ * El otro juego no se pierde, se aplaza: cuando la cola venga del backend (#13) los conteos
+ * seran los de quien mire, y este marco dejara de elegir.
  */
 const COLA = [
   { rotulo: 'Ejercicios sin conjunto', n: '4', tono: 'mal' },
