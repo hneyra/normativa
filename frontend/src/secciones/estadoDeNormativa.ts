@@ -74,6 +74,9 @@ export const EDICIONES_AL_EMPEZAR: EstadoDeEdiciones = {
   pagina: 0,
   tamano: 20,
   elegida: null,
+  // El identificador de `PASO_DE_APERTURA`, escrito y no importado: `ediciones.ts` ya importa
+  // el tipo de este archivo, y traerse de alla una constante cerraria el circulo. Que los dos
+  // digan lo mismo lo comprueba `ediciones.test.ts`, que si puede mirar los dos lados.
   paso: 'abrir',
   vals: {},
   intento: false,

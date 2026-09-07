@@ -108,6 +108,14 @@ describe('los cuatro pasos: uno que lee y TRES que escriben', () => {
   it('y con un identificador que no existe se cae del lado del que si funciona', () => {
     expect(pasoDe('inventado').id).toBe(PASO_DE_APERTURA);
   });
+
+  it('la seccion empieza en el paso que NO necesita conjunto, y no en una cadena suelta', () => {
+    // `estadoDeNormativa.ts` escribe el identificador en vez de importarlo, para no cerrar el
+    // circulo de modulos. Esta es la prueba que los ata: si uno cambiara y el otro no, la
+    // ficha arrancaria en un paso que la lista todavia no puede ofrecer.
+    expect(EDICIONES_AL_EMPEZAR.paso).toBe(PASO_DE_APERTURA);
+    expect(pasosPara(null).map((uno) => uno.id)).toContain(EDICIONES_AL_EMPEZAR.paso);
+  });
 });
 
 describe('la compuerta: sin observacion no se guarda (regla 10)', () => {
