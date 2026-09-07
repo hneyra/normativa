@@ -238,6 +238,61 @@ describe('la regla propia de «normativa»: ninguna cifra literal', () => {
   });
 });
 
+describe('AC8 — las dos barreras de «Importe» no son la misma, y se demuestra', () => {
+  /**
+   * `Importe` esta protegido dos veces: por el TIPO —`fechaCalculo` es obligatoria, y
+   * `verificaciones/tipos/barreras-de-tipos.tsx` lo comprueba con `@ts-expect-error`— y por
+   * la prohibicion `importe-sin-fecha` de ESLint.
+   *
+   * **Que hagan falta las dos no es una opinion: cada una ve un caso que la otra no.** Los
+   * dos casos estan aqui abajo, escritos como codigo y medidos. Sin esto, la doble barrera
+   * seria una afirmacion de un comentario, y el primero que la encontrara redundante
+   * borraria una de las dos.
+   */
+
+  it('ESLint ve el «spread» que el tipo no puede ver', async () => {
+    // `props` viene de un `any` —un `JSON.parse`, una respuesta sin tipar—, asi que el
+    // compilador no tiene con que comprobar si trae `fechaCalculo`: para `tsc` esto es
+    // valido. ESLint lo senala igual, porque su selector mira el JSX y no el tipo.
+    const conSpread = `
+      function Importe(_props: { valor: string; fechaCalculo: string }) {
+        return null;
+      }
+
+      export function FilaDelCuadro({ props }: { props: Record<string, string> }) {
+        return <Importe {...props} />;
+      }
+    `;
+
+    expect(
+      (await mensajesDelTexto(conSpread, enUnaPantalla('spread.tsx'))).join('\n'),
+      'Un `<Importe {...props} />` no declara `fechaCalculo` donde se pueda leer, asi que\n' +
+        'tiene que caer. Es el caso que el TIPO no cubre cuando el objeto viene de un `any`.',
+    ).toMatch(/Un importe se muestra con la fecha/);
+  });
+
+  it('y NO ve el «createElement», que es lo que cubre el tipo', async () => {
+    // La otra mitad, y es la que justifica que el tipo exista: `createElement` no produce
+    // un `JSXOpeningElement`, asi que la prohibicion no lo mira. Quien lo caza es
+    // `barreras-de-tipos.tsx`, con su `@ts-expect-error` sobre esta misma forma.
+    const sinJsx = `
+      import { createElement } from 'react';
+
+      function Importe(_props: { valor: string; fechaCalculo: string }) {
+        return null;
+      }
+
+      export const fila = createElement(Importe, { valor: '894.27' });
+    `;
+
+    expect(
+      (await mensajesDelTexto(sinJsx, enUnaPantalla('sin-jsx.tsx'))).join('\n'),
+      'Si ESLint tambien cazara esto, la barrera de tipo seria redundante y el AC8 estaria\n' +
+        'pidiendo dos cosas para lo mismo. No la caza, y por eso hacen falta las dos.',
+    ).not.toMatch(/Un importe se muestra con la fecha/);
+  });
+});
+
 describe('las reglas no senalan codigo correcto', () => {
   it('los dos contadores del envoltorio de paginacion se declaran «number», y pasan', async () => {
     // `totalElementos` y `totalPaginas` son cuentas de cosas, no cifras del dominio: el

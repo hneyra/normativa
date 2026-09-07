@@ -1,0 +1,92 @@
+/* ============================================================================
+   Espaciado, radios y foco de NormativaV6.
+   ----------------------------------------------------------------------------
+   **V6 no esta en una rejilla de 4 px, y no se le impone una.** Sus rellenos
+   reales son `9px 10px` en un campo, `9px 15px` en un boton secundario,
+   `10px 18px` en el primario, `5px 11px` en el menudo, `2px 8px` en una insignia
+   y `11px 16px` en una celda: 9, 11, 15 y 5 no caben en ninguna escala de
+   cuatros. Redondearlos seria reescribir el diseno a ojo.
+
+   Asi que aqui **no hay `--space-1 … --space-9`**. Hay los espaciados que el
+   artboard usa, con el nombre del sitio donde los usa. Un componente nuevo que
+   no encaje en ninguno escribe el suyo literal, como en el artboard, y solo se
+   asciende a token cuando tres sitios lo repiten.
+
+   Los huecos tampoco son una escala. El artboard usa `gap` de 1, 2, 6, 7, 8, 9,
+   10, 11, 12, 13, 14 y 16 px —y NINGUNO de 5—, asi que una escala de cinco pasos
+   numerados seria una invencion con aspecto de medida. Estan los cinco que los
+   ocho componentes ponen, nombrados por su sitio.
+   ============================================================================ */
+
+:root {
+  /* —— Rellenos, tal como el artboard los escribe —— */
+
+  /* `const IN`, `const AREA` y la caja de una casilla: el relleno de todo
+     control que se escribe. */
+  --relleno-campo: 9px 10px;
+
+  /* Boton secundario. El primario lleva un pixel mas de alto y tres de ancho: no
+     es un descuido del artboard, es que su rotulo va en 600 y pesa mas. */
+  --relleno-boton: 9px 15px;
+  --relleno-boton-primario: 10px 18px;
+
+  /* El boton menudo —el «Copiar» de una traza, el de una cabecera de tabla—.
+     **Sale del artboard**: `border-radius:5px; padding:5px 11px;
+     font-size:12.5px`, el boton de accion de una seccion. */
+  --relleno-boton-menudo: 5px 11px;
+
+  /* `const INS`: la insignia. */
+  --relleno-insignia: 2px 8px;
+
+  /* `const TD`: la celda de una tabla. Es tambien el relleno de la banda de un
+     panel, y por eso esta aqui y no en la hoja de las tablas. */
+  --relleno-celda: 11px 16px;
+
+  /* El estado vacio: el artboard lo centra dentro de un `padding:32px`. */
+  --relleno-vacio: 32px;
+
+  /* —— Huecos, por el sitio donde el artboard los pone —— */
+
+  /* Entre la etiqueta y su control (`margin-bottom:5px`), y entre el control y
+     su ayuda (`margin-top:5px`). */
+  --hueco-etiqueta: 5px;
+
+  /* Dentro de la fila de una etiqueta —rotulo, codigo de campo y «opcional»—
+     (`gap:7px`), y entre el icono y el rotulo de un boton secundario. */
+  --hueco-rotulo: 7px;
+
+  /* El icono y el rotulo de un boton primario: `gap:8px`. */
+  --hueco-boton: 8px;
+
+  /* La casilla y su texto: `gap:9px`. */
+  --hueco-casilla: 9px;
+
+  /* Del icono de un estado vacio a su titulo (`margin:12px 0 0`), y entre las
+     acciones que se le cuelgan debajo. */
+  --hueco-aviso: 12px;
+
+  /* —— Radios ——
+     Tres, y los tres del artboard: la insignia (`border-radius:4px`), el boton
+     menudo (`5px`) y todo lo demas que se puede pulsar o escribir (`6px`, el
+     radio mas repetido del archivo con diferencia: 35 apariciones). */
+  --radio-insignia: 4px;
+  --radio-menudo: 5px;
+  --radio: 6px;
+
+  /* —— Foco ——
+     El halo de un control enfocado: `box-shadow: 0 0 0 3px #D3EBFA`. El color es
+     `--foco`, de `colors.css`, asi que este anillo cambia solo con el tema. */
+  --anillo: 0 0 0 3px var(--foco);
+
+  /* El grosor y la separacion del indicador de foco de lo que no es un campo.
+     El artboard: `:focus-visible { outline: 2px solid …; outline-offset: 2px }`. */
+  --grosor-foco: 2px;
+  --separacion-foco: 2px;
+
+  /* —— La casilla ——
+     El artboard le fija el lado a mano —`width:17px; height:17px`— porque la
+     casilla nativa no hereda el tamano del texto. Y `margin-top:1px` para que su
+     centro caiga sobre la primera linea del rotulo, no sobre el hueco. */
+  --lado-casilla: 17px;
+  --ajuste-casilla: 1px;
+}

@@ -21,3 +21,12 @@
 # Lo comprueba `docs/10-negocio/verificar-bytes-del-corpus.mjs`, que exige las dos cosas:
 # que el archivo este declarado aqui y que los bytes del disco sean los que git guarda.
 docs/10-negocio/valores-normativos/** -text
+
+# Las dos fuentes auto-hospedadas de Source Sans 3 (#11) viajan tambien byte a byte.
+#
+# Son `woff2`, o sea un contenedor comprimido: un solo byte cambiado no da una fuente
+# distinta, da una fuente que el navegador no puede descomprimir y una pagina que cae a
+# `system-ui` sin decir nada. Git las detecta como binarias por su cuenta —tienen NUL—,
+# pero eso es una heuristica y C-15 costo aprender que un ajuste de la maquina de cada
+# quien no puede decidir que bytes viajan. Declarado, no adivinado.
+frontend/src/ds/fuentes/*.woff2 -text -diff

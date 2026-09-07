@@ -1,0 +1,76 @@
+/* ============================================================================
+   La escala tipografica de NormativaV6.
+   ----------------------------------------------------------------------------
+   Los valores son los del artboard, **sin redondear**. V6 no esta en una escala
+   modular: usa 16, 15, 14.5, 14, 13.5, 13, 12.5, 12, 11.5 y 11 px, y esos medios
+   pixeles son deliberados —una tabla de 13.5 px cabe donde una de 14 no—.
+   Redondearlos a una escala «limpia» seria reescribir el diseno a ojo, que es
+   exactamente el modo de fallo del que esta carpeta protege.
+
+   Por eso los nombres son de USO y no de tamano: `--texto-celda` dice donde va;
+   `--texto-4` no diria nada, y el dia que la celda pasara de 13.5 a 13 habria que
+   renombrar la variable o mentir con ella.
+
+   **Aqui estan los tamanos que los ocho componentes base usan, y solo esos.** El
+   artboard escribe mas —11 px de cabecera de tabla, 14.5 px de la entidad de la
+   barra, 10.5 px de un codigo de campo—, y llegaran con el marco (#12) y las
+   pantallas (#14, #15), cuando haya quien los use. Un token sin consumidor no
+   protege nada y no se puede medir.
+
+   Cada linea lleva de donde sale, con el trozo del artboard donde se ve.
+   ============================================================================ */
+
+:root {
+  /* —— Tamanos —— */
+
+  /* `html, body { … font-size: 15px }`. Es la base del documento. */
+  --texto-base: 15px;
+
+  /* El titulo de un estado vacio: `font-size:16px; font-weight:700`, en los dos
+     que el artboard dibuja —«No hay ningún submódulo abierto» y el de la ficha
+     sin seleccion—. Es el titulo de un `Aviso`. */
+  --texto-titulo: 16px;
+
+  /* Lo que se escribe: `const IN`, `const AREA` y sus dos gemelos de error. */
+  --texto-control: 14px;
+
+  /* La talla de trabajo: celda de tabla (`const TD`), rotulo de boton, texto de
+     una casilla, valor de solo lectura y detalle de un estado vacio. Es la mas
+     frecuente del artboard: 35 apariciones. */
+  --texto-celda: 13.5px;
+
+  /* La etiqueta de un campo: `font-size:12.5px; font-weight:600; color:#3A4A55`.
+     Tambien el rotulo de un boton menudo. */
+  --texto-etiqueta: 12.5px;
+
+  /* Lo menudo que sigue leyendose: la ayuda bajo un control
+     (`font-size:12px; line-height:1.45; color:#5A6B78`) y la fecha que acompana
+     a un importe. */
+  --texto-menudo: 12px;
+
+  /* La insignia (`const INS`) y la palabra «opcional» junto a una etiqueta. */
+  --texto-insignia: 11.5px;
+
+  /* —— Interlineados ——
+     El artboard los escribe donde el texto es prosa y los deja por omision donde
+     es una linea suelta. Aqui se nombran los tres que los componentes usan. */
+
+  /* Prosa de un detalle: `line-height:1.55`, 18 apariciones. */
+  --linea-prosa: 1.55;
+
+  /* La ayuda bajo un control, que va mas apretada: `line-height:1.45`. */
+  --linea-ayuda: 1.45;
+
+  /* Texto dentro de una caja: el rotulo de una casilla, `line-height:1.4`. */
+  --linea-apretada: 1.4;
+
+  /* —— Anchos de lectura ——
+     Van aqui y no en `spacing.css` porque `ch` es una medida TIPOGRAFICA: cambia
+     con la familia y con el tamano, no con la rejilla. */
+
+  /* El ancho de un estado vacio. El artboard escribe `max-width:40ch` en el de
+     pagina entera y `max-width:44ch` en el de dentro de un panel; se consolidan
+     en uno, porque cuatro caracteres de diferencia no son dos decisiones — y se
+     toma el mayor, que es el del bloque mas parecido a un `Aviso` con acciones. */
+  --ancho-aviso: 44ch;
+}
