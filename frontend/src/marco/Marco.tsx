@@ -363,6 +363,9 @@ export function Marco() {
             alCerrar={(destino) => {
               despachar({ tipo: 'pedir-cierre', destino });
             }}
+            alAbrir={abrir}
+            ejercicio={ejercicio}
+            alAvisar={fijarToast}
             alEnsuciar={() => {
               despachar({ tipo: 'ensuciar' });
             }}

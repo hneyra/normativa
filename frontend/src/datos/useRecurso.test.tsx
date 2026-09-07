@@ -27,7 +27,7 @@ describe('los tres estados', () => {
     const { result } = renderHook(() => useUno<ConjuntoVigenteResource>(RUTAS.vigente(2026)));
 
     // El primer fotograma dice «cargando», no «no hay nada».
-    expect(result.current).toEqual({ dato: null, cargando: true, error: null });
+    expect(result.current).toEqual({ dato: null, cargando: true, error: null, fallo: null });
 
     await waitFor(() => {
       expect(result.current.cargando).toBe(false);
@@ -73,7 +73,7 @@ describe('la ruta nula', () => {
     const { result } = renderHook(() => useUno(null));
 
     await waitFor(() => {
-      expect(result.current).toEqual({ dato: null, cargando: false, error: null });
+      expect(result.current).toEqual({ dato: null, cargando: false, error: null, fallo: null });
     });
     expect(espia).not.toHaveBeenCalled();
   });

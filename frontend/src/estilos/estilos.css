@@ -31,8 +31,9 @@
            una seccion sin construir se colocan desde alli, y para colocarlos hay
            que llegar despues.
 
-   La hoja de las pantallas (#14, #15) se encadenara aqui detras, por el mismo
-   motivo: compone con lo que hay debajo.
+     8     `secciones.css` (#14, #15), el ultimo, por el mismo motivo: una seccion
+           coloca `Aviso`, `Boton`, `Insignia` y `Esqueleto` dentro de sus
+           paneles y de sus tablas, y para colocarlos hay que llegar despues.
    ============================================================================ */
 
 @import './tokens/colors.css';
@@ -42,3 +43,4 @@
 @import './tokens/base.css';
 @import './componentes.css';
 @import './marco.css';
+@import './secciones.css';

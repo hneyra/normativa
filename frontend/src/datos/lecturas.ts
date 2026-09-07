@@ -265,8 +265,22 @@ export async function pedirSnapshot(
   ambito: Ambito,
   senal?: AbortSignal,
 ): Promise<SnapshotVerificado<SnapshotResource>> {
-  return solicitarSnapshot<SnapshotResource>(
-    RUTAS.snapshot(conjuntoId, ambito),
-    senal === undefined ? {} : { senal },
-  );
+  return pedirSnapshotDe(RUTAS.snapshot(conjuntoId, ambito), senal);
+}
+
+/**
+ * La misma lectura, pedida por su ruta ya compuesta.
+ *
+ * Existe porque los hooks de `useRecurso.ts` se rehacen **cuando cambia la ruta** —es su unica
+ * dependencia, y es lo que aborta la peticion anterior al cambiar de conjunto o de ambito—, asi
+ * que lo que necesitan es una funcion de ruta y no de argumentos sueltos. `pedirSnapshot`
+ * delega aqui para que la ruta se componga en un solo sitio: dos formas de escribir
+ * `/conjuntos/{id}/snapshot?ambito=X` son dos que un dia dejan de coincidir, y en esta
+ * operacion una ruta distinta es **otra huella**.
+ */
+export async function pedirSnapshotDe(
+  ruta: string,
+  senal?: AbortSignal,
+): Promise<SnapshotVerificado<SnapshotResource>> {
+  return solicitarSnapshot<SnapshotResource>(ruta, senal === undefined ? {} : { senal });
 }

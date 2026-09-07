@@ -1,4 +1,5 @@
 import { Aviso, Boton, Campo, Icono } from '../ds/index.ts';
+import { Cuadros, Publicacion } from '../secciones/index.ts';
 import { HOJAS, esPropia } from './arbol.ts';
 import { Trazos } from './Trazos.tsx';
 
@@ -10,9 +11,11 @@ import { Trazos } from './Trazos.tsx';
  *   1. **sin pestanas** — no hay nada abierto, y se dice;
  *   2. **una hoja ajena** — la ficha del AC9, que explica de que sistema es esa pantalla y
  *      deja la pestana abierta para volver a ella;
- *   3. **una seccion propia** — el hueco: se declara que la pantalla llega en #14 o #15, y
- *      se ofrece el campo «Observación»;
- *   4. **una clave que no esta en el arbol** — no puede pasar, y se contesta igual.
+ *   3. **una seccion propia CONSTRUIDA** — se monta. Desde #15 lo estan «Cuadros de
+ *      valuación» y «Publicación»;
+ *   4. **una seccion propia todavia sin construir** — el hueco: se declara en que issue
+ *      llega la pantalla, y se ofrece el campo «Observación»;
+ *   5. **una clave que no esta en el arbol** — no puede pasar, y se contesta igual.
  *
  * <h2>Por que el hueco lleva un campo, y por que es ESE campo</h2>
  *
@@ -20,9 +23,17 @@ import { Trazos } from './Trazos.tsx';
  * vacio no tiene ninguno con el que demostrarlo, asi que el hueco trae uno — y el que trae
  * no es un relleno cualquiera: la regla 10 del repositorio dice que **toda modificacion de
  * datos exige observacion del usuario**, de modo que el campo que toda pantalla de este
- * sistema va a tener sí o sí es justo este. Cuando #14 y #15 construyan las cuatro
- * secciones, el hueco baja con su campo y la mecanica del estado sucio se queda donde de
- * verdad se escribe.
+ * sistema va a tener sí o sí es justo este. Cuando #14 construya las dos que faltan, el
+ * hueco baja con su campo y la mecanica del estado sucio se queda donde de verdad se
+ * escribe.
+ *
+ * <h2>Y por que las dos de #15 NO lo traen</h2>
+ *
+ * Porque en ninguna de las dos se escribe nada. Los tres cuadros son NACIONALES —en la base
+ * lo impide un CHECK de `municipalidad_id IS NULL`, y escribirlos es del rol
+ * `rol_carga_parametros`, que la aplicacion no usa nunca— y la publicacion sirve un conjunto
+ * ya sellado, o sea inmutable. Un campo de observacion en una pantalla que no guarda nada
+ * seria ofrecer el gesto de guardar donde no hay nada que guardar.
  *
  * Lo que el hueco **no** trae es una sola cifra: ni un conteo de parametros, ni un ETag, ni
  * una UIT. Este es el repositorio cuyo trabajo entero es que las cifras vivan en datos
@@ -32,6 +43,12 @@ import { Trazos } from './Trazos.tsx';
 export interface LienzoProps {
   readonly activa: string | null;
   readonly alCerrar: (destino: string) => void;
+  /** Abrir otra seccion como pestana, sin salirse del marco. */
+  readonly alAbrir: (destino: string) => void;
+  /** El ejercicio de trabajo de la barra global: es de que ano hablan las secciones. */
+  readonly ejercicio: string;
+  /** El toast del marco. Una seccion no cambia de pantalla para decir que algo salio. */
+  readonly alAvisar: (texto: string) => void;
   /** Marca la pestana activa como sucia: es lo que pone el asterisco (AC6). */
   readonly alEnsuciar: () => void;
   /**
@@ -46,6 +63,9 @@ export interface LienzoProps {
 export function Lienzo({
   activa,
   alCerrar,
+  alAbrir,
+  ejercicio,
+  alAvisar,
   alEnsuciar,
   observacion,
   alEscribirObservacion,
@@ -118,6 +138,22 @@ export function Lienzo({
     );
   }
 
+  if (activa === 'nor-cuadros') {
+    return (
+      <main className="kn-marco__lienzo">
+        <Cuadros ejercicio={ejercicio} />
+      </main>
+    );
+  }
+
+  if (activa === 'nor-publicacion') {
+    return (
+      <main className="kn-marco__lienzo">
+        <Publicacion ejercicio={ejercicio} alAvisar={alAvisar} alAbrir={alAbrir} />
+      </main>
+    );
+  }
+
   return (
     <main className="kn-marco__lienzo">
       <div className="kn-marco__hueco">
@@ -125,10 +161,9 @@ export function Lienzo({
           tipo="vacio"
           titulo={`«${hoja.rotulo}» todavía no está construida`}
           detalle={
-            'Este issue construye el marco, no las pantallas: la barra global, el árbol, las ' +
-            'pestañas, el enrutado por hash y el estado sin guardar. El contenido de las ' +
-            'cuatro secciones de Normativa llega en #14 y #15, y entra por debajo de este ' +
-            'marco sin tocarlo.'
+            'El marco lo construyó #12 —la barra global, el árbol, las pestañas, el enrutado ' +
+            'por hash y el estado sin guardar—; «Cuadros de valuación» y «Publicación» las ' +
+            'construyó #15. Ésta llega en #14, y entra por debajo de este marco sin tocarlo.'
           }
         />
         <div className="kn-marco__observacion">

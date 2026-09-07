@@ -180,6 +180,26 @@ export interface SnapshotVerificado<T> {
   readonly recurso: T;
   /** El `sha256` de los bytes servidos, en minusculas y sin comillas. */
   readonly huella: string;
+  /**
+   * **Los bytes que se verificaron**, tal como llegaron y sin volver a serializar.
+   *
+   * Se devuelven porque quien ofrezca guardar el snapshot tiene que guardar **lo mismo que se
+   * comprobo** (#15 AC9). Volver a escribir el objeto con `JSON.stringify` produce un texto que
+   * *casi siempre* coincide y que **nadie ha comprobado**: bastan un escape distinto o un cero
+   * de mas para que el archivo guardado tenga otro `sha256` que el `ETag` que lo acompana, y
+   * entonces el consumidor que lo relea concluira que su copia esta corrupta. Aqui no hay
+   * segunda serializacion: se guarda la cadena cuyo `sha256` es `huella`.
+   */
+  readonly cuerpo: string;
+  /**
+   * El `Cache-Control` que la respuesta trajo, o `null` si no trajo ninguno.
+   *
+   * No es una constante escrita a mano: es lo que **esta** respuesta dijo. La diferencia
+   * importa, porque lo que autoriza a guardar el snapshot un ano —y a no volver a pedirlo
+   * nunca— es esa cabecera y no una linea de documentacion, y un intermediario que la reescriba
+   * cambia esa autorizacion sin que el cuerpo cambie.
+   */
+  readonly cacheControl: string | null;
 }
 
 /** Las cabeceras de una peticion, con `Content-Type` solo cuando hay cuerpo que tipar. */
@@ -290,7 +310,12 @@ export async function solicitarSnapshot<T>(
     );
   }
 
-  return { recurso: datos as T, huella: calculada };
+  return {
+    recurso: datos as T,
+    huella: calculada,
+    cuerpo: texto,
+    cacheControl: respuesta.headers.get('Cache-Control'),
+  };
 }
 
 /**
