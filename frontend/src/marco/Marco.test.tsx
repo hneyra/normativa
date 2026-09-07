@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Marco } from './Marco.tsx';
+import { SECCIONES } from './arbol.ts';
 
 /**
  * El marco, montado. AC1 a AC10.
@@ -475,18 +476,33 @@ describe('AC7 — el estado de la seccion vive en el marco', () => {
     ).toHaveValue('Ratificada por acuerdo');
   });
 
-  it('y cada seccion tiene la suya, no una compartida', async () => {
+  /**
+   * Este caso medía que dos secciones tuvieran observaciones distintas, y lo medía usando dos
+   * que estaban SIN CONSTRUIR: el hueco era el único sitio con campo «Observación».
+   *
+   * Con #14 y #15 mezclados **las cuatro secciones del módulo están construidas**, así que ya no
+   * queda ninguna con hueco y esa comparación no se puede hacer. Lo que la sustituye es más
+   * fuerte y es lo que de verdad protege al marco: **ningún submódulo propio cae al hueco**. Un
+   * quinto submódulo añadido al árbol sin cablearlo en el `Lienzo` sale rojo aquí, que es
+   * exactamente el defecto que el hueco existe para hacer visible.
+   *
+   * Que la observación sea por sección y no compartida lo sigue midiendo el caso de arriba: se
+   * escribe en «Ediciones», se va a «Panel» —donde el campo ya no existe— y al volver sigue ahí.
+   */
+  it('ningun submodulo propio cae al hueco: los cuatro estan cableados', async () => {
     const usuario = userEvent.setup();
     render(<Marco />);
-    await ensuciar(usuario);
 
-    // «Panel» y no «Publicación»: desde #15 la seccion de Publicacion esta CONSTRUIDA y no
-    // ofrece campo de observacion, porque en ella no se escribe nada —sirve un conjunto ya
-    // sellado, o sea inmutable—. Lo que este caso mide sigue siendo lo mismo: dos secciones
-    // con hueco tienen dos observaciones distintas, no una compartida.
-    await usuario.click(submodulo('Panel'));
+    for (const seccion of SECCIONES) {
+      await usuario.click(submodulo(seccion.rotulo));
 
-    expect(screen.getByLabelText('Observación')).toHaveValue('');
+      expect(
+        screen.queryByText(/todavía no está construida/),
+        `«${seccion.rotulo}» cae al hueco del Lienzo. El árbol lo declara y el Lienzo no sabe\n` +
+          'dibujarlo, que es un defecto del código y no un issue pendiente: las cuatro\n' +
+          'secciones de este módulo están construidas desde #14 y #15.',
+      ).toBeNull();
+    }
   });
 });
 

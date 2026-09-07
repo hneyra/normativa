@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useReducer, useState } from 'react';
 
 import { Icono } from '../ds/index.ts';
+import { EDICIONES_AL_EMPEZAR, type EstadoDeEdiciones } from '../secciones/estadoDeNormativa.ts';
 import { BarraGlobal } from './BarraGlobal.tsx';
 import { Confirmacion } from './Confirmacion.tsx';
 import { Lienzo } from './Lienzo.tsx';
@@ -123,6 +124,10 @@ export function Marco() {
   // dejaria el campo en blanco **con el asterisco puesto**. Una por seccion, indexada por su
   // clave: dos pestanas abiertas son dos observaciones distintas.
   const [observaciones, fijarObservaciones] = useState<Readonly<Record<string, string>>>({});
+  // Lo mismo, para «Ediciones»: el buscador, el chip, el orden, la pagina, la edicion abierta,
+  // el paso, lo tecleado y si ya se intento guardar. Es UNA y no una por clave porque la
+  // seccion es una sola; lo que la separa de las demas es que aqui vive el formulario.
+  const [ediciones, fijarEdiciones] = useState<EstadoDeEdiciones>(EDICIONES_AL_EMPEZAR);
 
   const abrir = useCallback((destino: string) => {
     despachar({ tipo: 'abrir', destino });
@@ -374,6 +379,10 @@ export function Marco() {
               if (activa !== null) {
                 fijarObservaciones((actuales) => ({ ...actuales, [activa]: texto }));
               }
+            }}
+            ediciones={ediciones}
+            alCambiarEdiciones={(cambio) => {
+              fijarEdiciones((actual) => ({ ...actual, ...cambio }));
             }}
           />
         </div>
