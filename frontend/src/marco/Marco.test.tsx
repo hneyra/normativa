@@ -458,8 +458,13 @@ describe('AC7 — el estado de la seccion vive en el marco', () => {
     expect(screen.getByLabelText('Observación')).toHaveValue('Ratificada por acuerdo');
 
     await usuario.click(within(barraDePestanas()).getByRole('button', { name: 'Panel' }));
-    // El marco DESMONTA la seccion: el campo ya no existe mientras se mira otra pestana.
-    expect(screen.getByLabelText('Observación')).not.toHaveValue('Ratificada por acuerdo');
+    // El marco DESMONTA la seccion: el campo **ya no existe** mientras se mira otra pestana.
+    //
+    // Hasta #14 esta linea decia `getByLabelText(...).not.toHaveValue(...)`, porque el Panel
+    // era el hueco y tenia su propio campo «Observación» con el que comparar. Con el Panel de
+    // verdad puesto ya no hay ninguno, asi que se afirma lo que el comentario decia desde el
+    // principio y es mas fuerte: no esta.
+    expect(screen.queryByLabelText('Observación')).toBeNull();
 
     await usuario.click(within(barraDePestanas()).getByRole('button', { name: /^Ediciones/ }));
 

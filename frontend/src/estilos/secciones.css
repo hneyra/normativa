@@ -146,6 +146,61 @@
 
 .kn-seccion__titulo {
   margin: 0;
+   Las secciones de Normativa: «Panel» y «Ediciones» (#14).
+   ----------------------------------------------------------------------------
+   Va la ultima de la cadena porque COMPONE con todo lo de debajo: los ocho
+   componentes base de `componentes.css` —el `Aviso` de un vacio, el `Campo` de
+   un formulario, la `Insignia` de un estado, el `Esqueleto` de una carga— y el
+   lienzo de `marco.css`, dentro del cual vive. A igualdad de especificidad gana
+   la ultima que llega, y para colocar hay que llegar despues.
+
+   **Ni un hexadecimal, ni un `rgba()`: todo color sale de `tokens/colors.css`**,
+   igual que en `componentes.css` y en `marco.css`, y lo comprueba la misma
+   prueba —el `it.each` de `tokens-del-artboard.test.ts` incluye este archivo—.
+   Es lo que hace que el tema oscuro exista sin tocar una linea de aqui, y lo que
+   hace que la prueba de contraste mida lo que la pantalla ensena.
+
+   Los PIXELES si son literales, y a proposito: son los de NormativaV6, con sus
+   medios pixeles y sus rellenos impares. Redondearlos a una rejilla de cuatros
+   seria reescribir el diseno a ojo.
+
+   Nada de anchos fijos para el contenido: las dos secciones viven dentro de
+   `.kn-marco__lienzo`, que ya desplaza, y las tablas anchas desplazan en SU
+   marco —`.kn-tabla__marco`— y no arrastran la pagina. Una tabla de siete
+   columnas con el documento fuente entero dentro es ancha de verdad.
+   ============================================================================ */
+
+.kn-seccion {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.kn-seccion__pie {
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--tinta-3);
+  max-width: 96ch;
+}
+
+/* ── La tarjeta, que las dos secciones usan ──────────────────────────────── */
+
+.kn-tarjeta {
+  background: var(--superficie);
+  border: 1px solid var(--linea);
+  border-radius: 8px;
+  padding: 15px 16px;
+}
+
+.kn-tarjeta__cabecera {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.kn-tarjeta__titulo {
+  margin: 0 0 6px;
   font-size: 14.5px;
   font-weight: 700;
   color: var(--tinta);
@@ -227,6 +282,308 @@
 .kn-seccion__panel {
   display: flex;
   flex-direction: column;
+.kn-tarjeta__cabecera .kn-tarjeta__titulo {
+  margin: 0;
+  flex: 1;
+}
+
+.kn-tarjeta__conteo {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--tinta-3);
+}
+
+.kn-tarjeta__nota,
+.kn-tarjeta__pie {
+  margin: 0 0 10px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--tinta-2);
+  max-width: 100ch;
+}
+
+.kn-tarjeta__pie {
+  margin: 12px 0 0;
+  color: var(--tinta-3);
+}
+
+.kn-tarjeta code {
+  font-size: 11.5px;
+  background: var(--sup);
+  border: 1px solid var(--linea-2);
+  border-radius: 4px;
+  padding: 0 4px;
+}
+
+/* ── Tablas ──────────────────────────────────────────────────────────────── */
+
+.kn-tabla__marco {
+  overflow-x: auto;
+  border: 1px solid var(--linea-2);
+  border-radius: 6px;
+}
+
+.kn-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.kn-tabla th,
+.kn-tabla td {
+  text-align: left;
+  padding: 8px 11px;
+  border-bottom: 1px solid var(--linea-2);
+  vertical-align: top;
+  color: var(--tinta-2);
+}
+
+.kn-tabla thead th {
+  position: sticky;
+  top: 0;
+  background: var(--sup);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--tinta-3);
+  white-space: nowrap;
+}
+
+.kn-tabla tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.kn-tabla__th--cifra,
+.kn-tabla__td--cifra {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.kn-tabla__td--clave {
+  font-weight: 600;
+  color: var(--tinta);
+  white-space: nowrap;
+}
+
+/* El documento fuente NO se recorta: es lo que hace auditable cada cifra. Se
+   ajusta en varias lineas, con un ancho que deja leerlo entero. */
+.kn-tabla__td--fuente {
+  min-width: 26ch;
+  max-width: 44ch;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.kn-tabla__vacio {
+  margin: 0;
+  padding: 14px 4px 2px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--tinta-3);
+}
+
+/* ── Panel ───────────────────────────────────────────────────────────────── */
+
+.kn-panel__estado-cabecera {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.kn-panel__estado-icono {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  background: var(--atencion-fondo);
+  color: var(--atencion-tinta);
+}
+
+.kn-panel__estado--sellado {
+  border-color: var(--ok-tinta);
+}
+
+.kn-panel__estado--sellado .kn-panel__estado-icono {
+  background: var(--ok-fondo);
+  color: var(--ok-tinta);
+}
+
+.kn-panel__estado-titulo {
+  margin: 0;
+  flex: 1;
+  font-size: 15.5px;
+  font-weight: 700;
+  color: var(--tinta);
+}
+
+.kn-panel__estado-texto {
+  margin: 0 0 12px;
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--tinta-2);
+  max-width: 100ch;
+}
+
+.kn-panel__estado-pie {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  border-top: 1px solid var(--linea-2);
+  padding-top: 11px;
+}
+
+.kn-panel__estado-nota {
+  margin: 0;
+  flex: 1;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--tinta-3);
+}
+
+.kn-panel__cargando {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.kn-panel__cifras {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0;
+}
+
+.kn-panel__cifra {
+  flex: 1 1 180px;
+  background: var(--sup);
+  border: 1px solid var(--linea-2);
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+
+.kn-panel__cifra dt {
+  font-size: 11.5px;
+  color: var(--tinta-3);
+}
+
+.kn-panel__cifra dd {
+  margin: 3px 0 0;
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--tinta);
+}
+
+.kn-panel__lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.kn-panel__version {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  border: 1px solid var(--linea-2);
+  border-radius: 6px;
+  padding: 9px 11px;
+  background: var(--sup);
+}
+
+.kn-panel__version-rotulo {
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--tinta);
+}
+
+.kn-panel__version-id {
+  font-size: 11.5px;
+  font-weight: 400;
+  color: var(--tinta-3);
+}
+
+.kn-panel__version-sello {
+  flex: 1;
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--tinta-2);
+}
+
+.kn-panel__decision {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  border: 1px solid var(--linea-2);
+  border-left: 3px solid var(--linea);
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+
+.kn-panel__decision--abierta {
+  border-left-color: var(--mal-borde);
+}
+
+.kn-panel__decision--cerrada {
+  border-left-color: var(--ok-tinta);
+}
+
+.kn-panel__decision-cabecera {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+.kn-panel__decision-id {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--tinta-3);
+}
+
+.kn-panel__decision-titulo {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--tinta);
+}
+
+.kn-panel__decision-detalle {
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--tinta-2);
+}
+
+/* ── Ediciones ───────────────────────────────────────────────────────────── */
+
+.kn-ediciones {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.kn-ediciones__lista {
+  flex: 0 0 340px;
+  max-width: 340px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--superficie);
+  border: 1px solid var(--linea);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.kn-ediciones__ficha {
+  flex: 1;
   min-width: 0;
   background: var(--superficie);
   border: 1px solid var(--linea);
@@ -546,4 +903,328 @@
 
 .kn-tabla__sin-dato {
   color: var(--tinta-3);
+}
+.kn-ediciones__buscador {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.kn-busqueda {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--borde-boton);
+  border-radius: 6px;
+  padding: 6px 9px;
+  background: var(--superficie);
+  color: var(--tinta-3);
+}
+
+.kn-busqueda__campo {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  color: var(--tinta);
+  outline: none;
+}
+
+.kn-busqueda__limpiar {
+  border: 0;
+  background: transparent;
+  color: var(--tinta-3);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  padding: 2px;
+}
+
+.kn-ediciones__chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.kn-chip {
+  border: 1px solid var(--linea);
+  border-radius: 999px;
+  padding: 3px 10px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  background: var(--superficie);
+  color: var(--tinta-3);
+}
+
+.kn-chip--on {
+  border-color: var(--azul);
+  background: var(--azul-suave);
+  color: var(--info-tinta);
+  font-weight: 600;
+}
+
+.kn-ediciones__mandos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  border-top: 1px solid var(--linea-2);
+  border-bottom: 1px solid var(--linea-2);
+  padding: 8px 0;
+}
+
+.kn-ediciones__conteo {
+  flex: 1 1 100%;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--tinta-3);
+}
+
+.kn-ediciones__mando {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 11px;
+}
+
+.kn-ediciones__mando-rotulo {
+  color: var(--tinta-3);
+}
+
+.kn-ediciones__mando select {
+  font: inherit;
+  font-size: 12px;
+  border: 1px solid var(--borde-campo);
+  border-radius: 5px;
+  padding: 3px 5px;
+  background: var(--superficie);
+  color: var(--tinta);
+}
+
+.kn-ediciones__filas {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 120px;
+}
+
+.kn-ediciones__cargando {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.kn-ediciones__fila {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-bottom: 1px solid var(--linea-2);
+  border-left: 3px solid transparent;
+  background: transparent;
+  padding: 10px 11px;
+  cursor: pointer;
+  font: inherit;
+}
+
+.kn-ediciones__fila:hover {
+  background: var(--realce);
+}
+
+.kn-ediciones__fila--actual {
+  border-left-color: var(--azul);
+  background: var(--azul-suave);
+}
+
+.kn-ediciones__fila--esqueleto {
+  cursor: default;
+}
+
+.kn-ediciones__linea {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.kn-ediciones__titulo {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--tinta);
+}
+
+.kn-ediciones__detalle {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--tinta-2);
+}
+
+.kn-ediciones__pie {
+  font-size: 11.5px;
+  color: var(--tinta-3);
+}
+
+.kn-ediciones__paginacion {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-top: 1px solid var(--linea-2);
+  padding-top: 9px;
+}
+
+.kn-ediciones__pagina {
+  flex: 1;
+  text-align: center;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--tinta-3);
+}
+
+/* ── La ficha de una edicion ─────────────────────────────────────────────── */
+
+.kn-ficha__cabecera {
+  border-bottom: 1px solid var(--linea-2);
+  padding: 14px 16px 12px;
+  background: var(--sup);
+}
+
+.kn-ficha__identidad {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+.kn-ficha__codigo {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--tinta-3);
+}
+
+.kn-ficha__titulo {
+  margin: 7px 0 3px;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--tinta);
+}
+
+.kn-ficha__contexto {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--tinta-2);
+  max-width: 100ch;
+}
+
+.kn-ficha__pestanas {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid var(--linea-2);
+  padding: 0 10px;
+  overflow-x: auto;
+}
+
+.kn-ficha__pestana {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  padding: 11px 12px 9px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13.5px;
+  white-space: nowrap;
+  color: var(--tinta-3);
+}
+
+.kn-ficha__pestana--actual {
+  border-bottom-color: var(--azul);
+  color: var(--tinta);
+  font-weight: 700;
+}
+
+.kn-ficha__cuerpo {
+  padding: 15px 16px 16px;
+}
+
+.kn-ficha__nota {
+  margin: 0 0 14px;
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: var(--tinta-2);
+  max-width: 100ch;
+}
+
+.kn-rejilla {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px 14px;
+}
+
+.kn-ficha__pie {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--linea-2);
+  margin-top: 16px;
+  padding-top: 13px;
+}
+
+.kn-ficha__pie-nota {
+  margin: 0;
+  flex: 1;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--tinta-3);
+}
+
+/* ── La negativa que redacta el servidor ─────────────────────────────────── */
+
+.kn-negativa {
+  border: 1px solid var(--mal-borde);
+  border-radius: 6px;
+  background: var(--mal-campo);
+  padding: 12px 14px;
+  margin-bottom: 14px;
+}
+
+.kn-negativa__titulo {
+  margin: 0 0 5px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--mal-tinta);
+}
+
+.kn-negativa__mensaje {
+  margin: 0 0 7px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--tinta);
+}
+
+.kn-negativa__nota {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--tinta-2);
+}
+
+/* ── Estrecho: la lista deja de ser una columna al lado ──────────────────── */
+
+@media (max-width: 900px) {
+  .kn-ediciones {
+    flex-direction: column;
+  }
+
+  .kn-ediciones__lista {
+    flex: 1 1 auto;
+    max-width: none;
+    width: 100%;
+  }
 }

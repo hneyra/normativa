@@ -1,5 +1,9 @@
 import { Aviso, Boton, Campo, Icono } from '../ds/index.ts';
 import { Cuadros, Publicacion } from '../secciones/index.ts';
+import { Ediciones } from '../secciones/Ediciones.tsx';
+import { Panel } from '../secciones/Panel.tsx';
+import { PASO_DE_APERTURA, PASO_DE_LECTURA } from '../secciones/ediciones.ts';
+import type { EstadoDeEdiciones } from '../secciones/estadoDeNormativa.ts';
 import { HOJAS, esPropia } from './arbol.ts';
 import { Trazos } from './Trazos.tsx';
 
@@ -58,6 +62,10 @@ export interface LienzoProps {
    */
   readonly observacion: string;
   readonly alEscribirObservacion: (texto: string) => void;
+  /** Lo escrito en «Ediciones». Vive en el marco porque el marco desmonta la seccion. */
+  readonly ediciones: EstadoDeEdiciones;
+  /** Y como se cambia, que es lo que el Panel usa para abrir una edicion concreta. */
+  readonly alCambiarEdiciones: (cambio: Partial<EstadoDeEdiciones>) => void;
 }
 
 export function Lienzo({
@@ -69,6 +77,8 @@ export function Lienzo({
   alEnsuciar,
   observacion,
   alEscribirObservacion,
+  ediciones,
+  alCambiarEdiciones,
 }: LienzoProps) {
   if (activa === null) {
     return (
@@ -138,6 +148,39 @@ export function Lienzo({
     );
   }
 
+  if (activa === 'nor-panel') {
+    return (
+      <Panel
+        ejercicio={ejercicio}
+        alAbrirEdicion={(conjuntoId) => {
+          alCambiarEdiciones({
+            elegida: conjuntoId,
+            // Sin conjunto solo cabe abrir una version; con uno, se empieza mirando lo que
+            // contiene. Los dos identificadores se importan y no se escriben: son los mismos
+            // que `pasosPara` usa para decidir que pestanas ofrece.
+            paso: conjuntoId === null ? PASO_DE_APERTURA : PASO_DE_LECTURA,
+            vals: {},
+            intento: false,
+            negativa: null,
+          });
+          alAbrir('nor-ediciones');
+        }}
+      />
+    );
+  }
+
+  if (activa === 'nor-ediciones') {
+    return (
+      <Ediciones
+        ejercicio={ejercicio}
+        estado={ediciones}
+        alCambiar={alCambiarEdiciones}
+        alEnsuciar={alEnsuciar}
+        alAvisar={alAvisar}
+      />
+    );
+  }
+
   if (activa === 'nor-cuadros') {
     return (
       <main className="kn-marco__lienzo">
@@ -161,9 +204,10 @@ export function Lienzo({
           tipo="vacio"
           titulo={`«${hoja.rotulo}» todavía no está construida`}
           detalle={
-            'El marco lo construyó #12 —la barra global, el árbol, las pestañas, el enrutado ' +
-            'por hash y el estado sin guardar—; «Cuadros de valuación» y «Publicación» las ' +
-            'construyó #15. Ésta llega en #14, y entra por debajo de este marco sin tocarlo.'
+            'Las cuatro secciones de este módulo están construidas —«Panel» y «Ediciones» en ' +
+            '#14, «Cuadros de valuación» y «Publicación» en #15—, así que llegar aquí ' +
+            'significa que el árbol declara un submódulo que este lienzo no sabe dibujar. Es ' +
+            'un defecto del código, no un issue pendiente.'
           }
         />
         <div className="kn-marco__observacion">
