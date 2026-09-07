@@ -224,6 +224,43 @@ export const RUTAS = {
     `/conjuntos/${String(conjuntoId)}/snapshot?ambito=${ambito}`,
 } as const;
 
+/**
+ * Las tres escrituras que ADR-0025 §5 anticipa y que `src/main` todavia no publica.
+ *
+ * **Las rutas estan inventadas; el comportamiento no.** `AdministrarParametros` tiene
+ * `abrirVersion`, `agregarParametroPublicado` y `sellar`, las tres `@Transactional`, y las
+ * reproduce el proxy con las negativas literales del backend (`datos/simulados.ts`). Estan aqui
+ * y no dentro de la seccion por lo mismo que `RUTAS`: una ruta repetida en dos pantallas se
+ * corrige en una sola el dia que cambie.
+ *
+ * Van aparte de `RUTAS` **a proposito**: aquellas son contrato publicado y estas no lo son
+ * todavia, y quien lea este archivo tiene que poder decir de un vistazo cuales son cuales.
+ */
+export const ESCRITURAS = {
+  abrirVersion: '/ediciones',
+  agregarParametro: (conjuntoId: number) => `/ediciones/${String(conjuntoId)}/parametros`,
+  sellar: (conjuntoId: number) => `/ediciones/${String(conjuntoId)}/sellar`,
+} as const;
+
+/**
+ * Manda una escritura **con su cuerpo**, y devuelve lo que el servidor conteste.
+ *
+ * <h2>Por que no basta con `pedirCalculo`</h2>
+ *
+ * `pedirCalculo` manda un `POST` **sin cuerpo**, que es lo que necesita una lectura publicada
+ * como `POST`. Las tres escrituras no: su cuerpo lleva la **observacion**, y sin ella el borde
+ * contesta el 422 de `Observacion` —«al menos 5 caracteres»— siempre, tambien cuando quien la
+ * escribio la escribio bien. O sea que una pantalla que guardara con `pedirCalculo` no podria
+ * guardar nunca, y el rechazo hablaria de un dato que si esta.
+ *
+ * No lleva `senal`: una escritura no se aborta al cambiar de pantalla. Un `GET` abandonado no
+ * deja nada detras y por eso `useRecurso` los cancela; un `POST` abandonado puede haber llegado
+ * ya, y cancelarlo en el cliente no lo deshace — solo deja a quien lo mando sin saber si ocurrio.
+ */
+export async function enviar<T>(ruta: string, cuerpo: unknown): Promise<T> {
+  return solicitar<T>(ruta, { metodo: 'POST', cuerpo });
+}
+
 /** Pide una operacion paginada y devuelve solo su contenido. */
 export async function pedirLista<T>(ruta: string, senal?: AbortSignal): Promise<readonly T[]> {
   const pagina = await solicitar<Paginado<T>>(ruta, senal === undefined ? {} : { senal });

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
-import { ErrorDeLaApi } from '../api/cliente.ts';
-import { pedirCalculo, pedirLista, pedirUno } from './lecturas.ts';
+import { ErrorDeLaApi, solicitarSnapshot, type SnapshotVerificado } from '../api/cliente.ts';
+import { RUTAS, pedirCalculo, pedirLista, pedirUno, type Ambito, type SnapshotResource } from './lecturas.ts';
 
 /**
  * **Los tres nombres empiezan por `use` y no por `usar`, y es la excepcion declarada de la regla
@@ -123,4 +123,28 @@ export function useLista<T>(ruta: string | null): Recurso<readonly T[]> {
  */
 export function useCalculo<T>(ruta: string | null): Recurso<T> {
   return usePeticion<T>(ruta, (donde, senal) => pedirCalculo<T>(donde, senal));
+}
+
+/**
+ * Pide el snapshot de un conjunto y **comprueba su huella antes de entregarlo** (ADR-0025).
+ *
+ * No pasa por `useUno`, y esa es toda la razon de que exista: `pedirUno` devuelve el cuerpo tal
+ * cual, y el snapshot se cachea un ano con `Cache-Control: immutable` — una copia corrupta no se
+ * volveria a pedir nunca. El `sha256` de los bytes servidos tiene que cuadrar con el `ETag`, y
+ * quien lo pide recibe la huella junto al recurso porque es lo que se guarda con la fila de la
+ * cache.
+ *
+ * Con `conjuntoId` nulo no pide nada, que es como se encadena con la lectura que lo resuelve
+ * **sin romper la regla de los hooks**. Y con un conjunto sin sellar tampoco hay que llamarla:
+ * `SnapshotController` contesta 404 nombrandolo, porque lo que se pide es un documento que
+ * todavia no existe.
+ */
+export function useSnapshot(
+  conjuntoId: number | null,
+  ambito: Ambito,
+): Recurso<SnapshotVerificado<SnapshotResource>> {
+  return usePeticion<SnapshotVerificado<SnapshotResource>>(
+    conjuntoId === null ? null : RUTAS.snapshot(conjuntoId, ambito),
+    (donde, senal) => solicitarSnapshot<SnapshotResource>(donde, { senal }),
+  );
 }

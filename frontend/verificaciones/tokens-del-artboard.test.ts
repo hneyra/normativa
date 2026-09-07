@@ -153,6 +153,18 @@ describe('AC1 — los cinco archivos de tokens, y un solo punto de entrada', () 
     expect(limpio.indexOf('./marco.css')).toBeGreaterThan(limpio.indexOf('./componentes.css'));
   });
 
+  it('«secciones.css» va la ULTIMA: las secciones componen con todo lo de debajo', () => {
+    // Las dos secciones de #14 colocan los ocho componentes base Y viven dentro del lienzo del
+    // marco, asi que su hoja tiene que llegar despues de las dos. Y estar: sin ella en la
+    // cadena, las secciones se dibujan **sin un solo estilo** y `yarn build` sigue en verde,
+    // porque un `@import` que nadie escribio no es un error de empaquetado.
+    const limpio = sinComentarios(entrada);
+    expect(limpio, 'La hoja de las pantallas tiene que estar encadenada.').toContain(
+      './secciones.css',
+    );
+    expect(limpio.indexOf('./secciones.css')).toBeGreaterThan(limpio.indexOf('./marco.css'));
+  });
+
   it('nadie mas importa una hoja de estilos: el punto de entrada es uno', () => {
     // Si cada componente trajera la suya, el orden de la cascada lo decidiria el orden en
     // que Vite resuelve los modulos, que cambia con un `import` movido de sitio.
@@ -241,7 +253,7 @@ describe('AC2 — los valores coinciden con el artboard', () => {
 });
 
 describe('AC2 (c) — los componentes no pintan: solo usan tokens', () => {
-  it.each(['componentes.css', 'tokens/base.css', 'marco.css'])(
+  it.each(['componentes.css', 'tokens/base.css', 'marco.css', 'secciones.css'])(
     '«%s» no escribe ni un color a mano',
     (hoja) => {
       const css = sinComentarios(leer(join(RAIZ, 'src/estilos', hoja)));

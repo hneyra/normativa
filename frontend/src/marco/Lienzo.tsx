@@ -1,28 +1,33 @@
 import { Aviso, Boton, Campo, Icono } from '../ds/index.ts';
+import { Ediciones } from '../secciones/Ediciones.tsx';
+import { Panel } from '../secciones/Panel.tsx';
+import type { EstadoDeEdiciones } from '../secciones/estadoDeNormativa.ts';
 import { HOJAS, esPropia } from './arbol.ts';
 import { Trazos } from './Trazos.tsx';
 
 /**
  * El lienzo: lo que hay debajo de las pestanas.
  *
- * Tiene **cuatro estados**, y ninguno de ellos es una pantalla:
+ * Tiene **cinco estados**, y solo dos de ellos son una pantalla:
  *
  *   1. **sin pestanas** — no hay nada abierto, y se dice;
- *   2. **una hoja ajena** — la ficha del AC9, que explica de que sistema es esa pantalla y
- *      deja la pestana abierta para volver a ella;
- *   3. **una seccion propia** — el hueco: se declara que la pantalla llega en #14 o #15, y
- *      se ofrece el campo «Observación»;
- *   4. **una clave que no esta en el arbol** — no puede pasar, y se contesta igual.
+ *   2. **una hoja ajena** — la ficha del AC9 de #12, que explica de que sistema es esa
+ *      pantalla y deja la pestana abierta para volver a ella;
+ *   3. **`nor-panel` y `nor-ediciones`** — las dos secciones de #14, que entran por debajo
+ *      del marco sin tocarlo: esa era la promesa de #12 y aqui se cobra;
+ *   4. **`nor-cuadros` y `nor-publicacion`** — el hueco que queda, con su campo
+ *      «Observación», hasta que #15 las construya;
+ *   5. **una clave que no esta en el arbol** — no puede pasar, y se contesta igual.
  *
- * <h2>Por que el hueco lleva un campo, y por que es ESE campo</h2>
+ * <h2>Por que el hueco que queda lleva un campo, y por que es ESE campo</h2>
  *
- * El AC6 pide que **editar un campo** marque la pestana con su asterisco. Un lienzo del todo
- * vacio no tiene ninguno con el que demostrarlo, asi que el hueco trae uno — y el que trae
- * no es un relleno cualquiera: la regla 10 del repositorio dice que **toda modificacion de
- * datos exige observacion del usuario**, de modo que el campo que toda pantalla de este
- * sistema va a tener sí o sí es justo este. Cuando #14 y #15 construyan las cuatro
- * secciones, el hueco baja con su campo y la mecanica del estado sucio se queda donde de
- * verdad se escribe.
+ * El AC6 de #12 pide que **editar un campo** marque la pestana con su asterisco. Un lienzo
+ * del todo vacio no tiene ninguno con el que demostrarlo, asi que el hueco trae uno — y el
+ * que trae no es un relleno cualquiera: la regla 10 del repositorio dice que **toda
+ * modificacion de datos exige observacion del usuario**, de modo que el campo que toda
+ * pantalla de este sistema va a tener sí o sí es justo este. Con #14 la mecanica del estado
+ * sucio ya se ejerce donde de verdad se escribe —los tres formularios de «Ediciones»—, y el
+ * hueco la conserva solo para las dos secciones que faltan.
  *
  * Lo que el hueco **no** trae es una sola cifra: ni un conteo de parametros, ni un ETag, ni
  * una UIT. Este es el repositorio cuyo trabajo entero es que las cifras vivan en datos
@@ -32,8 +37,13 @@ import { Trazos } from './Trazos.tsx';
 export interface LienzoProps {
   readonly activa: string | null;
   readonly alCerrar: (destino: string) => void;
+  /** Abre otra seccion: es lo que usa el Panel para llevar a «Ediciones». */
+  readonly alAbrir: (destino: string) => void;
   /** Marca la pestana activa como sucia: es lo que pone el asterisco (AC6). */
   readonly alEnsuciar: () => void;
+  readonly alAvisar: (texto: string) => void;
+  /** El ejercicio de la barra global: decide de que ano preguntan las dos secciones. */
+  readonly ejercicio: string;
   /**
    * Lo escrito en la observacion de la seccion activa. **Vive en el marco, no aqui** (AC7):
    * el marco desmonta la seccion al cambiar de pestana, y con el estado dentro, escribir e
@@ -41,14 +51,22 @@ export interface LienzoProps {
    */
   readonly observacion: string;
   readonly alEscribirObservacion: (texto: string) => void;
+  /** Lo que «Ediciones» recuerda, por el mismo motivo y guardado en el mismo sitio. */
+  readonly ediciones: EstadoDeEdiciones;
+  readonly alCambiarEdiciones: (cambio: Partial<EstadoDeEdiciones>) => void;
 }
 
 export function Lienzo({
   activa,
   alCerrar,
+  alAbrir,
   alEnsuciar,
+  alAvisar,
+  ejercicio,
   observacion,
   alEscribirObservacion,
+  ediciones,
+  alCambiarEdiciones,
 }: LienzoProps) {
   if (activa === null) {
     return (
@@ -118,6 +136,36 @@ export function Lienzo({
     );
   }
 
+  if (activa === 'nor-panel') {
+    return (
+      <Panel
+        ejercicio={ejercicio}
+        alAbrirEdicion={(conjuntoId) => {
+          alCambiarEdiciones({
+            elegida: conjuntoId,
+            paso: conjuntoId === null ? 'abrir' : 'parametros',
+            vals: {},
+            intento: false,
+            negativa: null,
+          });
+          alAbrir('nor-ediciones');
+        }}
+      />
+    );
+  }
+
+  if (activa === 'nor-ediciones') {
+    return (
+      <Ediciones
+        ejercicio={ejercicio}
+        estado={ediciones}
+        alCambiar={alCambiarEdiciones}
+        alEnsuciar={alEnsuciar}
+        alAvisar={alAvisar}
+      />
+    );
+  }
+
   return (
     <main className="kn-marco__lienzo">
       <div className="kn-marco__hueco">
@@ -125,10 +173,10 @@ export function Lienzo({
           tipo="vacio"
           titulo={`«${hoja.rotulo}» todavía no está construida`}
           detalle={
-            'Este issue construye el marco, no las pantallas: la barra global, el árbol, las ' +
-            'pestañas, el enrutado por hash y el estado sin guardar. El contenido de las ' +
-            'cuatro secciones de Normativa llega en #14 y #15, y entra por debajo de este ' +
-            'marco sin tocarlo.'
+            'El marco y las dos primeras secciones ya están: «Panel» y «Ediciones» entraron ' +
+            'por debajo de este lienzo sin tocarlo, que era la promesa del reparto. Los tres ' +
+            'cuadros de valuación y la publicación del snapshot llegan en #15, y entrarán ' +
+            'igual.'
           }
         />
         <div className="kn-marco__observacion">

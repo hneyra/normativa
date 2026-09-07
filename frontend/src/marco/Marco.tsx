@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useReducer, useState } from 'react';
 
 import { Icono } from '../ds/index.ts';
+import {
+  EDICIONES_AL_EMPEZAR,
+  type EstadoDeEdiciones,
+} from '../secciones/estadoDeNormativa.ts';
 import { BarraGlobal } from './BarraGlobal.tsx';
 import { Confirmacion } from './Confirmacion.tsx';
 import { Lienzo } from './Lienzo.tsx';
@@ -63,8 +67,9 @@ const AVISO_DE_SERVICIO =
  * El subtitulo de cada seccion propia.
  *
  * El de «Ediciones» era en el artboard un conteo —«1 edición»—. **Esa cifra es un dato**, y
- * los datos son de #13: escribirla aqui la convertiria en una afirmacion del producto que
- * nada respalda. Los otros tres no son datos sino descripciones, y se copian tal cual.
+ * los datos no se escriben aqui: escribirla la convertiria en una afirmacion del producto
+ * que nada respalda, y ademas el conteo lo dice ya la propia seccion, que lo ha pedido. Los
+ * otros tres no son datos sino descripciones, y se copian tal cual.
  */
 const SUBTITULOS: Readonly<Record<string, string>> = {
   'nor-ediciones': 'Versiones del conjunto, y su sellado',
@@ -123,6 +128,10 @@ export function Marco() {
   // dejaria el campo en blanco **con el asterisco puesto**. Una por seccion, indexada por su
   // clave: dos pestanas abiertas son dos observaciones distintas.
   const [observaciones, fijarObservaciones] = useState<Readonly<Record<string, string>>>({});
+  // Lo mismo, para «Ediciones»: el buscador, el chip, el orden, la pagina, la edicion abierta,
+  // el paso, lo tecleado y si ya se intento guardar. Es UNA y no una por clave porque la
+  // seccion es una sola; lo que la separa de las demas es que aqui vive el formulario.
+  const [ediciones, fijarEdiciones] = useState<EstadoDeEdiciones>(EDICIONES_AL_EMPEZAR);
 
   const abrir = useCallback((destino: string) => {
     despachar({ tipo: 'abrir', destino });
@@ -363,14 +372,21 @@ export function Marco() {
             alCerrar={(destino) => {
               despachar({ tipo: 'pedir-cierre', destino });
             }}
+            alAbrir={abrir}
             alEnsuciar={() => {
               despachar({ tipo: 'ensuciar' });
             }}
+            alAvisar={fijarToast}
+            ejercicio={ejercicio}
             observacion={activa === null ? '' : (observaciones[activa] ?? '')}
             alEscribirObservacion={(texto) => {
               if (activa !== null) {
                 fijarObservaciones((actuales) => ({ ...actuales, [activa]: texto }));
               }
+            }}
+            ediciones={ediciones}
+            alCambiarEdiciones={(cambio) => {
+              fijarEdiciones((actual) => ({ ...actual, ...cambio }));
             }}
           />
         </div>
