@@ -1,0 +1,81 @@
+/* ============================================================================
+   La familia tipografica de NormativaV6, AUTO-HOSPEDADA.
+   ----------------------------------------------------------------------------
+   **Una sola familia: `Source Sans 3`.** No hay serif de titulares ni
+   monoespaciada de codigos. El artboard declara exactamente esto y nada mas:
+
+       font-family: 'Source Sans 3', system-ui, sans-serif
+
+   Las cifras NO cambian de familia: se alinean con `font-variant-numeric:
+   tabular-nums`, que es lo que el artboard usa en cada columna de importes
+   (`const TDN`) y en el valor de solo lectura de un campo. Una monoespaciada
+   para los numeros seria una familia mas que descargar para resolver algo que
+   una propiedad ya resuelve.
+
+   —— Por que los `woff2` viven aqui dentro ————————————————————————————————
+   El artboard los pide al CDN de Google con un `<link rel="stylesheet"
+   href="https://fonts.googleapis.com/…">`. Aqui NO. Una municipalidad con red
+   mala no deberia depender de un tercero para que su sistema se LEA: sin salida
+   a internet, con el CDN caido o con el dominio bloqueado por el proxy de la
+   entidad, la pagina cae a `system-ui` y el diseno deja de ser el que se aprobo.
+   Y una peticion menos a un dominio ajeno es una cosa menos que explicar sobre
+   quien usa el sistema.
+
+   **Un archivo por SUBCONJUNTO, no uno por peso, y esta medido.** El CSS que
+   Google sirve declara 21 bloques `@font-face` —tres pesos por cada uno de sus
+   siete subconjuntos— y apunta a solo 7 URLs distintas: Source Sans 3 es una
+   fuente VARIABLE, y el mismo `woff2` sirve el 400, el 600 y el 700. Los dos
+   archivos que hay aqui son los mismos bytes que sirve Google (`md5`
+   `fb6579a3…` el `latin` y `60938528…` el `latin-ext`), asi que el rango de peso
+   se declara `400 700` en un solo bloque en vez de bajar tres copias del mismo
+   archivo.
+
+   Se traen `latin` y `latin-ext` y no los siete: el castellano cabe en los dos
+   —las tildes y la enie estan en `latin`; `latin-ext` cubre lo que se cuela en
+   un nombre propio—, y los otros cinco —cirilico, griego, vietnamita— son unos
+   300 KB que nadie iba a pintar.
+
+   `font-display: swap`: el texto se lee desde el primer fotograma con la familia
+   de reserva y cambia cuando la fuente llega. Con el valor por omision
+   (`block`), una ventanilla con red lenta mira un bloque de tres segundos de
+   texto invisible.
+   ============================================================================ */
+
+@font-face {
+  font-family: 'Source Sans 3';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('../../ds/fuentes/source-sans-3-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Source Sans 3';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('../../ds/fuentes/source-sans-3-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308,
+    U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113,
+    U+2C60-2C7F, U+A720-A7FF;
+}
+
+:root {
+  /* La familia de todo, con la reserva del artboard. `system-ui` primero porque
+     es la que ya esta cargada: la reserva tiene que ser rapida, no parecida. */
+  --fuente: 'Source Sans 3', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  /* Los tres pesos que el artboard pide en su `<link>`: `wght@400;600;700`. Ni
+     uno mas: como la fuente es variable, un peso de mas no es una descarga de
+     mas, pero si es una decision de mas que nadie tomo. */
+  --peso-normal: 400;
+  --peso-fuerte: 600;
+  --peso-titulo: 700;
+
+  /* Cifras que se pueden comparar en columna. Va sobre CUALQUIER cifra que se
+     lea junto a otra —un importe, una alicuota, un ejercicio—, no solo sobre las
+     de una tabla. */
+  --cifras: tabular-nums;
+}

@@ -3,6 +3,14 @@ import { createRoot } from 'react-dom/client';
 
 import { Aplicacion } from './aplicacion.tsx';
 
+// **El unico `.css` que se importa en todo el arbol**, y lo comprueba
+// `verificaciones/tokens-del-artboard.test.ts`. Si cada componente trajera su hoja, el
+// orden de la cascada lo decidiria el orden en que Vite resuelve los modulos, que cambia
+// con un `import` movido de sitio: el mismo codigo se veria distinto segun por donde se
+// entrara. Lo que hay detras de esta linea —los cinco archivos de tokens y los
+// componentes, en orden— lo encadena `estilos/estilos.css`.
+import './estilos/estilos.css';
+
 const raiz = document.getElementById('raiz');
 if (raiz === null) {
   // Revienta al principio y con su nombre. Un `raiz!` dejaria la pagina en blanco sin una

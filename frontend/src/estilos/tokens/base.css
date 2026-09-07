@@ -1,0 +1,120 @@
+/* ============================================================================
+   El reinicio de NormativaV6.
+   ----------------------------------------------------------------------------
+   Es el bloque `<style>` de la cabecera del artboard, portado linea a linea. Es
+   el UNICO de los cinco archivos que escribe reglas de verdad: los otros cuatro
+   solo declaran custom properties. Por eso va el ultimo de los cinco en
+   `estilos.css` —lee lo que los otros declaran— y por eso `componentes.css` va
+   despues de el: un componente tiene que poder ganarle al reinicio sin subir a
+   `!important`.
+
+   TRES COSAS DEL ARTBOARD NO SE COPIAN. Las tres estan medidas, y las tres
+   medidas las recalcula `verificaciones/contraste.test.ts` en cada corrida: no
+   son una nota de un dia, son aserciones.
+
+     1. `::placeholder { color: #93A3AF }` pasa a `--tinta-3`. #93A3AF sobre
+        papel blanco da **2.59:1**; un `placeholder` es TEXTO y WCAG 1.4.3 pide
+        4.5:1. `--tinta-3` da 5.51:1 y es un color del artboard, asi que no se
+        inventa ninguno: lo que cambia es cual de los suyos se usa. `--tinta-4`
+        se queda con el valor del artboard para lo que si es decorativo —el
+        trazo del icono de un estado vacio, que siempre lleva su texto al lado—.
+
+     2. `:focus-visible { outline: 2px solid #52BDEF }` pasa a `--azul`. #52BDEF
+        sobre papel blanco da **2.12:1**, y WCAG 1.4.11 pide 3:1 para lo que
+        identifica un ESTADO. `--azul` da 8.26:1, y tampoco es un color nuevo: es
+        el que el propio artboard le pone al borde de un campo enfocado, asi que
+        el foco queda del mismo color en todas partes.
+
+     3. La tercera no esta aqui sino en `componentes.css`, y es la misma causa:
+        la palabra «opcional» de una etiqueta, que el artboard pinta tambien con
+        #93A3AF (2.59:1) y que es texto igual. Se dice aqui para que las tres
+        desviaciones se lean juntas.
+
+   `[data-ancho="1"] { grid-column: 1 / -1 }` del artboard NO se porta a un
+   atributo: se porta a la clase `kn-campo--ancho` de `componentes.css`, que es
+   lo que la prop `ancho` de `Campo` pone. Un atributo de dato en el HTML de la
+   aplicacion seria un segundo vocabulario para decir lo mismo.
+   ============================================================================ */
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--fondo);
+  color: var(--tinta);
+  font-family: var(--fuente);
+  font-size: var(--texto-base);
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+a {
+  color: var(--azul);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+input,
+select,
+textarea,
+button {
+  font: inherit;
+  color: inherit;
+}
+
+/* El indicador de foco. `--azul` y no `--acento`: ver la cabecera. */
+:focus-visible {
+  outline: var(--grosor-foco) solid var(--azul);
+  outline-offset: var(--separacion-foco);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--azul);
+  box-shadow: var(--anillo);
+  outline: none;
+}
+
+/* `--tinta-3` y no `--tinta-4`: ver la cabecera. */
+::placeholder {
+  color: var(--tinta-3);
+  opacity: 1;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--borde-campo);
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--desplazamiento-hover);
+}
+
+/* Quien pidio menos movimiento no recibe animaciones. **Va en el reinicio y no
+   en cada componente**: una animacion nueva no se acuerda de preguntar, y la que
+   se anada manana ya nace apagada aqui. El artboard solo apaga
+   `animation-duration`; aqui se apagan tambien las transiciones y se fija
+   `animation-iteration-count`, porque una animacion infinita de 0.01 ms sigue
+   repintando para siempre. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
