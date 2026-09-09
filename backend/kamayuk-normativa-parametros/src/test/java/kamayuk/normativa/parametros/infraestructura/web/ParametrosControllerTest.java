@@ -331,5 +331,17 @@ class ParametrosControllerTest {
                 String usuario, String acceso, Privilegio privilegio, LocalDate fecha) {
             return false;
         }
+
+        /**
+         * Por omision el sistema SI conoce a la cuenta: asi las pruebas que ya existian siguen
+         * midiendo lo que median —«esta dado de alta y le falta el privilegio»— y no se convierten
+         * en silencio en el caso nuevo (#29 §8).
+         */
+        private boolean conoce = true;
+
+        @Override
+        public boolean conoceAlUsuario(String usuario) {
+            return conoce;
+        }
     }
 }
