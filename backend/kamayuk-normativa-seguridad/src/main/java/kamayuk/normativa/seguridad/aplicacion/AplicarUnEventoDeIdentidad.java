@@ -3,6 +3,7 @@ package kamayuk.normativa.seguridad.aplicacion;
 import java.time.Instant;
 import kamayuk.normativa.seguridad.dominio.consumidor.CopiaLocalDeLaAutorizacion;
 import kamayuk.normativa.seguridad.dominio.consumidor.EventoRecibido;
+import org.jspecify.annotations.Nullable;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,6 +47,14 @@ public class AplicarUnEventoDeIdentidad {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void apartar(EventoRecibido evento, String motivo, Instant cuando) {
         copia.apartar(evento, motivo, cuando);
+    }
+
+    /**
+     * La fila que ese hecho escribe, en clave natural. <b>Sin transaccion a proposito</b>: lee el
+     * cuerpo del hecho y no toca la base, y quien lo llama lo hace ANTES de decidir si abre una.
+     */
+    public @Nullable String filaQueEscribe(EventoRecibido evento) {
+        return copia.filaQueEscribe(evento);
     }
 
     @Transactional(readOnly = true)

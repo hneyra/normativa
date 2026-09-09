@@ -147,7 +147,7 @@ public class ImplantarMunicipalidad implements ApplicationRunner {
             return;
         }
         try {
-            CorrerElConsumidorDeIdentidad.darVueltas(consumidor, log);
+            consumidor.correr();
         } catch (BuzonDeIdentidad.IdentidadNoContesta noContesta) {
             // La municipalidad YA esta implantada —eso se confirmo arriba— y lo que no llego es
             // la frescura de la copia local, que el CronJob del consumidor trae en su siguiente

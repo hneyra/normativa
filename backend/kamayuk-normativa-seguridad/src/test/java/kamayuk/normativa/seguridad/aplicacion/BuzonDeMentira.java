@@ -35,14 +35,24 @@ final class BuzonDeMentira implements AutoCloseable {
     private final AtomicInteger lecturas = new AtomicInteger();
     private volatile int rechazaCon = 0;
 
-    /** Un hecho tal como `identidad` lo publica. */
+    /**
+     * Un hecho publicado. {@code creadoEn} es del EMISOR y por omision es reciente —un minuto antes
+     * del reloj fijo de las pruebas—: la edad de un pospuesto se mide contra el, y con la base
+     * antigua que este doble tenia (las 10:00 contra un reloj de las 12:00) todo hecho habria
+     * nacido con dos horas y el aviso de {@code EDAD_QUE_SE_AVISA} habria saltado en todas las
+     * pruebas, que es lo contrario de una guarda que se pueda demostrar.
+     */
     record Evento(
             UUID eventoId,
             long secuencia,
             String tipo,
             long sujetoId,
             String cuerpo,
-            String huella) {}
+            String huella,
+            Instant creadoEn) {}
+
+    /** El reloj de las pruebas menos un minuto: un hecho «recien publicado». */
+    static final Instant RECIEN = Instant.parse("2026-09-09T11:59:00Z");
 
     private BuzonDeMentira(JsonMapper json) throws IOException {
         this.json = json;
@@ -59,8 +69,14 @@ final class BuzonDeMentira implements AutoCloseable {
 
     /** Publica un hecho con el cuerpo dado; devuelve su identificador. */
     UUID publicar(long secuencia, String tipo, long sujetoId, String cuerpo) {
+        return publicar(secuencia, tipo, sujetoId, cuerpo, RECIEN);
+    }
+
+    /** Igual, pero diciendo CUANDO lo publico el emisor: es lo que mide la edad de un pospuesto. */
+    UUID publicar(long secuencia, String tipo, long sujetoId, String cuerpo, Instant creadoEn) {
         UUID id = UUID.randomUUID();
-        publicados.add(new Evento(id, secuencia, tipo, sujetoId, cuerpo, huellaDe(cuerpo)));
+        publicados.add(
+                new Evento(id, secuencia, tipo, sujetoId, cuerpo, huellaDe(cuerpo), creadoEn));
         return id;
     }
 
@@ -128,16 +144,17 @@ final class BuzonDeMentira implements AutoCloseable {
                         .append(",\"huella\":\"")
                         .append(e.huella())
                         .append("\",\"creadoEn\":\"")
-                        .append(Instant.parse("2026-09-09T10:00:00Z").plusSeconds(e.secuencia()))
+                        .append(e.creadoEn())
                         .append("\"}");
             }
             eventos.append(']');
+            // `quedan` cuenta la cola ENTERA, incluidos los de esta pagina: es lo que el emisor
+            // publica —«cuantos le faltan en total, contando los de esta pagina. Es su retraso»,
+            // `EventosController.LoteDeEventosResource`— y lo que hace que la cifra del lote NO
+            // sirva como «quedan» al final de una vuelta (H6). Este doble restaba la pagina, y con
+            // eso la rotura de H6 pasaba en VERDE: el instrumento mentia sobre el campo medido.
             return ServidorDeMentira.Respuesta.ok(
-                    "{\"eventos\":"
-                            + eventos
-                            + ",\"quedan\":"
-                            + (sinAcusar.size() - pagina.size())
-                            + "}");
+                    "{\"eventos\":" + eventos + ",\"quedan\":" + sinAcusar.size() + "}");
         }
         if (ruta.startsWith(ACUSES)) {
             JsonNode peticion = json.readTree(cuerpo);

@@ -9,8 +9,13 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Profile;
 
 /**
- * El proceso que el {@code CronJob} despierta cada cinco minutos: vueltas acotadas sobre el buzon
- * de {@code identidad} hasta que una no avance (etapa 4 de ADR-0039).
+ * El proceso que el {@code CronJob} despierta cada cinco minutos: una corrida del consumidor sobre
+ * el buzon de {@code identidad} (etapa 4 de ADR-0039).
+ *
+ * <p>Las vueltas, el corte por «sin progreso» y el aviso de lo que lleva demasiado pospuesto son de
+ * {@link ConsumirEventosDeIdentidad#correr()}, y no de aqui: la implantacion hace <b>la misma</b>
+ * pasada al terminar de sembrar, y dos bucles con las mismas reglas escritos en dos sitios se
+ * separan.
  *
  * <p>Vive en el perfil {@code batch} y solo existe cuando el despliegue dice de que municipalidad
  * es este consumidor ({@code kamayuk.identidad.consumidor.municipalidad}): el proceso web no
@@ -25,12 +30,6 @@ public class CorrerElConsumidorDeIdentidad implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(CorrerElConsumidorDeIdentidad.class);
 
-    /**
-     * Cincuenta vueltas de doscientos son diez mil hechos por corrida. Es una cota, no una
-     * expectativa: la corrida acaba a proposito en vez de no acabar, y la siguiente sigue.
-     */
-    private static final int VUELTAS_MAXIMAS = 50;
-
     private final ConsumirEventosDeIdentidad consumidor;
     private final long municipalidadId;
 
@@ -44,34 +43,18 @@ public class CorrerElConsumidorDeIdentidad implements ApplicationRunner {
     public void run(ApplicationArguments argumentos) {
         TenantContext.fijar(new MunicipalidadId(municipalidadId));
         try {
-            darVueltas(consumidor, log);
+            ConsumirEventosDeIdentidad.Corrida corrida = consumidor.correr();
+            log.info(
+                    "Corrida del consumidor de `identidad`: {} vuelta(s), {} aplicados, {}"
+                            + " apartados, {} pospuestos ({} avisados por llevar demasiado"
+                            + " esperando)",
+                    corrida.vueltas(),
+                    corrida.aplicados(),
+                    corrida.apartados(),
+                    corrida.pospuestos().size(),
+                    corrida.avisados().size());
         } finally {
             TenantContext.limpiar();
         }
-    }
-
-    /**
-     * Las vueltas, con el contexto de tenant ya fijado por quien llama.
-     *
-     * <p>Es {@code static} y publico para que la implantacion haga la misma pasada con las mismas
-     * reglas, sin necesitar un segundo runner ni copiar el bucle.
-     *
-     * @throws BuzonDeIdentidad.IdentidadNoContesta si el buzon no contesta: la corrida se corta SIN
-     *     acusar nada y sale distinta de cero. Es transitorio y la invocacion siguiente lo
-     *     reintenta; tragarselo dejaria el {@code CronJob} en verde con la copia parada
-     */
-    public static void darVueltas(ConsumirEventosDeIdentidad consumidor, Logger registro) {
-        for (int vuelta = 1; vuelta <= VUELTAS_MAXIMAS; vuelta++) {
-            ConsumirEventosDeIdentidad.Vuelta resultado = consumidor.consumir();
-            registro.info("Vuelta {}: {}", vuelta, resultado);
-            if (resultado.sinProgreso()) {
-                return;
-            }
-        }
-        registro.warn(
-                "Se agotaron las {} vueltas y el buzon de `identidad` sigue teniendo hechos. No es"
-                        + " un fallo: la corrida acaba a proposito en vez de no acabar. La siguiente"
-                        + " invocacion sigue por donde esta se quedo",
-                VUELTAS_MAXIMAS);
     }
 }

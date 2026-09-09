@@ -11,6 +11,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -423,8 +424,8 @@ class ConsumidorDeIdentidadJdbcTest {
 
         @Test
         @DisplayName(
-                "AC-7 (3): HOY NO —lo que nombra no llego— NO se acusa, NO se aparta, y la vuelta se corta en orden")
-        void hoyNoSePostergaSinAcusar() throws Exception {
+                "AC-7 (3): HOY NO —lo que nombra no llego— NO se acusa, NO se aparta, y lo que va DETRAS si entra")
+        void hoyNoSePosponeSinAcusar() throws Exception {
             BuzonDeMentira buzon = buzon();
             // La secuencia se asigna al INSERT y no al COMMIT (V2 de `identidad`): el hecho 2
             // puede quedar visible antes que el 1 si aquel tardo mas en confirmar.
@@ -435,41 +436,174 @@ class ConsumidorDeIdentidadJdbcTest {
 
             ConsumirEventosDeIdentidad.Vuelta primera = consumidor.consumir();
 
-            assertThat(primera.postergado())
+            assertThat(primera.pospuesto())
                     .as(
-                            "[AC-7 (3)] la afiliacion cuyo grupo no llego se POSTERGA —la vuelta la"
+                            "[AC-7 (3)] la afiliacion cuyo grupo no llego se POSPONE —la vuelta la"
                                     + " nombra y no la acusa— y no se aparta: apartada, `identidad`"
                                     + " ya no la sirve y el grupo que llegue despues se queda sin su"
                                     + " miembro para siempre, sin un solo error")
                     .isEqualTo(afiliacion);
-            assertThat(primera.sinProgreso()).isTrue();
             assertThat(buzon.acusados())
-                    .as("[AC-7 (3)] postergado NO es acusado: `identidad` lo vuelve a servir")
-                    .isEmpty();
+                    .as("[AC-7 (3)] pospuesto NO es acusado: `identidad` lo vuelve a servir")
+                    .doesNotContain(afiliacion.toString());
             assertThat(filas("identidad_evento_muerto", "true", municipalidadA))
                     .as(
-                            "[AC-7 (3)] postergado NO es apartado: el hecho esta bien, falta lo de antes")
+                            "[AC-7 (3)] pospuesto NO es apartado: el hecho esta bien, falta lo de antes")
                     .isEmpty();
-            assertThat(AVISOS).as("y no se avisa: no hay nada roto que atender").isEmpty();
             assertThat(filas("usuario", "cuenta = 'detras'", municipalidadA))
-                    .as("la vuelta se corta EN ORDEN: lo que va detras espera")
+                    .as(
+                            "[el ensayo de AC-5/AC-6 midio lo contrario: cortar la vuelta aqui dejaba"
+                                    + " esta alta —que no depende de nada— sin entrar, y con ella"
+                                    + " cualquier cambio posterior, hasta que el grupo perdido"
+                                    + " volviera. Una fila perdida congelaba la autorizacion entera]")
+                    .hasSize(1);
+            assertThat(primera.aplicados()).isEqualTo(1);
+            assertThat(buzon.acusados())
+                    .as("y lo que si se pudo aplicar se acusa, o volveria en cada vuelta")
+                    .contains(detras.toString());
+            assertThat(primera.sinProgreso())
+                    .as("hubo progreso: la vuelta siguiente traera cosas nuevas")
+                    .isFalse();
+            assertThat(AVISOS)
+                    .as(
+                            "y no se avisa TODAVIA: un pospuesto reciente es una carrera, no una averia")
                     .isEmpty();
             assertThat(ANOTADOS.list)
                     .anySatisfy(
                             linea ->
                                     assertThat(linea.getFormattedMessage())
-                                            .contains("POSTERGADO")
+                                            .contains("POSPUESTO")
                                             .contains("Recaudacion")
                                             .contains("acruz"));
 
-            // Llegan los que iban delante, y la vuelta siguiente aplica los cuatro en orden.
+            // Llegan los que iban delante, y la vuelta siguiente aplica los que faltaban.
             buzon.publicar(0, "USUARIO_DADO_DE_ALTA", 9, usuario("acruz", true));
             buzon.publicar(1, "GRUPO_DADO_DE_ALTA", 3, grupo("Recaudacion"));
             ConsumirEventosDeIdentidad.Vuelta segunda = consumidor.consumir();
 
-            assertThat(segunda.aplicados()).isEqualTo(4);
-            assertThat(segunda.postergado()).isNull();
+            assertThat(segunda.aplicados()).isEqualTo(3);
+            assertThat(segunda.pospuesto()).isNull();
             assertThat(buzon.acusados()).contains(afiliacion.toString(), detras.toString());
+        }
+
+        @Test
+        @DisplayName(
+                "y el orden DENTRO de una fila se conserva: lo que escribe la misma fila que un pospuesto espera")
+        void elOrdenDeUnaMismaFilaSeConserva() throws Exception {
+            // El caso que se midio antes de decidir, y es el unico en que seguir con lo de detras
+            // deja la copia diciendo algo FALSO —no desordenado—: esta copia perdio el grupo (lo
+            // mismo que el ensayo de AC-5/AC-6 provoco renombrando la fila a mano), asi que la
+            // afiliacion se pospone; el GRUPO_MODIFICADO que viene detras lo vuelve a crear, y la
+            // DESAFILIACION de ese mismo par se podria aplicar ya. Si se aplicara, la vuelta
+            // siguiente aplicaria la afiliacion pospuesta ENCIMA y la copia diria que esa cuenta
+            // esta en un grupo del que `identidad` la saco.
+            BuzonDeMentira buzon = buzon();
+            buzon.publicar(1, "USUARIO_DADO_DE_ALTA", 9, usuario("rquispe2", true));
+            UUID afiliacion =
+                    buzon.publicar(
+                            2, "MIEMBRO_AFILIADO", 3, miembro("Fiscalizacion", "rquispe2", true));
+            buzon.publicar(3, "GRUPO_MODIFICADO", 3, grupo("Fiscalizacion"));
+            UUID desafiliacion =
+                    buzon.publicar(
+                            4,
+                            "MIEMBRO_DESAFILIADO",
+                            3,
+                            miembro("Fiscalizacion", "rquispe2", false));
+            UUID ajeno =
+                    buzon.publicar(5, "USUARIO_DADO_DE_ALTA", 10, usuario("ni-va-ni-viene", true));
+            ConsumirEventosDeIdentidad consumidor = consumidorDe(buzon);
+
+            ConsumirEventosDeIdentidad.Vuelta primera = consumidor.consumir();
+
+            assertThat(primera.pospuestos().stream().map(EventoRecibido::eventoId))
+                    .as(
+                            "[la desafiliacion escribe LA MISMA FILA que la afiliacion pospuesta, asi"
+                                    + " que espera con ella. Aplicada aqui, la vuelta siguiente le"
+                                    + " pondria encima la afiliacion y la copia diria que rquispe2 esta"
+                                    + " en un grupo del que `identidad` lo saco: no desordenada, FALSA]")
+                    .containsExactly(afiliacion, desafiliacion);
+            assertThat(buzon.acusados())
+                    .as("y lo que no toca esa fila sigue entrando")
+                    .contains(ajeno.toString())
+                    .doesNotContain(afiliacion.toString(), desafiliacion.toString());
+            assertThat(filas("grupo", "nombre = 'Fiscalizacion'", municipalidadA))
+                    .as("el grupo que faltaba SI se aplico: es otra fila")
+                    .hasSize(1);
+
+            ConsumirEventosDeIdentidad.Vuelta segunda = consumidor.consumir();
+
+            assertThat(segunda.aplicados()).isEqualTo(2);
+            assertThat(
+                            consultar(
+                                    "SELECT m.activo::text FROM miembro m"
+                                            + " JOIN grupo g ON g.id = m.grupo_id"
+                                            + "   AND g.municipalidad_id = m.municipalidad_id"
+                                            + " WHERE m.municipalidad_id = "
+                                            + municipalidadA
+                                            + " AND g.nombre = 'Fiscalizacion'"))
+                    .as(
+                            "afiliado y despues desafiliado, EN ESE ORDEN: la copia dice lo que dice el emisor")
+                    .containsExactly("false");
+        }
+
+        @Test
+        @DisplayName(
+                "un pospuesto de mas de quince minutos avisa UNA vez por corrida, con su lista")
+        void unPospuestoViejoAvisaUnaVezPorCorrida() throws Exception {
+            BuzonDeMentira buzon = buzon();
+            Instant hace20 = AHORA.minus(Duration.ofMinutes(20));
+            buzon.publicar(1, "MIEMBRO_AFILIADO", 31, miembro("Perdido", "vsalas", true), hace20);
+            buzon.publicar(
+                    2, "PERMISO_FIJADO", 31, permiso("normativa", OPCION, "Perdido", true), hace20);
+
+            ConsumirEventosDeIdentidad.Corrida corrida = consumidorDe(buzon).correr();
+
+            assertThat(corrida.pospuestos()).hasSize(2);
+            assertThat(corrida.avisados()).hasSize(2);
+            assertThat(AVISOS)
+                    .as(
+                            "[UNO por corrida y no uno por hecho: lo que hay que atender es que esta"
+                                    + " copia lleva un rato sin poder aplicar lo que le llega. El ensayo"
+                                    + " de AC-5/AC-6 midio CERO avisos en dos corridas (H7)]")
+                    .hasSize(1);
+            assertThat(AVISOS.get(0))
+                    .contains("Quien atiende")
+                    .contains("MIEMBRO_AFILIADO")
+                    .contains("PERMISO_FIJADO")
+                    .contains("secuencia 1")
+                    .contains("secuencia 2")
+                    .contains("20 min esperando");
+        }
+
+        @Test
+        @DisplayName("y uno de dos minutos NO avisa: todavia es una carrera, no una averia")
+        void unPospuestoRecienteNoAvisa() throws Exception {
+            BuzonDeMentira buzon = buzon();
+            buzon.publicar(
+                    1,
+                    "MIEMBRO_AFILIADO",
+                    32,
+                    miembro("Perdido", "vsalas", true),
+                    AHORA.minus(Duration.ofMinutes(2)));
+
+            ConsumirEventosDeIdentidad.Corrida corrida = consumidorDe(buzon).correr();
+
+            assertThat(corrida.pospuestos()).hasSize(1);
+            assertThat(corrida.avisados()).isEmpty();
+            assertThat(AVISOS).isEmpty();
+        }
+
+        @Test
+        @DisplayName("y una corrida sin pospuestos tampoco avisa")
+        void unaCorridaLimpiaNoAvisa() throws Exception {
+            BuzonDeMentira buzon = buzon();
+            buzon.publicar(1, "USUARIO_DADO_DE_ALTA", 33, usuario("sin-lios", true));
+
+            ConsumirEventosDeIdentidad.Corrida corrida = consumidorDe(buzon).correr();
+
+            assertThat(corrida.aplicados()).isEqualTo(1);
+            assertThat(corrida.pospuestos()).isEmpty();
+            assertThat(AVISOS).isEmpty();
         }
 
         @Test
@@ -636,10 +770,10 @@ class ConsumidorDeIdentidadJdbcTest {
                         }
 
                         @Override
-                        public void acusar(List<UUID> eventoIds) {
+                        public long acusar(List<UUID> eventoIds) {
                             List<UUID> deMas = new ArrayList<>(eventoIds);
                             deMas.add(UUID.randomUUID());
-                            fuente.acusar(deMas);
+                            return fuente.acusar(deMas);
                         }
                     };
 
@@ -654,6 +788,56 @@ class ConsumidorDeIdentidadJdbcTest {
         }
     }
 
+    @Test
+    @DisplayName("«quedan» se cuenta DESPUES del acuse, y no al servir la pagina")
+    void quedanSeCuentaTrasElAcuse() throws Exception {
+        BuzonDeMentira buzon = buzon();
+        for (int i = 1; i <= 3; i++) {
+            buzon.publicar(i, "USUARIO_DADO_DE_ALTA", i, usuario("quedan-" + i, true));
+        }
+
+        ConsumirEventosDeIdentidad.Vuelta vuelta = consumidorDe(buzon).consumir();
+
+        assertThat(vuelta.acusados()).isEqualTo(3);
+        assertThat(vuelta.quedan())
+                .as(
+                        "[H6 del ensayo de AC-5/AC-6: el «quedan» del lote se cuenta al SERVIR la"
+                                + " pagina, o sea antes del acuse, y por eso una vuelta que acusaba"
+                                + " 174 decia «174 acusados; quedan 174»]")
+                .isZero();
+        assertThat(vuelta.toString()).contains("quedan 0");
+    }
+
+    @Test
+    @DisplayName(
+            "los hechos de otro sistema se cuentan en UNA linea por vuelta, no en una por hecho")
+    void losAjenosSeResumenEnUnaLinea() throws Exception {
+        BuzonDeMentira buzon = buzon();
+        buzon.publicar(1, "GRUPO_DADO_DE_ALTA", 3, grupo("Ajenos"));
+        for (int i = 2; i <= 6; i++) {
+            buzon.publicar(
+                    i, "PERMISO_FIJADO", i, permiso("rentas", "opcion-" + i, "Ajenos", true));
+        }
+
+        ConsumirEventosDeIdentidad.Vuelta vuelta = consumidorDe(buzon).consumir();
+
+        assertThat(vuelta.ignorados()).isEqualTo(5);
+        assertThat(
+                        ANOTADOS.list.stream()
+                                .filter(l -> l.getFormattedMessage().contains("IGNORADOS"))
+                                .toList())
+                .as(
+                        "[H6: una implantacion entera producia 161 lineas de WARN, una por permiso"
+                                + " ajeno. Lo que se lee de un registro asi es nada]")
+                .hasSize(1)
+                .first()
+                .satisfies(
+                        linea ->
+                                assertThat(linea.getFormattedMessage())
+                                        .contains("5 hecho(s) IGNORADOS")
+                                        .contains("PERMISO_FIJADO/2"));
+    }
+
     // ------------------------------------------------------------------ el runner
 
     @Test
@@ -662,12 +846,11 @@ class ConsumidorDeIdentidadJdbcTest {
         BuzonDeMentira buzon = buzon();
         buzon.publicar(1, "MIEMBRO_AFILIADO", 3, miembro("Nunca llega", "nadie", true));
 
-        CorrerElConsumidorDeIdentidad.darVueltas(
-                consumidorDe(buzon), org.slf4j.LoggerFactory.getLogger("prueba"));
+        consumidorDe(buzon).correr();
 
         assertThat(buzon.lecturas())
                 .as(
-                        "un hecho postergado no se acusa y volveria en cada vuelta: se para a la primera")
+                        "un hecho pospuesto no se acusa y volveria en cada vuelta: se para a la primera")
                 .isEqualTo(1);
     }
 
@@ -680,8 +863,7 @@ class ConsumidorDeIdentidadJdbcTest {
             buzon.publicar(i, "USUARIO_DADO_DE_ALTA", i, usuario("cuenta-" + i, true));
         }
 
-        CorrerElConsumidorDeIdentidad.darVueltas(
-                consumidorDe(buzon), org.slf4j.LoggerFactory.getLogger("prueba"));
+        consumidorDe(buzon).correr();
 
         assertThat(buzon.pendientes()).isZero();
         assertThat(buzon.lecturas()).isEqualTo(3);

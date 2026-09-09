@@ -82,9 +82,9 @@ public class ClienteHttpDelBuzonDeIdentidad implements BuzonDeIdentidad {
     }
 
     @Override
-    public void acusar(List<UUID> eventoIds) {
+    public long acusar(List<UUID> eventoIds) {
         if (eventoIds.isEmpty()) {
-            return;
+            return 0;
         }
         List<String> ids = new ArrayList<>();
         for (UUID id : eventoIds) {
@@ -119,6 +119,9 @@ public class ClienteHttpDelBuzonDeIdentidad implements BuzonDeIdentidad {
                             + " al acusar. Los hechos SI estan aplicados aqui: se volveran a"
                             + " servir y se descartaran por deduplicacion");
         }
+        // `quedan` DESPUES del acuse, que es lo que el contrato publica en esta respuesta. El del
+        // lote se cuenta al servir la pagina, o sea antes (H6).
+        return leerJson(respuesta.body(), "leer el acuse").path("quedan").asLong(0L);
     }
 
     // ------------------------------------------------------------------
@@ -159,8 +162,12 @@ public class ClienteHttpDelBuzonDeIdentidad implements BuzonDeIdentidad {
             throw new IdentidadNoContesta(
                     "`identidad` contesto " + respuesta.statusCode() + " al " + que);
         }
+        return leerJson(respuesta.body(), que);
+    }
+
+    private JsonNode leerJson(String cuerpo, String que) {
         try {
-            return json.readTree(respuesta.body());
+            return json.readTree(cuerpo);
         } catch (JacksonException ilegible) {
             throw new IdentidadNoContesta(
                     "`identidad` contesto algo que no es JSON al " + que, ilegible);

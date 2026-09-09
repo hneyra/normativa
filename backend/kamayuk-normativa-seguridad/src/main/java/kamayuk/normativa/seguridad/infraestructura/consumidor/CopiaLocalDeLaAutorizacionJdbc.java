@@ -124,6 +124,43 @@ public class CopiaLocalDeLaAutorizacionJdbc extends RepositorioJdbc
     }
 
     @Override
+    public @Nullable String filaQueEscribe(EventoRecibido evento) {
+        TipoDeEventoDeIdentidad tipo = evento.tipo();
+        if (tipo == null) {
+            return null;
+        }
+        JsonNode cuerpo;
+        try {
+            cuerpo = json.readTree(evento.cuerpo());
+        } catch (JacksonException noEsJson) {
+            return null;
+        }
+        if (!cuerpo.isObject()) {
+            return null;
+        }
+        return switch (tipo) {
+            case USUARIO_DADO_DE_ALTA, USUARIO_MODIFICADO ->
+                    "usuario:" + cuerpo.path("cuenta").asString("");
+            case GRUPO_DADO_DE_ALTA, GRUPO_MODIFICADO ->
+                    "grupo:" + cuerpo.path("nombre").asString("");
+            case MIEMBRO_AFILIADO, MIEMBRO_DESAFILIADO ->
+                    "miembro:"
+                            + cuerpo.path("grupoNombre").asString("")
+                            + "/"
+                            + cuerpo.path("usuarioCuenta").asString("");
+            case PERMISO_FIJADO ->
+                    "permiso:"
+                            + cuerpo.path("sujeto").asString("")
+                            + "/"
+                            + cuerpo.path("sujetoNombre").asString("")
+                            + "/"
+                            + cuerpo.path("sistema").asString("")
+                            + "/"
+                            + cuerpo.path("codigo").asString("");
+        };
+    }
+
+    @Override
     public long apartadosSinExplicar() {
         return jdbc().sql(
                         "SELECT count(*) FROM identidad_evento_muerto"

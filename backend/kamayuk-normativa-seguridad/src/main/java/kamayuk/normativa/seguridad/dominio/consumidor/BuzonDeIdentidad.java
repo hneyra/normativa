@@ -28,12 +28,18 @@ public interface BuzonDeIdentidad {
     Lote pendientes(int limite);
 
     /**
-     * Retira del buzon lo que YA ESTA aplicado o apartado aqui.
+     * Retira del buzon lo que YA ESTA aplicado o apartado aqui, y devuelve <b>cuantos quedan
+     * DESPUES</b> del acuse.
      *
      * <p>Solo despues del {@code COMMIT}: lo acusado no se vuelve a servir, asi que acusar antes de
      * confirmar convierte un fallo del commit en un hecho perdido para siempre.
+     *
+     * <p>El «quedan» sale de aqui y no de {@link Lote#quedan()} por una medida: aquel se cuenta
+     * cuando se SIRVE la pagina, o sea antes del acuse, y por eso una vuelta que acusaba 174 decia
+     * «174 acusados; quedan 174» —H6 del ensayo de AC-5/AC-6—. Los dos numeros son ciertos y hablan
+     * de instantes distintos; el que interesa al final de una vuelta es este.
      */
-    void acusar(List<UUID> eventoIds);
+    long acusar(List<UUID> eventoIds);
 
     /** Una pagina del buzon, con cuantos quedan detras. */
     record Lote(List<EventoRecibido> eventos, long quedan) {}

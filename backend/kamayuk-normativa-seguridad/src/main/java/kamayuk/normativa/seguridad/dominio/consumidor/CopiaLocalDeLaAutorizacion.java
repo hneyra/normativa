@@ -1,6 +1,7 @@
 package kamayuk.normativa.seguridad.dominio.consumidor;
 
 import java.time.Instant;
+import org.jspecify.annotations.Nullable;
 
 /**
  * La copia local de la autorizacion —{@code usuario}, {@code grupo}, {@code miembro}, {@code
@@ -41,6 +42,22 @@ public interface CopiaLocalDeLaAutorizacion {
 
     /** Cuantos apartados sigue sin mirar nadie. Es la cifra que lleva el aviso. */
     long apartadosSinExplicar();
+
+    /**
+     * La FILA de esta copia que ese hecho escribe, en clave natural —{@code usuario:jperez}, {@code
+     * grupo:Caja}, {@code miembro:Caja/jperez}, {@code permiso:GRUPO/Caja/normativa/…}—, o {@code
+     * null} si el hecho no se puede leer (que es un caso de {@link NoSePuedeAplicar} y lo decide
+     * {@link #aplicar}, no este metodo).
+     *
+     * <p><b>Existe por una sola cosa: para conservar el orden DENTRO de una fila</b> cuando la
+     * vuelta sigue con los hechos que van detras de uno pospuesto. Sin ella, una afiliacion
+     * pospuesta y su desafiliacion posterior se aplicarian al reves y la copia acabaria diciendo
+     * que alguien es miembro de un grupo del que {@code identidad} ya lo saco: no «desordenada»,
+     * <b>falsa</b>. Esta medido, con su rotura, en {@code ConsumidorDeIdentidadJdbcTest}.
+     *
+     * <p>No toca la base: lee el cuerpo del hecho y nada mas.
+     */
+    @Nullable String filaQueEscribe(EventoRecibido evento);
 
     /** Lo que paso con un hecho que SI se acusa. */
     enum Aplicacion {

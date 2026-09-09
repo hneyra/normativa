@@ -122,6 +122,51 @@ class AvisoAlResponsableTest {
     }
 
     @Test
+    @DisplayName(
+            "el aviso de los pospuestos viejos nombra tipo, sujeto, secuencia y edad de cada uno")
+    void elAvisoDeLosPospuestosLosNombra() {
+        AlertaAlCanalDelResponsable alerta =
+                new AlertaAlCanalDelResponsable(
+                        json,
+                        new ResponsableDeLaCopiaLocal(
+                                "Equipo de operacion", "operaciones@example.pe"));
+        Instant cuando = Instant.parse("2026-09-09T12:00:00Z");
+
+        alerta.hayEventosPospuestosDesdeHaceRato(
+                List.of(
+                        pospuesto("MIEMBRO_AFILIADO", 31, 77, cuando.minusSeconds(20 * 60)),
+                        pospuesto("PERMISO_FIJADO", 31, 78, cuando.minusSeconds(31 * 60))),
+                cuando);
+
+        assertThat(ANOTADOS.list).hasSize(1);
+        assertThat(ANOTADOS.list.get(0).getFormattedMessage())
+                .contains("2 hecho(s) de `identidad` estan pospuestos")
+                .contains("mas de 15 minutos")
+                .contains("MIEMBRO_AFILIADO sujeto 31, secuencia 77, 20 min esperando")
+                .contains("PERMISO_FIJADO sujeto 31, secuencia 78, 31 min esperando")
+                .contains("Equipo de operacion <operaciones@example.pe>");
+        assertThat(ENTREGADOS).as("a un correo no se le entrega nada por HTTP").isEmpty();
+    }
+
+    @Test
+    @DisplayName("y con un canal http(s) ese mismo aviso se entrega una sola vez")
+    void elAvisoDeLosPospuestosSeEntregaUnaVez() {
+        AlertaAlCanalDelResponsable alerta =
+                new AlertaAlCanalDelResponsable(
+                        json, new ResponsableDeLaCopiaLocal("Quien atiende", canal.raiz()));
+        Instant cuando = Instant.parse("2026-09-09T12:00:00Z");
+
+        alerta.hayEventosPospuestosDesdeHaceRato(
+                List.of(pospuesto("MIEMBRO_AFILIADO", 31, 77, cuando.minusSeconds(16 * 60))),
+                cuando);
+
+        assertThat(ENTREGADOS).hasSize(1);
+        assertThat(ENTREGADOS.get(0))
+                .contains("\"motivo\":\"pospuestos desde hace rato\"")
+                .contains("\"apartadosSinExplicar\":1");
+    }
+
+    @Test
     @DisplayName("un canal que no contesta NO tumba la vuelta: se registra y se sigue")
     void unCanalQueNoContestaNoTumba() {
         AlertaAlCanalDelResponsable alerta =
@@ -146,6 +191,12 @@ class AvisoAlResponsableTest {
         assertThatThrownBy(() -> new ResponsableDeLaCopiaLocal("Quien atiende", ""))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining(".canal");
+    }
+
+    private static EventoRecibido pospuesto(
+            String tipo, long sujetoId, long secuencia, Instant creadoEn) {
+        return new EventoRecibido(
+                UUID.randomUUID(), secuencia, tipo, sujetoId, "{}", "b".repeat(64), creadoEn);
     }
 
     private static EventoRecibido evento() {

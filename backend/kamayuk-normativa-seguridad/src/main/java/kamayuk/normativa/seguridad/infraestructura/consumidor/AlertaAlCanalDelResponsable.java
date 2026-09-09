@@ -6,7 +6,10 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.time.Instant;
+import java.util.List;
 import kamayuk.normativa.seguridad.aplicacion.AlertaDeEventosSinAplicar;
+import kamayuk.normativa.seguridad.aplicacion.ConsumirEventosDeIdentidad;
 import kamayuk.normativa.seguridad.dominio.consumidor.EventoRecibido;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,6 +70,43 @@ public class AlertaAlCanalDelResponsable implements AlertaDeEventosSinAplicar {
                             evento.eventoId().toString(),
                             motivo,
                             apartadosSinExplicar,
+                            texto));
+        }
+    }
+
+    @Override
+    public void hayEventosPospuestosDesdeHaceRato(List<EventoRecibido> pospuestos, Instant cuando) {
+        StringBuilder lista = new StringBuilder();
+        for (EventoRecibido pospuesto : pospuestos) {
+            lista.append(lista.isEmpty() ? "" : "; ")
+                    .append(pospuesto.tipoPublicado())
+                    .append(" sujeto ")
+                    .append(pospuesto.sujetoId())
+                    .append(", secuencia ")
+                    .append(pospuesto.secuencia())
+                    .append(", ")
+                    .append(Duration.between(pospuesto.creadoEn(), cuando).toMinutes())
+                    .append(" min esperando");
+        }
+        String texto =
+                "LA COPIA LOCAL DE LA AUTORIZACION LLEVA RATO SIN PODER APLICAR LO QUE LE LLEGA: "
+                        + pospuestos.size()
+                        + " hecho(s) de `identidad` estan pospuestos desde hace mas de "
+                        + ConsumirEventosDeIdentidad.EDAD_QUE_SE_AVISA.toMinutes()
+                        + " minutos porque nombran algo que esta copia no conoce —un grupo o una"
+                        + " cuenta que tenia que haber llegado antes—. No se pierden: `identidad`"
+                        + " los sigue sirviendo. Lo que hay que mirar es por que lo que iba delante"
+                        + " no esta, y mientras tanto lo que ellos dicen no rige aqui: "
+                        + lista
+                        + " (ADR-0039).";
+        REGISTRO.error("{} Responsable: {}", texto, responsable);
+        if (responsable.seLeEntrega()) {
+            entregar(
+                    new Aviso(
+                            responsable.nombre(),
+                            pospuestos.get(0).eventoId().toString(),
+                            "pospuestos desde hace rato",
+                            pospuestos.size(),
                             texto));
         }
     }
