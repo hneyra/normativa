@@ -1,8 +1,7 @@
 package kamayuk.normativa.seguridad.aplicacion;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.ServerSocket;
@@ -67,40 +66,36 @@ final class ServidorDeMentira implements AutoCloseable {
         }
     }
 
+    /**
+     * Lee la peticion EN BYTES y no en caracteres: {@code Content-Length} cuenta bytes, y un cuerpo
+     * con una tilde o un guion largo tiene mas bytes que caracteres. La primera version leia {@code
+     * largo} CARACTERES con un {@code BufferedReader}, asi que con cualquier cuerpo no ASCII se
+     * quedaba esperando lo que nunca iba a llegar, el cliente agotaba su espera y la respuesta solo
+     * salia cuando el cliente cerraba —o sea, un aviso que «se entregaba» diez segundos despues de
+     * que el remitente lo diera por perdido—.
+     */
     @SuppressWarnings("checkstyle:IllegalCatch")
     private void contestar(Socket conexion) {
         try (Socket abierta = conexion;
-                BufferedReader entrada =
-                        new BufferedReader(
-                                new InputStreamReader(
-                                        abierta.getInputStream(), StandardCharsets.UTF_8));
+                InputStream entrada = abierta.getInputStream();
                 OutputStream salida = abierta.getOutputStream()) {
-            String peticion = entrada.readLine();
+            String peticion = leerLinea(entrada);
             if (peticion == null) {
                 return;
             }
             String ruta = peticion.split(" ")[1];
             int largo = 0;
             String linea;
-            while ((linea = entrada.readLine()) != null && !linea.isEmpty()) {
+            while ((linea = leerLinea(entrada)) != null && !linea.isEmpty()) {
                 if (linea.toLowerCase(Locale.ROOT).startsWith("content-length:")) {
                     largo = Integer.parseInt(linea.substring(linea.indexOf(':') + 1).strip());
                 }
             }
-            char[] cuerpo = new char[largo];
-            if (largo > 0) {
-                int leidos = 0;
-                while (leidos < largo) {
-                    int ahora = entrada.read(cuerpo, leidos, largo - leidos);
-                    if (ahora < 0) {
-                        break;
-                    }
-                    leidos += ahora;
-                }
-            }
+            byte[] cuerpoEnBytes = largo > 0 ? entrada.readNBytes(largo) : new byte[0];
+            String cuerpo = new String(cuerpoEnBytes, StandardCharsets.UTF_8);
             Respuesta respuesta;
             try {
-                respuesta = responder.apply(ruta, new String(cuerpo));
+                respuesta = responder.apply(ruta, cuerpo);
             } catch (RuntimeException fallo) {
                 respuesta =
                         new Respuesta(
@@ -119,5 +114,22 @@ final class ServidorDeMentira implements AutoCloseable {
         } catch (IOException seCorto) {
             // El cliente cerro antes de leer. No es un fallo de la prueba.
         }
+    }
+
+    /** Una linea de cabecera, terminada en CRLF, en bytes. {@code null} si la conexion se cerro. */
+    private static String leerLinea(InputStream entrada) throws IOException {
+        StringBuilder linea = new StringBuilder();
+        int b;
+        while ((b = entrada.read()) >= 0) {
+            if (b == '\n') {
+                int fin = linea.length();
+                if (fin > 0 && linea.charAt(fin - 1) == '\r') {
+                    linea.setLength(fin - 1);
+                }
+                return linea.toString();
+            }
+            linea.append((char) b);
+        }
+        return linea.isEmpty() ? null : linea.toString();
     }
 }

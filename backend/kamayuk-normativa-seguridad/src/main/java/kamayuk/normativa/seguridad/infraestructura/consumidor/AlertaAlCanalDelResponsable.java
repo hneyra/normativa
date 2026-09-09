@@ -14,12 +14,14 @@ import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Le dice al responsable que un hecho de la autorizacion se aparto: una linea de ERROR con su
- * nombre, y un {@code POST} con el aviso a su canal.
+ * nombre y su canal dentro, SIEMPRE; y ademas un {@code POST} con el aviso a su canal cuando el
+ * canal es una direccion http(s) ({@link ResponsableDeLaCopiaLocal#seLeEntrega()}).
  *
- * <p>Las dos cosas y no una: la linea queda aunque el canal no conteste, y el canal llega aunque
- * nadie lea el registro. Y ninguna de las dos puede tumbar la vuelta: un aviso que no se pudo
- * entregar se registra y el consumidor sigue, porque lo que estaba pendiente de acusar ya esta
- * apartado y acusado.
+ * <p>Las dos cosas y no una: la linea queda aunque el canal no conteste —o no sea entregable, que
+ * es el caso de los dos stacks, cuyo canal es un correo—, y el canal llega aunque nadie lea el
+ * registro. Y ninguna de las dos puede tumbar la vuelta: un aviso que no se pudo entregar se
+ * registra y el consumidor sigue, porque lo que estaba pendiente de acusar ya esta apartado y
+ * acusado. Es la doctrina que {@code catastro} midio antes de copiar la clase de {@code rentas}.
  */
 public class AlertaAlCanalDelResponsable implements AlertaDeEventosSinAplicar {
 
@@ -58,13 +60,15 @@ public class AlertaAlCanalDelResponsable implements AlertaDeEventosSinAplicar {
                         + " de alguien algo que `identidad` ya no dice —un permiso que sigue, una"
                         + " cuenta que entra— y ninguna cifra lo delata (ADR-0039).";
         REGISTRO.error("{} Responsable: {}", texto, responsable);
-        entregar(
-                new Aviso(
-                        responsable.nombre(),
-                        evento.eventoId().toString(),
-                        motivo,
-                        apartadosSinExplicar,
-                        texto));
+        if (responsable.seLeEntrega()) {
+            entregar(
+                    new Aviso(
+                            responsable.nombre(),
+                            evento.eventoId().toString(),
+                            motivo,
+                            apartadosSinExplicar,
+                            texto));
+        }
     }
 
     @SuppressWarnings("checkstyle:IllegalCatch")
