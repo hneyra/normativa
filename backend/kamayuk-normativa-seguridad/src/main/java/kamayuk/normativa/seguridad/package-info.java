@@ -21,13 +21,20 @@
  * {@code rentas/api/v1/sesion/permisos}). Aqui hay dos cosas: quien <b>lee</b> la copia para
  * autorizar, y quien la <b>siembra</b> al implantar la municipalidad.
  *
- * <p><b>HUECO DECLARADO:</b> como se sincroniza la copia cuando alguien cambia un permiso en {@code
- * rentas} — y que pasa mientras esta desatrasada — <b>no esta construido</b>. Es literalmente lo
- * que D-19 enunciaba y lo que la propia decision D-N5 dejo sin fijar («el detalle lo escribe la
- * fase 1»). Hoy la copia la escribe la implantacion y nadie mas, asi que lo que hay es correcto y
- * estatico: los dos grupos que crea la implantacion. Un permiso otorgado en {@code rentas} despues
- * de eso <b>no llega</b>, y eso se dice aqui en vez de descubrirse cuando alguien no pueda abrir
- * una pantalla.
+ * <p><b>El hueco que D-N5 dejo declarado esta cerrado desde la etapa 4 de ADR-0039</b>: la copia la
+ * escribe ademas el consumidor del buzon de {@code identidad} ({@code dominio.consumidor}, {@code
+ * aplicacion.ConsumirEventosDeIdentidad}, {@code infraestructura.consumidor}). Lee los hechos que
+ * aquel sistema publica —altas, bajas, afiliaciones y permisos—, los aplica aqui uno por
+ * transaccion y los acusa despues del commit; un {@code CronJob} lo despierta cada cinco minutos y
+ * la implantacion hace una pasada al terminar de sembrar. <b>Lo que cuesta se dice</b>: es la
+ * primera arista de este sistema hacia otro, y entre que {@code identidad} escribe y este
+ * consumidor aplica hay una ventana en la que la copia esta desatrasada — cuanto dura esta por
+ * medir (ADR-0039 §«Lo que cuesta», punto 2). El guardia sigue leyendo su propia tabla: con {@code
+ * identidad} caido este sistema autoriza igual, y lo unico que no pasa es que un permiso nuevo
+ * llegue.
+ *
+ * <p>El sembrador se queda hasta la etapa 5: hoy es lo que deja el primer administrador, y una
+ * municipalidad sin consumidor configurado sigue siendo un estado legitimo.
  */
 @org.jspecify.annotations.NullMarked
 package kamayuk.normativa.seguridad;

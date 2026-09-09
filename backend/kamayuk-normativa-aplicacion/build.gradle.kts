@@ -96,6 +96,16 @@ tasks.test {
                 "../../catastro/docs/50-api/contratos-que-consume/normativa.json"))
         .optional()
         .withPathSensitivity(PathSensitivity.NONE)
+
+    // Y EL CONTRATO QUE ESTE REPOSITORIO PUBLICA COMO CONSUMIDOR (etapa 4 de ADR-0039):
+    // `ContratoQueConsumeDeIdentidad` compara `docs/50-api/contratos-que-consume/identidad.json`
+    // con lo que el adaptador pide hoy, y ese archivo no esta en ningun conjunto de fuentes. Sin
+    // declararlo, editarlo a mano deja la tarea UP-TO-DATE y el archivo mutado viaja al CI de
+    // `identidad` sin que nadie lo haya comparado aqui (#192 punto 2; `rentas` lo midio con
+    // `catastro.json` y salio exactamente asi: BUILD SUCCESSFUL en 1s).
+    inputs
+        .dir(rootProject.layout.projectDirectory.dir("../docs/50-api/contratos-que-consume"))
+        .withPathSensitivity(PathSensitivity.RELATIVE)
 }
 
 // Nombre fijo del artefacto ejecutable. La imagen lo copia por nombre y no por comodin:

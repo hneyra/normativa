@@ -3,7 +3,11 @@
 #
 #  Solo lo de este sistema: su migrador, su implantacion y su backend. NO trae
 #  PostgreSQL ni Keycloak — los usa, y los levanta el compose de la plataforma,
-#  que vive en el clon hermano `infrastructure`:
+#  que vive en el clon hermano `infrastructure`—, y desde la etapa 4 de ADR-0039
+#  tampoco trae a `identidad`, el sistema del que la implantacion lee su copia
+#  local de la autorizacion: ese lo levanta SU compose, en la misma red. El
+#  `CronJob` del consumidor que el descriptor declara no tiene contraparte aqui,
+#  como el ingestor de `rentas`: en el compose la pasada la hace la implantacion.
 #
 #      docker compose -f ../infrastructure/despliegue/plataforma.compose.yaml up -d --wait
 #      docker compose -f despliegue/compose.yaml up --build --wait
@@ -109,6 +113,34 @@ services:
       # punto, asi que `KAMAYUK_IMPLANTACION_OWNER_CLAVE` seria
       # `kamayuk.implantacion.owner.clave` y no `owner-clave`.
       KAMAYUK_IMPLANTACION_OWNERCLAVE: ${KAMAYUK_CLAVE_OWNER:?falta KAMAYUK_CLAVE_OWNER, sale del .env de la plataforma}
+      # ── El consumidor del buzon de `identidad` (ADR-0039, etapa 4) ──────────
+      #
+      # La implantacion termina con una pasada del consumidor, para que la
+      # municipalidad recien implantada traiga lo que `identidad` ya publico.
+      # Son las MISMAS seis variables que el `CronJob` del descriptor le da a
+      # su consumidor, y las lee `ConfiguracionDelConsumidorDeIdentidad`.
+      #
+      # `identidad-sistema` y NO `identidad`: en la red `kamayuk-plataforma` el
+      # alias `identidad` lo tiene Keycloak, y el backend del sistema se llama
+      # `identidad-sistema` a proposito (la cabecera de SU compose lo mide).
+      KAMAYUK_IDENTIDAD_URL: http://identidad-sistema:8080
+      # A donde se pide el token, por la red interna: Keycloak, que aqui si se
+      # llama `identidad`. Es una direccion, no una identidad.
+      KAMAYUK_IDENTIDAD_TOKEN: http://identidad:8080/realms/sgtm/protocol/openid-connect/token
+      # Un cliente por municipalidad: la cuenta de servicio es la que lleva
+      # `municipalidad_id` (ADR-0028 §2), e `identidad` deriva QUIEN pregunta del
+      # `azp` del token y nunca de un parametro.
+      KAMAYUK_IDENTIDAD_CLIENTE: kamayuk-normativa-servicio-${KAMAYUK_UBIGEO:?falta KAMAYUK_UBIGEO en el .env de la plataforma}
+      # La clave de ese cliente confidencial, que crea `reconciliar-identidades.sh
+      # servicios` en el Keycloak de la plataforma. VACIA POR OMISION, y a
+      # proposito: sin ella la peticion sale sin credencial, `identidad` contesta
+      # 401, y la implantacion lo DICE y termina igual —la municipalidad ya esta—;
+      # la copia local queda como la sembro hasta que haya credencial. Lo que no
+      # hace es inventar una cadena que ningun emisor firmo (#21).
+      KAMAYUK_IDENTIDAD_CREDENCIAL: ${KAMAYUK_CREDENCIAL_NORMATIVA_IDENTIDAD:-}
+      # A quien se avisa cuando un evento no se puede aplicar nunca y se aparta.
+      KAMAYUK_IDENTIDAD_CONSUMIDOR_RESPONSABLE: ${KAMAYUK_RESPONSABLE:-Quien levanto este compose}
+      KAMAYUK_IDENTIDAD_CONSUMIDOR_CANAL: ${KAMAYUK_CANAL_DE_AVISOS:-http://localhost:8025/api/v1/send}
     restart: "no"
 
   # ── El backend ──────────────────────────────────────────────────────────────

@@ -18,16 +18,26 @@
  * imagen** —la pone `infrastructure`, o cada liberacion vuelve a ser un `pulumi up`—, privilegios
  * sobre la base de otro sistema, un `Deployment` sin limites ni sondas, y un `Secret` en claro.
  *
- * ## SIN EGRESO A NINGUN SISTEMA, y no es que aun no le haga falta
+ * ## UN SOLO EGRESO A OTRO SISTEMA: el buzon de `identidad` (ADR-0039, etapa 4)
  *
- * `normativa` **publica** y no consulta a nadie. Es la unica de las cuatro con el egreso vacio, y
- * eso es una afirmacion sobre la arquitectura, no una casilla pendiente: lo que distribuye son
- * datos sellados —inmutables una vez sellados (`V9`)— y un artefacto de reglas que viaja como
- * codigo (`ADR-0025` §2). Nada de eso necesita preguntarle nada a nadie.
+ * Hasta la etapa 4 de ADR-0039 este descriptor decia «SIN EGRESO A NINGUN SISTEMA, y no es que
+ * aun no le haga falta», y era cierto sobre lo que `normativa` PUBLICA: conjuntos sellados
+ * —inmutables una vez sellados (`V9`)— y un artefacto de reglas que viaja como codigo
+ * (`ADR-0025` §2). Nada de eso necesita preguntarle nada a nadie, y sigue sin necesitarlo.
  *
- * **Si algun dia necesitara egreso, lo que esta mal es la arquitectura, no este descriptor.** La
- * pregunta que habria que contestar antes de anadir la linea es que dato de otro sistema hace
- * falta para sellar una cifra que la ley ya fijo.
+ * Lo que si necesita —y no lo necesitaba porque lo sembraba a mano— es **de donde sale su copia
+ * local de la autorizacion**: las cuatro tablas `usuario`, `grupo`, `miembro` y `permiso` con las
+ * que `ComprobadorDeAccesoJdbc` autoriza sin un viaje de red. ADR-0039 §«Lo que cuesta» contesta
+ * la pregunta que la cabecera anterior dejaba escrita («que dato de otro sistema hace falta para
+ * sellar una cifra que la ley ya fijo»): **ninguno**. Leer el buzon de `identidad` no es consultar
+ * un dato de negocio: es **replicar la autorizacion**, que desde ADR-0039 tiene un dueno y ese
+ * dueno no es este sistema. Es la unica arista de egreso hacia un sistema, se declara con su
+ * motivo en `egreso()`, y **no cambia nada de lo que ADR-0025 afirma**: para sellar, `normativa`
+ * sigue sin llamar a nadie.
+ *
+ * Y la arista es del `CronJob` de `lotes()` y del `Job` de implantacion —los dos en perfil
+ * `batch`—, no del proceso web: el guardia sigue autorizando contra la copia local, y con
+ * `identidad` caido la ventanilla sigue leyendo sus parametros (ADR-0039 §«Lo que cuesta», 2).
  *
  * ## Todavia no hay codigo de negocio
  *
@@ -39,6 +49,7 @@ import type {
   BaseDeDatosDeclarada,
   ClaveDeclarada,
   Contenedor,
+  CronJob,
   DescriptorDeSistema,
   EntornoDelDescriptor,
   Manifiesto,
@@ -126,12 +137,74 @@ function contenedorDelMigrador(e: EntornoDelDescriptor): Contenedor {
   };
 }
 
-/** Las propiedades de `DatosDeImplantacion`, tal como Spring las lee del entorno. */
+/**
+ * La ventana del consumidor del buzon de `identidad`: **cada cinco minutos**, y no de madrugada.
+ *
+ * Lo que trae son altas, bajas, afiliaciones y permisos —quien puede hacer que—, y la ventana ES
+ * la ventana de inconsistencia de la copia local que ADR-0039 §«Lo que cuesta» (2) exige medir:
+ * un permiso retirado en `identidad` sigue valiendo aqui hasta la siguiente vuelta. Cinco minutos
+ * es la cota superior que este descriptor declara; lo que tarda de verdad se mide en la etapa 5.
+ *
+ * No compite con la ventanilla: cada vuelta es un pod de `RECURSOS_DE_ARRANQUE` con la clase
+ * `lote`, que termina en cuanto el buzon deja de servir algo que aplicar (`sinProgreso`).
+ */
+const VENTANA_DEL_CONSUMIDOR = "*/5 * * * *";
+
+/**
+ * Lo que el consumidor del buzon de `identidad` lee del entorno (ADR-0039, etapa 4).
+ *
+ * Son las mismas para el `Job` de implantacion —que termina con una pasada del consumidor, para
+ * que la municipalidad recien implantada traiga lo que `identidad` ya publico— y para el
+ * `CronJob` de `lotes()`. Van juntas y se derivan de una sola lista porque la deriva entre las
+ * dos mitades se lee mal: un `CronJob` con la URL y un `Job` sin ella implanta la municipalidad,
+ * dice «Sin identidad configurada» y sale con cero.
+ *
+ * - `KAMAYUK_IDENTIDAD_URL`: el buzon, en SU namespace. Se compone con `namespaceDe` y no a mano.
+ *   **El servicio es `kamayuk-identidad-web`, en `kamayuk-identidad-<ambiente>`**, y no
+ *   `kamayuk-<ambiente>-identidad`, que es Keycloak en el namespace de la plataforma: la colision
+ *   de nombre esta medida en el `CLAUDE.md` de `identidad`.
+ * - `KAMAYUK_IDENTIDAD_TOKEN`: a donde se pide el token, por la red INTERNA (#21 AC-2). Es una
+ *   direccion, no una identidad: pedirlo al emisor publico haria salir al ingreso para volver a
+ *   entrar, y la politica de egreso no lo permite.
+ * - `KAMAYUK_IDENTIDAD_CLIENTE`: con QUE cliente, uno por municipalidad, porque la cuenta de
+ *   servicio es la que lleva `municipalidad_id` (ADR-0028 §2) y `identidad` deriva QUIEN pregunta
+ *   del `azp` del token y nunca de un parametro. El nombre lo fija `clienteDeServicio()` de
+ *   `infrastructure`, y su guarda `identidad-de-servicio` compara esta cadena con la suya.
+ * - `KAMAYUK_IDENTIDAD_CREDENCIAL`: la clave de ese cliente confidencial. No es el token.
+ * - `KAMAYUK_IDENTIDAD_CONSUMIDOR_RESPONSABLE` y `_CANAL`: a quien se avisa cuando un evento no
+ *   se puede aplicar nunca y se aparta. `ResponsableDeLaCopiaLocal` exige los dos.
+ */
+function variablesDeIdentidad(e: EntornoDelDescriptor): VariableDeEntorno[] {
+  return [
+    {
+      name: "KAMAYUK_IDENTIDAD_URL",
+      value: `http://kamayuk-identidad-web.${e.namespaceDe("identidad")}`,
+    },
+    { name: "KAMAYUK_IDENTIDAD_TOKEN", value: e.plataforma.token },
+    {
+      name: "KAMAYUK_IDENTIDAD_CLIENTE",
+      value: `kamayuk-${SISTEMA}-servicio-${e.implantacion.ubigeo}`,
+    },
+    {
+      name: "KAMAYUK_IDENTIDAD_CREDENCIAL",
+      valueFrom: { secretKeyRef: { name: e.secretoDe("identidad"), key: "clave" } },
+    },
+    { name: "KAMAYUK_IDENTIDAD_CONSUMIDOR_RESPONSABLE", value: e.operacion.responsable },
+    { name: "KAMAYUK_IDENTIDAD_CONSUMIDOR_CANAL", value: e.operacion.canal },
+  ];
+}
+
+/**
+ * Las propiedades de `DatosDeImplantacion`, tal como Spring las lee del entorno — y desde la
+ * etapa 4 de ADR-0039 las del consumidor de `identidad`, porque la implantacion termina con una
+ * pasada suya.
+ */
 function variablesDeImplantacion(e: EntornoDelDescriptor): VariableDeEntorno[] {
   const i = e.implantacion;
   return [
     { name: "SPRING_PROFILES_ACTIVE", value: "batch" },
     ...credencialesDeLaAplicacion(e),
+    ...variablesDeIdentidad(e),
     { name: "KAMAYUK_IMPLANTACION_UBIGEO", value: i.ubigeo },
     { name: "KAMAYUK_IMPLANTACION_NOMBRE", value: i.nombre },
     { name: "KAMAYUK_IMPLANTACION_TIPO", value: i.tipo },
@@ -375,15 +448,79 @@ export const normativa: DescriptorDeSistema = {
   },
 
   /**
-   * Sus procesos por lotes con ventana. **Ninguno**, y es una afirmacion, no una casilla.
+   * Sus procesos por lotes con ventana: **el consumidor del buzon de `identidad`** (ADR-0039,
+   * etapa 4), y ninguno mas.
    *
-   * `normativa` publica y no consulta a nadie: lo que distribuye son conjuntos sellados —inmutables una vez sellados, `V9`— y un artefacto de reglas que viaja como codigo
-   * (ADR-0025 §2). Sellar es un acto con dos firmas, no una tarea programada.
+   * Hasta la etapa 4 esta lista estaba vacia y era una afirmacion: «`normativa` publica y no
+   * consulta a nadie; sellar es un acto con dos firmas, no una tarea programada». Sigue siendo
+   * cierto para sellar. Lo que este `CronJob` trae no es un parametro: es **quien puede hacer
+   * que**, y hasta ahora lo sembraba a mano la implantacion desde el catalogo (etapa 1) — o sea que
+   * un permiso concedido o retirado en `identidad` no llegaba aqui nunca.
    *
-   * Una lista vacia no es lo mismo que un `CronJob` suspendido: lo primero dice «este sistema no
-   * corre nada de madrugada» y lo segundo «corre esto, y hoy no puede».
+   * Corre con la MISMA imagen que la aplicacion en perfil `batch` (ADR-0003: un artefacto, dos
+   * perfiles): `CorrerElConsumidorDeIdentidad` es un `ApplicationRunner`, da vueltas hasta que el
+   * buzon deja de servir algo que aplicar y el proceso termina. Un `Deployment` no valdria —solo
+   * admite `restartPolicy: Always` y reportaria como fallo una salida con exito— y un `CronJob`
+   * con `concurrencyPolicy: Forbid` es lo que impide que dos vueltas apliquen la misma cola a la
+   * vez. `backoffLimit: 1`, porque la siguiente ventana llega en cinco minutos y reintentar cuatro
+   * veces lo mismo antes de ella no anade informacion.
+   *
+   * **No nace suspendido**, y lo que sostiene que no lo este es lo mismo que en `rentas` (#21):
+   * `KAMAYUK_IDENTIDAD_CREDENCIAL` declara `emisor: "keycloak"` en el inventario y la guarda
+   * `identidad-de-servicio` de `infrastructure` no deja pasar el build mientras alguna
+   * municipalidad no declare `{"sistema":"normativa","llamaA":"identidad"}` en su bloque
+   * `servicios`. Un `suspend: true` diria «corre esto, y hoy no puede», y hoy puede.
    */
-  lotes: (): Manifiesto[] => [],
+  lotes(e): Manifiesto[] {
+    const nombre = `kamayuk-${SISTEMA}-consumidor-de-identidad`;
+    const etiquetas = { ...e.etiquetas, componente: SISTEMA };
+    const consumidor: CronJob = {
+      apiVersion: "batch/v1",
+      kind: "CronJob",
+      metadata: { name: nombre, namespace: e.namespace, labels: etiquetas },
+      spec: {
+        schedule: VENTANA_DEL_CONSUMIDOR,
+        concurrencyPolicy: "Forbid",
+        successfulJobsHistoryLimit: 3,
+        failedJobsHistoryLimit: 3,
+        jobTemplate: {
+          spec: {
+            backoffLimit: 1,
+            template: {
+              metadata: { labels: { ...etiquetas, app: nombre } },
+              spec: {
+                restartPolicy: "Never",
+                priorityClassName: e.prioridadDe("lote"),
+                containers: [
+                  {
+                    name: "consumidor",
+                    image: e.imagenDe(SISTEMA),
+                    env: [
+                      { name: "SPRING_PROFILES_ACTIVE", value: "batch" },
+                      ...credencialesDeLaAplicacion(e),
+                      ...variablesDeIdentidad(e),
+                      // `@ConditionalOnProperty("kamayuk.identidad.consumidor.municipalidad")`:
+                      // es lo que separa este proceso del Job de implantacion, que lleva las
+                      // mismas variables de identidad y NO esta: sin ella el runner del
+                      // consumidor no existe, y con ella la implantacion correria dos veces
+                      // la misma pasada.
+                      {
+                        name: "KAMAYUK_IDENTIDAD_CONSUMIDOR_MUNICIPALIDAD",
+                        value: String(e.implantacion.municipalidadId),
+                      },
+                    ],
+                    resources: RECURSOS_DE_ARRANQUE,
+                    securityContext: SEGURIDAD,
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+    };
+    return [consumidor];
+  },
 
   /** Sus rutas, **bajo su prefijo**. Reclamar el de otro no falla: se lo queda. */
   ingreso(e): Manifiesto[] {
@@ -413,7 +550,15 @@ export const normativa: DescriptorDeSistema = {
    * A quien puede llamar. **El egreso declarado ES el grafo de dependencias** (ADR-0029), y
    * tiene que coincidir con ARQ-01 reducido a cuatro nodos. Cada arista, con su motivo:
    *
-   * - **ninguno.** Ver la cabecera: es una afirmacion, no una casilla pendiente.
+   * - **`identidad`, el sistema**, para leer y acusar su buzon de eventos (ADR-0039, etapa 4).
+   *   Es la unica, y ver la cabecera: no es un dato de negocio, es la replica de la
+   *   autorizacion, y lo que ADR-0025 afirma sobre sellar sigue en pie.
+   *
+   * Y no confundir las DOS aristas con el nombre `identidad`: la de la plataforma es Keycloak
+   * —`componente: identidad`, en `e.plataforma.namespace`, para el JWKS y el token— y la del
+   * sistema es `componente: identidad-sistema`, en `e.namespaceDe("identidad")`. Los pods de
+   * aquel llevan esa etiqueta a proposito, porque `componente: identidad` ya significaba Keycloak
+   * cuando el sistema nacio (su `CLAUDE.md`, «La colision de nombre con Keycloak»).
    */
   egreso(e): NetworkPolicy[] {
     return [
@@ -500,7 +645,24 @@ export const normativa: DescriptorDeSistema = {
               ],
               ports: [{ protocol: "TCP", port: 8080 }],
             },
-            // Y ningun sistema. `normativa` publica y no consulta a nadie.
+            // La identidad, EL SISTEMA (ADR-0039): su buzon de eventos, en SU namespace. Es la
+            // unica arista hacia un sistema que este descriptor declara, y la lleva el perfil
+            // `batch`; el proceso web sigue autorizando contra la copia local y no la usa. Con
+            // `identidad` caido la ventanilla no se entera: lo que se pierde es la frescura de la
+            // copia, no la capacidad de autorizar.
+            {
+              to: [
+                {
+                  namespaceSelector: {
+                    matchLabels: { "kubernetes.io/metadata.name": e.namespaceDe("identidad") },
+                  },
+                  // `identidad-sistema` y no `identidad`: esa etiqueta es Keycloak (arriba).
+                  podSelector: { matchLabels: { componente: "identidad-sistema" } },
+                },
+              ],
+              ports: [{ protocol: "TCP", port: 8080 }],
+            },
+            // Y ningun otro sistema. Para sellar, `normativa` sigue sin consultar a nadie.
           ],
         },
       },
@@ -551,6 +713,23 @@ export const normativa: DescriptorDeSistema = {
       rol: "kamayuk_owner",
       rotacion: "anual",
       proposito: `migrar la base de ${SISTEMA}; es el unico rol con DDL`,
+    },
+    {
+      // La credencial con que el consumidor lee y acusa el buzon de `identidad` (ADR-0039,
+      // etapa 4).
+      //
+      // **`emisor: "keycloak"` es lo que la separa de una clave de PostgreSQL** (#21). Su valor no
+      // vale por si mismo: es la clave del cliente confidencial `kamayuk-normativa-servicio-<ubigeo>`
+      // con la que se pide un token, y ese cliente lo crea `reconciliar-identidades.sh servicios`
+      // desde `despliegue/identidad/municipalidades/<ubigeo>.json` — que tiene que declarar
+      // `{"sistema":"normativa","llamaA":"identidad"}`, o la guarda `identidad-de-servicio` de
+      // `infrastructure` no deja pasar el build. `llamaA` se deriva del nombre de este secreto,
+      // y por eso se llama `identidad`.
+      nombre: e.secretoDe("identidad"),
+      clave: "clave",
+      emisor: "keycloak",
+      rotacion: "trimestral",
+      proposito: "leer y acusar el buzon de eventos de identidad con el token del cliente de servicio",
     },
   ],
 };

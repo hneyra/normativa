@@ -5,9 +5,12 @@ import kamayuk.normativa.auditoria.OrigenContext;
 import kamayuk.normativa.compartido.TenantContext;
 import kamayuk.normativa.dominio.MunicipalidadId;
 import kamayuk.normativa.dominio.Observacion;
+import kamayuk.normativa.seguridad.dominio.consumidor.BuzonDeIdentidad;
 import kamayuk.normativa.seguridad.infraestructura.RegistroDeMunicipalidadesJdbc;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -53,6 +56,20 @@ import org.springframework.stereotype.Component;
  *
  * <p>Se ejecuta en cada despliegue. Lo que ya existe se queda como esta —con los permisos que
  * alguien haya configurado despues—, y lo que falta se crea. Nunca borra.
+ *
+ * <h2>Y desde la etapa 4 termina con una pasada del consumidor del buzon (ADR-0039)</h2>
+ *
+ * <p>Sembrar deja el primer administrador; lo que {@code identidad} haya publicado desde que esta
+ * municipalidad existe —grupos, cuentas, permisos— lo trae el consumidor, y hacerlo aqui es lo que
+ * deja la copia local al dia el mismo dia que se implanta, sin esperar al primer {@code CronJob}.
+ * <b>Sin identidad configurada</b> ({@code kamayuk.identidad.url} sin poner) no hay consumidor: se
+ * dice y la implantacion NO falla, porque en esta etapa la copia sembrada sigue siendo un estado
+ * legitimo. Que deje de serlo es la etapa 5, cuando el sembrador se retire.
+ *
+ * <p>Si el buzon no contesta, la implantacion <b>si</b> falla: la municipalidad queda dada de alta
+ * y sembrada —eso ya confirmo—, y la corrida sale distinta de cero para que el despliegue la
+ * repita. Tragarselo dejaria una implantacion en verde con una copia que no sabe nada de lo que
+ * {@code identidad} ya dijo.
  */
 @Component
 @Profile("batch")
@@ -65,14 +82,18 @@ public class ImplantarMunicipalidad implements ApplicationRunner {
     private final RegistroDeMunicipalidadesJdbc registro;
     private final SembradorDeLaCopiaLocal sembrador;
     private final DatosDeImplantacion datos;
+    private final @Nullable ConsumirEventosDeIdentidad consumidor;
 
     public ImplantarMunicipalidad(
             RegistroDeMunicipalidadesJdbc registro,
             SembradorDeLaCopiaLocal sembrador,
-            DatosDeImplantacion datos) {
+            DatosDeImplantacion datos,
+            ObjectProvider<ConsumirEventosDeIdentidad> consumidor) {
         this.registro = registro;
         this.sembrador = sembrador;
         this.datos = datos;
+        // `getIfAvailable`: el consumidor solo existe si el despliegue dijo donde esta el buzon.
+        this.consumidor = consumidor.getIfAvailable();
     }
 
     @Override
@@ -107,9 +128,37 @@ public class ImplantarMunicipalidad implements ApplicationRunner {
                     municipalidadId,
                     nuevos,
                     datos.administrador());
+
+            traerLoQueIdentidadYaPublico();
         } finally {
             OrigenContext.limpiar();
             TenantContext.limpiar();
+        }
+    }
+
+    /** La pasada del consumidor, con el contexto de tenant que este runner ya fijo. */
+    private void traerLoQueIdentidadYaPublico() {
+        if (consumidor == null) {
+            log.info(
+                    "Sin identidad configurada (kamayuk.identidad.url): la copia local de la"
+                            + " autorizacion queda como la sembro esta implantacion. Lo que"
+                            + " `identidad` haya publicado no llega hasta que se configure el"
+                            + " consumidor (ADR-0039, etapa 4)");
+            return;
+        }
+        try {
+            CorrerElConsumidorDeIdentidad.darVueltas(consumidor, log);
+        } catch (BuzonDeIdentidad.IdentidadNoContesta noContesta) {
+            // La municipalidad YA esta implantada —eso se confirmo arriba— y lo que no llego es
+            // la frescura de la copia local, que el CronJob del consumidor trae en su siguiente
+            // ventana. Tumbar el Job aqui dejaria un despliegue sin municipalidad por un sistema
+            // que no es este, que es justo lo que ADR-0039 §«Lo que cuesta» (2) excluye: con
+            // `identidad` caido, los otros cuatro siguen. Se dice, y con la causa entera.
+            log.warn(
+                    "La implantacion termino, y la pasada del consumidor de `identidad` NO: {}. La"
+                            + " copia local de la autorizacion queda como la sembro esta implantacion"
+                            + " hasta la siguiente vuelta del consumidor (ADR-0039, etapa 4)",
+                    noContesta.getMessage());
         }
     }
 }
