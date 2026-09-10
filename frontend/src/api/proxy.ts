@@ -153,7 +153,7 @@ function problema(
 ): Response {
   return new Response(
     JSON.stringify({
-      type: `https://sgtm.gob.pe/errores/${codigo.toLowerCase()}`,
+      type: `https://kamayuk.gob.pe/errores/${codigo.toLowerCase()}`,
       title: TITULO_DEL_CODIGO[codigo] ?? codigo,
       status: estado,
       detail: detalle,

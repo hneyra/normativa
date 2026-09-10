@@ -260,7 +260,7 @@ describe('los errores tienen la forma del backend (AC7)', () => {
     expect(cuerpo.codigo).toBe('NO_ENCONTRADO');
     expect(cuerpo.status).toBe(404);
     expect(cuerpo.title).toBe('No se encontro lo solicitado');
-    expect(cuerpo.type).toBe('https://sgtm.gob.pe/errores/no_encontrado');
+    expect(cuerpo.type).toBe('https://kamayuk.gob.pe/errores/no_encontrado');
     expect(cuerpo.mensaje).toBe(cuerpo.detail);
   });
 
