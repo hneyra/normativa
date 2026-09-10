@@ -116,22 +116,71 @@ describe("el descriptor de normativa", () => {
     }
   });
 
-  it("NO tiene egreso a ningun sistema, y es una afirmacion", () => {
-    // `normativa` publica y no consulta a nadie. Si algun dia necesitara egreso, lo que esta
-    // mal es la arquitectura, no este descriptor.
-    expect(destinosDeEgreso()).toEqual([]);
+  /**
+   * Hasta la etapa 4 de ADR-0039 esta prueba decia «NO tiene egreso a ningun sistema, y es una
+   * afirmacion», y exigia la lista vacia. **Cambia de signo, y hay que decir por que**: la
+   * pregunta que la cabecera del descriptor dejaba escrita —«que dato de otro sistema hace falta
+   * para sellar una cifra que la ley ya fijo»— sigue contestandose «ninguno», y ese egreso no es
+   * para sellar. Es para **replicar la autorizacion**: la copia local de `usuario`, `grupo`,
+   * `miembro` y `permiso` con la que el guardia autoriza sin un viaje de red deja de sembrarse a
+   * mano y pasa a leerse del buzon de `identidad` (ADR-0039 §«Lo que cuesta»; AC-3.3 de
+   * `infrastructure`#52). Es la unica arista, y es la que hace que un permiso retirado en
+   * `identidad` llegue aqui.
+   */
+  it("tiene UN egreso a otro sistema, `identidad`, y solo ese (ADR-0039, etapa 4)", () => {
+    expect(destinosDeEgreso()).toEqual(["identidad"]);
+  });
+
+  /**
+   * Y la arista apunta al SISTEMA y no a Keycloak, que en la plataforma tambien se llama
+   * `identidad`: los pods del sistema llevan `componente: identidad-sistema` a proposito (su
+   * `CLAUDE.md`, «La colision de nombre con Keycloak»), y viven en `kamayuk-identidad-<amb>`,
+   * no en el namespace de la plataforma. Una regla con `componente: identidad` hacia
+   * `kamayuk-identidad-stg` no abre nada: ahi no hay ningun pod con esa etiqueta.
+   */
+  it("y esa arista va al namespace del sistema, al pod `identidad-sistema`, por el 8080", () => {
+    const reglas = normativa.egreso(ENTORNO).flatMap((p) => p.spec.egress ?? []);
+    const alSistema = reglas.filter((r) =>
+      (r.to ?? []).some(
+        (d) =>
+          d.namespaceSelector?.matchLabels?.["kubernetes.io/metadata.name"] === "kamayuk-identidad-stg",
+      ),
+    );
+    expect(alSistema).toHaveLength(1);
+    const destino = alSistema[0]!.to![0]!;
+    expect(destino.podSelector?.matchLabels?.["componente"]).toBe("identidad-sistema");
+    expect((alSistema[0]!.ports ?? []).map((p) => `${p.protocol}/${p.port}`)).toEqual(["TCP/8080"]);
+    // Y la de Keycloak sigue: sin ella el proceso web no se trae el JWKS y todo token es invalido.
+    const aKeycloak = reglas.filter((r) =>
+      (r.to ?? []).some(
+        (d) =>
+          d.namespaceSelector?.matchLabels?.["kubernetes.io/metadata.name"] === "kamayuk-stg" &&
+          d.podSelector?.matchLabels?.["componente"] === "identidad",
+      ),
+    );
+    expect(aKeycloak, "la arista a Keycloak (el JWKS) no puede irse con la del sistema").toHaveLength(1);
   });
 });
 
-/** Los SISTEMAS a los que este descriptor declara egreso. El motor y la identidad no cuentan. */
+/**
+ * Los SISTEMAS a los que este descriptor declara egreso. El motor y Keycloak no cuentan, y se
+ * distinguen por el NAMESPACE de destino y no por el nombre de la etiqueta: `identidad` es
+ * Keycloak en el namespace de la plataforma y el sistema en el suyo (la leccion de la etapa 1 de
+ * `infrastructure`#52, `grafoDeEgreso`).
+ */
 function destinosDeEgreso(): string[] {
-  const infra = ["postgres", "identidad"];
+  const plataforma = ENTORNO.plataforma.namespace;
   return normativa
     .egreso(ENTORNO)
     .flatMap((p) => p.spec.egress ?? [])
     .flatMap((r) => r.to ?? [])
-    .map((s) => s.podSelector?.matchLabels?.["componente"])
-    .filter((c): c is string => c !== undefined && !infra.includes(c))
+    .map((s) => s.namespaceSelector?.matchLabels?.["kubernetes.io/metadata.name"])
+    .filter((ns): ns is string => ns !== undefined && ns !== plataforma && ns !== "kube-system")
+    .map((ns) => {
+      const encaje = /^kamayuk-(.+)-stg$/.exec(ns);
+      expect(encaje, `un namespace de destino que no es de un sistema: ${ns}`).not.toBeNull();
+      return encaje![1]!;
+    })
     .sort();
 }
 
@@ -219,14 +268,90 @@ function declara(c: Contenedor, nombre: string): boolean {
   return (c.env ?? []).some((e) => e.name === nombre);
 }
 
-describe("C-14 §3 — normativa no corre nada de madrugada", () => {
+describe("ADR-0039, etapa 4 — el consumidor del buzon de identidad", () => {
   /**
-   * Vacio es una respuesta legitima, y no es lo mismo que un `CronJob` suspendido: lo primero
-   * dice «este sistema no corre nada» y lo segundo «corre esto, y hoy no puede». `normativa`
-   * publica y no consulta a nadie; sellar es un acto con dos firmas, no una tarea programada.
+   * Hasta la etapa 4 esto afirmaba `lotes(...) == []`: «`normativa` no corre nada de madrugada;
+   * sellar es un acto con dos firmas, no una tarea programada». Sigue sin correr nada para
+   * sellar. Lo que corre ahora, cada cinco minutos, es la replica de la autorizacion.
+   *
+   * **Y no nace suspendido.** Un `suspend: true` diria «corre esto, y hoy no puede»; lo que
+   * sostiene que pueda no es un interruptor sino una guarda que se pone roja: la credencial
+   * declara `emisor: "keycloak"` y `identidad-de-servicio` de `infrastructure` exige que cada
+   * municipalidad declare el cliente de servicio. Es la leccion de `rentas` #21 AC-4, donde dos
+   * guardas DEMANDABAN el `suspend` y quitarlo ponia rojo el arbol.
    */
-  it("no declara ningun proceso por lotes, y es una afirmacion", () => {
-    expect(normativa.lotes(ENTORNO)).toEqual([]);
+  it("declara su configuracion entera, y CORRE", () => {
+    const crones = normativa.lotes(ENTORNO).filter((m) => m.kind === "CronJob");
+    expect(crones).toHaveLength(1);
+    const cron = crones[0]!;
+    // `undefined` es lo que Kubernetes lee como «no suspendido». Se afirma que NO es `true` y no
+    // que sea `false`: declarar `suspend: false` seria ruido en el manifiesto.
+    expect(cron.spec.suspend, "el consumidor nacio suspendido (AC-7 de identidad#4)").not.toBe(true);
+    expect(cron.spec.schedule).toBe("*/5 * * * *");
+    // Dos vueltas a la vez aplicarian la misma cola dos veces; el `ON CONFLICT` de la copia lo
+    // aguantaria, pero seria trabajo doble en el nodo justo.
+    expect(cron.spec.concurrencyPolicy).toBe("Forbid");
+    expect(cron.spec.jobTemplate.spec.backoffLimit).toBe(1);
+    const pod = cron.spec.jobTemplate.spec.template.spec;
+    expect(pod.restartPolicy).toBe("Never");
+    expect(pod.priorityClassName).toBe("kamayuk-stg-prioridad-lote");
+    const c = pod.containers[0]!;
+    expect(c.image).toBe(ENTORNO.imagenDe("normativa"));
+    expect(valorDe(c, "SPRING_PROFILES_ACTIVE")).toBe("batch");
+    // `@ConditionalOnProperty("kamayuk.identidad.consumidor.municipalidad")`: sin ella el runner
+    // no existe y el proceso arranca, no consume nada y sale con cero.
+    expect(valorDe(c, "KAMAYUK_IDENTIDAD_CONSUMIDOR_MUNICIPALIDAD")).toBe("1");
+    // El buzon vive en el namespace del SISTEMA `identidad`, y su servicio es el `-web`.
+    expect(valorDe(c, "KAMAYUK_IDENTIDAD_URL")).toBe("http://kamayuk-identidad-web.kamayuk-identidad-stg");
+    expect(valorDe(c, "KAMAYUK_IDENTIDAD_TOKEN")).toBe(ENTORNO.plataforma.token);
+    expect(valorDe(c, "KAMAYUK_IDENTIDAD_CLIENTE")).toBe("kamayuk-normativa-servicio-200105");
+    expect(declara(c, "KAMAYUK_IDENTIDAD_CREDENCIAL")).toBe(true);
+    // `ResponsableDeLaCopiaLocal` exige los dos: un evento apartado es un permiso que aqui no
+    // llego, y avisar a nadie es no avisar.
+    expect(valorDe(c, "KAMAYUK_IDENTIDAD_CONSUMIDOR_RESPONSABLE")).toBe("Guardia de plataforma");
+    expect(valorDe(c, "KAMAYUK_IDENTIDAD_CONSUMIDOR_CANAL")).toBe("guardia@example.pe");
+    expect(c.resources.limits.memory).toBeTruthy();
+  });
+
+  /**
+   * La implantacion termina con una pasada del consumidor, para que la municipalidad recien
+   * implantada traiga lo que `identidad` ya publico. Lleva las mismas variables de identidad
+   * que el `CronJob` **menos** la que enciende el runner del `CronJob`: con las dos, la misma
+   * pasada correria dos veces en el mismo proceso.
+   */
+  it("la implantacion lleva las variables del consumidor, y NO el interruptor del CronJob", () => {
+    const c = contenedoresDe(normativa.implantacion(ENTORNO))[0]!;
+    const cron = contenedoresDe(normativa.lotes(ENTORNO))[0]!;
+    const deIdentidad = (x: Contenedor) =>
+      (x.env ?? []).map((v) => v.name).filter((n) => n.startsWith("KAMAYUK_IDENTIDAD_")).sort();
+    expect(deIdentidad(c)).toEqual(
+      deIdentidad(cron).filter((n) => n !== "KAMAYUK_IDENTIDAD_CONSUMIDOR_MUNICIPALIDAD"),
+    );
+    expect(declara(c, "KAMAYUK_IDENTIDAD_CONSUMIDOR_MUNICIPALIDAD")).toBe(false);
+    expect(deIdentidad(c)).toHaveLength(6);
+  });
+
+  /**
+   * La credencial se declara con su emisor. Sin `emisor: "keycloak"` seria indistinguible de una
+   * clave de PostgreSQL —una cadena aleatoria de `bootstrap-secretos.sh` que ningun emisor
+   * firmo— y el sintoma seria un 401 en el primer pod, con el build en verde (#21).
+   */
+  it("la credencial de identidad se declara con emisor keycloak, y el secreto es el que monta", () => {
+    const clave = normativa.claves(ENTORNO).find((k) => k.nombre === "kamayuk-normativa-stg-identidad");
+    expect(clave).toBeDefined();
+    expect(clave!.emisor).toBe("keycloak");
+    const c = contenedoresDe(normativa.lotes(ENTORNO))[0]!;
+    const ref = (c.env ?? []).find((v) => v.name === "KAMAYUK_IDENTIDAD_CREDENCIAL")?.valueFrom?.secretKeyRef;
+    expect(ref?.name).toBe(clave!.nombre);
+    expect(ref?.key).toBe(clave!.clave);
+  });
+
+  /** Y el perfil `batch` corre donde hay trabajo: en el Job de implantacion y en el CronJob. */
+  it("el perfil `batch` corre donde hay trabajo: la implantacion y el consumidor", () => {
+    const perfiles = contenedoresDe([...normativa.implantacion(ENTORNO), ...normativa.lotes(ENTORNO)]).map(
+      (c) => valorDe(c, "SPRING_PROFILES_ACTIVE"),
+    );
+    expect(perfiles).toEqual(["batch", "batch"]);
   });
 });
 

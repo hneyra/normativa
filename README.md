@@ -34,25 +34,34 @@ yarn install
 yarn verificar          # lint, tipos y pruebas. Sin Pulumi, sin token y sin cluster
 ```
 
-Declara **su base y sus roles**, **su Deployment**, **su Job de migracion**, **sus
-rutas bajo su prefijo `normativa/`**, **su egreso**, sus alertas, su panel y su inventario de claves.
+Declara **su base y sus roles**, **su Deployment**, **su Job de migracion**, **el `CronJob` del
+consumidor de `identidad`** (ADR-0039, etapa 4), **sus rutas bajo su prefijo `normativa/`**, **su
+egreso**, sus alertas, su panel y su inventario de claves.
 No declara la etiqueta de su imagen: la pone `infrastructure`, y es lo que hace que una
 liberacion normal no sea un `pulumi up` (ADR-0011 §5).
 
 **Su egreso, que es su grafo de dependencias:**
 
 ```
-normativa  ──▶  (ninguno)
+normativa  ──▶  identidad    (el buzon de eventos de la autorizacion, ADR-0039 etapa 4)
 ```
 
-**Sin egreso a ningun sistema, y es una afirmacion sobre la arquitectura, no una casilla
-pendiente.** Lo que distribuye son datos sellados —inmutables una vez sellados (`V9`)— y un
-artefacto de reglas que viaja como codigo (ADR-0025 §2). Nada de eso necesita preguntarle nada a
-nadie.
+**Una sola arista, y hay que decir por que hasta la etapa 4 de ADR-0039 aqui decia
+«ninguno».** Lo que `normativa` distribuye son datos sellados —inmutables una vez sellados
+(`V9`)— y un artefacto de reglas que viaja como codigo (ADR-0025 §2), y nada de eso necesita
+preguntarle nada a nadie: **para sellar, sigue sin llamar a ningun sistema**. La pregunta que
+este README dejaba escrita —«que dato de otro sistema hace falta para sellar una cifra que la ley
+ya fijo»— sigue contestandose «ninguno».
 
-**Si algun dia necesitara egreso, lo que esta mal es la arquitectura, no el descriptor.** La
-pregunta que habria que contestar antes de anadir la linea es que dato de otro sistema hace falta
-para sellar una cifra que la ley ya fijo.
+La arista no es un dato de negocio: es **la replica de la autorizacion**. Las cuatro tablas
+`usuario`, `grupo`, `miembro` y `permiso` con las que el guardia autoriza sin un viaje de red
+dejan de sembrarse a mano desde el catalogo y pasan a leerse del buzon de `identidad`, que desde
+ADR-0039 es su dueno (ADR-0039 §«Lo que cuesta»; AC-3.3 de `infrastructure#52`). La lleva el
+perfil `batch` —el `CronJob` del consumidor y el `Job` de implantacion—, no el proceso web: con
+`identidad` caido la ventanilla sigue leyendo sus parametros; lo que se pierde es la frescura de
+la copia, no la capacidad de autorizar. Y **`identidad` el sistema no es `identidad` Keycloak**:
+la arista apunta a `componente: identidad-sistema` en `kamayuk-identidad-<ambiente>`, y la de
+Keycloak —el JWKS del proceso web— sigue apuntando a la plataforma.
 
 ## Lo que este repositorio NO decide
 

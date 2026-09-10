@@ -178,6 +178,11 @@ public final class ConfiguracionDeNormativa implements ConfiguracionDeLasVerific
                     "conjunto_parametro_detalle",
                     "conjunto_parametros",
                     "depreciacion",
+                    // Las dos del consumidor del buzon de `identidad` (V2, etapa 4 de ADR-0039).
+                    // Son de ESTE sistema y no replicadas: lo que este consumidor aplico o aparto
+                    // es suyo, y los otros tres consumidores tienen las suyas en su base.
+                    "identidad_evento_aplicado",
+                    "identidad_evento_muerto",
                     "parametro_tributario",
                     "valor_referencial_vehiculo",
                     "valor_unitario_edificacion");
@@ -269,7 +274,12 @@ public final class ConfiguracionDeNormativa implements ConfiguracionDeLasVerific
                 "valor_unitario_edificacion",
                 "depreciacion",
                 "valor_referencial_vehiculo",
-                "auditoria");
+                "auditoria",
+                // Lo que el consumidor de `identidad` aplico o aparto es constancia: un hecho
+                // aplicado que se borrara se volveria a aplicar, y uno apartado que se borrara
+                // dejaria de contarse en el aviso sin que nadie lo hubiera explicado.
+                "identidad_evento_aplicado",
+                "identidad_evento_muerto");
     }
 
     /**
@@ -291,7 +301,63 @@ public final class ConfiguracionDeNormativa implements ConfiguracionDeLasVerific
                 "auditoria",
                 "valor_unitario_edificacion",
                 "depreciacion",
-                "valor_referencial_vehiculo");
+                "valor_referencial_vehiculo",
+                // Se inserta y se lee. `identidad_evento_muerto` NO esta aqui: admite el UPDATE
+                // de su `explicacion`, que es como el responsable dice que ya lo miro.
+                "identidad_evento_aplicado");
+    }
+
+    /**
+     * Regla 12 (ADR-0039): las DOS clases de este sistema que escriben {@code usuario}, {@code
+     * grupo}, {@code miembro} o {@code permiso}, cada una con su motivo. Declararlas ENCIENDE la
+     * prohibicion: desde aqui, cualquier otra clase que escriba una de las cuatro sale roja
+     * nombrada, y {@code ProhibicionesEnElCodigoFuenteTest} imprime «SI se vigila aqui».
+     *
+     * <ul>
+     *   <li>{@code SembradorDeLaCopiaLocal}: siembra el primer administrador al implantar. <b>Hasta
+     *       la etapa 5</b>, cuando la copia la escriba solo el consumidor y esta entrada se quite
+     *       —y el escaner la cace si alguien la deja—.
+     *   <li>{@code CopiaLocalDeLaAutorizacionJdbc}: el consumidor del buzon de {@code identidad},
+     *       que aplica lo que aquel sistema publica. <b>Sin fecha de fin</b>: es el consumidor, y
+     *       escribir las cuatro es lo suyo. Lo que no puede es DECIDIR, y eso no lo ve un escaner
+     *       de texto: lo sostiene que todo lo que escribe sale de un hecho con {@code evento_id}.
+     * </ul>
+     *
+     * <p>Se nombran por el NOMBRE SIMPLE, que es lo que el escaner compara contra el archivo; una
+     * entrada que no nombre una clase de produccion la caza {@code SujetosDeLaConfiguracion}.
+     */
+    @Override
+    public Set<String> escritoresDeLaAutorizacionConMotivo() {
+        return Set.of("SembradorDeLaCopiaLocal", "CopiaLocalDeLaAutorizacionJdbc");
+    }
+
+    /**
+     * Las dos escrituras del consumidor del buzon de {@code identidad} (ADR-0039, etapa 4), y son
+     * las primeras de este sistema que entran aqui.
+     *
+     * <p>Lo que escriben es una COPIA de un dato que este sistema NO PRODUJO —una cuenta, un grupo,
+     * una afiliacion, un permiso—, ya decidido en {@code identidad} y verificado alli con la
+     * observacion que la regla 10 exigio EN EL ACTO QUE LO CAMBIO. El cuerpo del evento trae ademas
+     * quien lo hizo ({@code usuarioRegistro}, {@code usuarioAlta}). No hay ningun usuario que pida
+     * esta escritura: la dispara un proceso por lotes que un {@code CronJob} invoca, y el «por que»
+     * no existe de este lado. Pedirlo produciria lo que el javadoc de la regla advierte: una cadena
+     * fija que satisface la comprobacion y vacia de sentido la auditoria. Es la misma entrada que
+     * {@code AplicarUnHecho} tiene en {@code rentas} y que el acuse tiene en {@code identidad}.
+     *
+     * <p>{@code apartar} esta por lo mismo, con un matiz: lo que escribe no es un dato de la
+     * autorizacion sino la constancia de que un evento NO se pudo aplicar, con su motivo dentro
+     * —{@code identidad_evento_muerto.motivo}—. Ese motivo es lo que una observacion seria, y lo
+     * pone el consumidor porque es el unico que sabe por que.
+     */
+    @Override
+    public Set<String> escriturasSinUsuarioQueObserve() {
+        return Set.of(
+                ".seguridad.aplicacion.AplicarUnEventoDeIdentidad.aplicar("
+                        + "kamayuk.normativa.seguridad.dominio.consumidor.EventoRecibido,"
+                        + " java.time.Instant)",
+                ".seguridad.aplicacion.AplicarUnEventoDeIdentidad.apartar("
+                        + "kamayuk.normativa.seguridad.dominio.consumidor.EventoRecibido,"
+                        + " java.lang.String, java.time.Instant)");
     }
 
     /** Ninguna: aqui no se compone ningun area a mano, porque no hay predios que medir (#607). */

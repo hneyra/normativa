@@ -137,6 +137,7 @@ public final class DatosDePrueba {
             sembrarConjunto(app, muni, parametroId);
             sembrarSeguridad(app, muni, sufijo);
             sembrarDocumento(app, muni, sufijo);
+            sembrarElBuzonDeIdentidad(app, muni, sufijo);
 
             app.commit();
         }
@@ -240,6 +241,34 @@ public final class DatosDePrueba {
                 "CONJUNTO_SELLADO-2026-00000" + (sufijo.equals("A") ? "1" : "2"),
                 MODELO_DE_DOCUMENTO,
                 VIGENCIA);
+    }
+
+    /**
+     * Las dos tablas del consumidor del buzon de {@code identidad} (V2, etapa 4 de ADR-0039): un
+     * hecho ya aplicado y uno apartado. Sin sembrarlas, la prueba de aislamiento las encuentra
+     * vacias y no puede afirmar nada sobre su politica — y se pone roja sola, que es lo que hizo al
+     * llegar V2.
+     */
+    private static void sembrarElBuzonDeIdentidad(Connection app, long muni, String sufijo)
+            throws SQLException {
+        ejecutar(
+                app,
+                "INSERT INTO identidad_evento_aplicado (municipalidad_id, evento_id, secuencia,"
+                        + " tipo, sujeto_id, huella, aplicado_en)"
+                        + " VALUES (?, CAST(? AS uuid), 1, 'USUARIO_DADO_DE_ALTA', 1,"
+                        + "         repeat('a', 64), ?)",
+                muni,
+                "00000000-0000-4000-8000-00000000000" + (sufijo.equals("A") ? "1" : "2"),
+                java.time.OffsetDateTime.of(VIGENCIA.atStartOfDay(), java.time.ZoneOffset.UTC));
+        ejecutar(
+                app,
+                "INSERT INTO identidad_evento_muerto (municipalidad_id, evento_id, secuencia,"
+                        + " tipo, sujeto_id, cuerpo, huella, motivo, recibido_en)"
+                        + " VALUES (?, CAST(? AS uuid), 2, 'PERMISO_FIJADO', 1, 'esto no es JSON',"
+                        + "         repeat('b', 64), 'cuerpo ilegible, sembrado por la prueba', ?)",
+                muni,
+                "00000000-0000-4000-8000-00000000001" + (sufijo.equals("A") ? "1" : "2"),
+                java.time.OffsetDateTime.of(VIGENCIA.atStartOfDay(), java.time.ZoneOffset.UTC));
     }
 
     /** Identificador del grupo sembrado en una municipalidad. */
