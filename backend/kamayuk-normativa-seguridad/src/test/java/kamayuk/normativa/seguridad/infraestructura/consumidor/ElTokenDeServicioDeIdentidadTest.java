@@ -315,7 +315,7 @@ class ElTokenDeServicioDeIdentidadTest {
         }
 
         String raiz() {
-            return "http://127.0.0.1:" + socket.getLocalPort() + "/realms/sgtm/token";
+            return "http://127.0.0.1:" + socket.getLocalPort() + "/realms/kamayuk/token";
         }
 
         int puerto() {

@@ -126,7 +126,7 @@ services:
       KAMAYUK_IDENTIDAD_URL: http://identidad-sistema:8080
       # A donde se pide el token, por la red interna: Keycloak, que aqui si se
       # llama `identidad`. Es una direccion, no una identidad.
-      KAMAYUK_IDENTIDAD_TOKEN: http://identidad:8080/realms/sgtm/protocol/openid-connect/token
+      KAMAYUK_IDENTIDAD_TOKEN: http://identidad:8080/realms/kamayuk/protocol/openid-connect/token
       # Un cliente por municipalidad: la cuenta de servicio es la que lleva
       # `municipalidad_id` (ADR-0028 §2), e `identidad` deriva QUIEN pregunta del
       # `azp` del token y nunca de un parametro.
@@ -174,13 +174,13 @@ services:
       #
       # Es el MISMO realm que los otros tres: un login para los cuatro
       # (ADR-0030 §3).
-      KAMAYUK_OIDC_EMISOR: ${KAMAYUK_OIDC_EMISOR:-http://localhost:8180}/realms/sgtm
+      KAMAYUK_OIDC_EMISOR: ${KAMAYUK_OIDC_EMISOR:-http://localhost:8180}/realms/kamayuk
       # El emisor es una identidad, no una direccion de red. El navegador llega a
       # Keycloak por su nombre publico y este contenedor por el interno de la red
       # del compose; usar el publico para las dos cosas haria que el backend
       # buscara el JWKS en si mismo y todo token seria invalido por un motivo que
       # no se parece a su causa.
-      KAMAYUK_OIDC_JWKS: http://identidad:8080/realms/sgtm/protocol/openid-connect/certs
+      KAMAYUK_OIDC_JWKS: http://identidad:8080/realms/kamayuk/protocol/openid-connect/certs
     labels:
       # Su prefijo, y SOLO el suyo. Reclamar el de otro no falla: se lo queda, y
       # las peticiones dejan de llegar a su dueno. Es la misma prohibicion (a) que

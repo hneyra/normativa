@@ -26,8 +26,8 @@
  * `solicitar()` no manda `Authorization`, y eso **no es un olvido sino el motivo de que
  * `datos/servidas.ts` este vacio**: esta interfaz no consigue un token porque no hay cliente
  * OIDC de `normativa-web` en ninguno de los dos realms —`realm-sgtm.json` declara
- * `sgtm-backoffice` y `sgtm-verificacion`; `realm-sgtm-ciudadano.json`, `sgtm-portal` y
- * `sgtm-verificacion`—, y eso es de `infrastructure`. Cuando lo haya, el token vive **en
+ * `kamayuk-backoffice` y `kamayuk-verificacion`; `realm-sgtm-ciudadano.json`, `kamayuk-portal` y
+ * `kamayuk-verificacion`—, y eso es de `infrastructure`. Cuando lo haya, el token vive **en
  * memoria**: nunca en `localStorage` ni en `sessionStorage`, porque en una PC de ventanilla
  * compartida entre turnos un token persistido sobrevive al cierre del navegador. Lo vigila la
  * prohibicion `token-en-almacenamiento` de `eslint.prohibiciones.mjs`.
