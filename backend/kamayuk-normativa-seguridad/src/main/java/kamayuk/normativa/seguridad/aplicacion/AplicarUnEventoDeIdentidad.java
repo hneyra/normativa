@@ -61,4 +61,14 @@ public class AplicarUnEventoDeIdentidad {
     public long apartadosSinExplicar() {
         return copia.apartadosSinExplicar();
     }
+
+    /**
+     * Cuantas cuentas dejo la copia local. <b>Transaccional a proposito</b>, como la de arriba: la
+     * politica RLS de {@code usuario} lee {@code app.municipalidad_id} y sin el {@code SET LOCAL}
+     * que abre la transaccion esta consulta no devuelve cero, revienta.
+     */
+    @Transactional(readOnly = true)
+    public long cuentasEnLaCopia() {
+        return copia.cuentasEnLaCopia();
+    }
 }
