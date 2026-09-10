@@ -161,6 +161,22 @@ public class ConsumirEventosDeIdentidad {
         return new Corrida(vueltas, aplicados, apartados, List.copyOf(pospuestos.values()), viejos);
     }
 
+    /**
+     * Cuantas cuentas hay en la copia local ahora mismo, para quien tenga que decidir con eso.
+     *
+     * <p>Lo pregunta {@code ImplantarMunicipalidad} al terminar su pasada, y por eso esta aqui y no
+     * en un segundo colaborador suyo: lo que la implantacion tiene delante es <b>el consumidor</b>,
+     * y pedirle ademas el aplicador para una sola cuenta seria dos referencias al mismo cableado
+     * —que existe entero o no existe, porque las dos las declara la misma {@code @Configuration}
+     * bajo la misma condicion—.
+     *
+     * <p>La corrida periodica <b>no</b> lo pregunta, y tampoco debe: cero cuentas en una vuelta del
+     * {@code CronJob} no es un fallo sino una copia que todavia no ha recibido nada.
+     */
+    public long cuentasEnLaCopia() {
+        return aplicador.cuentasEnLaCopia();
+    }
+
     private static List<EventoRecibido> losQueLlevanDemasiado(
             Iterable<EventoRecibido> pospuestos, Instant cuando) {
         List<EventoRecibido> viejos = new ArrayList<>();

@@ -156,8 +156,11 @@ const VENTANA_DEL_CONSUMIDOR = "*/5 * * * *";
  * Son las mismas para el `Job` de implantacion —que termina con una pasada del consumidor, para
  * que la municipalidad recien implantada traiga lo que `identidad` ya publico— y para el
  * `CronJob` de `lotes()`. Van juntas y se derivan de una sola lista porque la deriva entre las
- * dos mitades se lee mal: un `CronJob` con la URL y un `Job` sin ella implanta la municipalidad,
- * dice «Sin identidad configurada» y sale con cero.
+ * dos mitades cuesta el despliegue: desde la etapa 5 de ADR-0039 el administrador ya no se siembra
+ * —lo escribe solo el consumidor, con lo que `identidad` publica—, asi que un `Job` de implantacion
+ * sin estas variables deja la base sin una sola cuenta y **falla nombrandolo** (`SinAutorizacion`).
+ * Hasta la etapa 4 salia con cero diciendo «Sin identidad configurada», que era peor: `Complete`
+ * sobre una municipalidad donde nadie puede entrar.
  *
  * - `KAMAYUK_IDENTIDAD_URL`: el buzon, en SU namespace. Se compone con `namespaceDe` y no a mano.
  *   **El servicio es `kamayuk-identidad-web`, en `kamayuk-identidad-<ambiente>`**, y no

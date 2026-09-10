@@ -169,6 +169,17 @@ public class CopiaLocalDeLaAutorizacionJdbc extends RepositorioJdbc
                 .single();
     }
 
+    /**
+     * Las cuentas de la municipalidad del contexto. La politica RLS de {@code usuario} las acota,
+     * asi que esto <b>tiene que correr dentro de una transaccion</b>: sin el {@code SET LOCAL} la
+     * politica evalua {@code ''::bigint} y la consulta no devuelve vacio, revienta (la leccion que
+     * {@code rentas} pago con sus dos lecturas de la copia local en la etapa 4).
+     */
+    @Override
+    public long cuentasEnLaCopia() {
+        return jdbc().sql("SELECT count(*) FROM usuario").query(Long.class).single();
+    }
+
     // ------------------------------------------------------------------ cada tipo
 
     private Aplicacion escribirUsuario(JsonNode cuerpo) {

@@ -45,31 +45,42 @@ import org.springframework.stereotype.Component;
  * INSERT}, en una conexion que se abre y se cierra. Todo lo demas va por el camino normal de la
  * aplicacion, como {@code kamayuk_app} y con su auditoria.
  *
- * <h2>Un grupo, no dos</h2>
+ * <h2>Tres pasos, y el tercero ya no es opcional (ADR-0039, etapa 5)</h2>
  *
- * <p>{@code rentas} crea dos —administracion y {@code Seguridad}—; aqui solo el primero. El segundo
- * es la plantilla de quien administra <b>el acceso de los usuarios</b>, y esas pantallas viven en
- * {@code rentas} (ADR-0030 §3): crear aqui un grupo que no puede administrar nada seria decir que
- * existe una delegacion que no existe.
+ * <ol>
+ *   <li>dar de alta la municipalidad;
+ *   <li>sembrar <b>el catalogo</b> de este sistema —sus modulos y sus opciones—, que es lo unico
+ *       que le queda a {@link SembradorDelCatalogo};
+ *   <li>traer del buzon de {@code identidad} lo que aquel sistema ya publico: el grupo de
+ *       administracion, el primer administrador, su afiliacion y sus permisos.
+ * </ol>
+ *
+ * <p>Hasta la etapa 4 el paso 2 escribia ademas el administrador, asi que el 3 era un extra: si el
+ * buzon no contestaba, la copia sembrada seguia siendo un estado legitimo y la implantacion podia
+ * avisar y terminar. <b>Desde la etapa 5 no lo es</b>: la autorizacion la escribe solo el
+ * consumidor, de modo que una implantacion cuyo paso 3 no llegue a hacer nada deja esta base <b>sin
+ * una sola cuenta</b> —nadie puede entrar, y el guardia le dice a quien acaba de implantar la
+ * municipalidad que no esta dado de alta en este sistema—. Por eso el paso 3 falla en vez de
+ * avisar, y la corrida sale distinta de cero para que el despliegue la repita.
+ *
+ * <h2>Fallar aqui NO es lo mismo que fallar en el {@code CronJob}, y la diferencia vive aqui</h2>
+ *
+ * <p>{@link ConsumirEventosDeIdentidad#correr()} no cambia: una vuelta periodica con hechos
+ * pospuestos termina <b>normal</b>, avisa una vez por corrida y deja que la siguiente siga (etapa
+ * 4). Convertir eso en un fallo pondria el {@code CronJob} en {@code Failed} cada cinco minutos, y
+ * un {@code Job} que falla siempre no lo mira nadie.
+ *
+ * <p>Lo que esta clase anade es una exigencia <b>del momento de implantar</b>, que es otro momento:
+ * ahi no hay «la siguiente vuelta trae lo que falte», hay un despliegue que o deja la municipalidad
+ * utilizable o no la deja. Las dos reglas conviven porque preguntan cosas distintas —«¿avanzo la
+ * copia?» y «¿quedo alguien que pueda entrar?»— y la segunda solo se hace aqui.
  *
  * <h2>Idempotente, entera</h2>
  *
  * <p>Se ejecuta en cada despliegue. Lo que ya existe se queda como esta —con los permisos que
- * alguien haya configurado despues—, y lo que falta se crea. Nunca borra.
- *
- * <h2>Y desde la etapa 4 termina con una pasada del consumidor del buzon (ADR-0039)</h2>
- *
- * <p>Sembrar deja el primer administrador; lo que {@code identidad} haya publicado desde que esta
- * municipalidad existe —grupos, cuentas, permisos— lo trae el consumidor, y hacerlo aqui es lo que
- * deja la copia local al dia el mismo dia que se implanta, sin esperar al primer {@code CronJob}.
- * <b>Sin identidad configurada</b> ({@code kamayuk.identidad.url} sin poner) no hay consumidor: se
- * dice y la implantacion NO falla, porque en esta etapa la copia sembrada sigue siendo un estado
- * legitimo. Que deje de serlo es la etapa 5, cuando el sembrador se retire.
- *
- * <p>Si el buzon no contesta, la implantacion <b>si</b> falla: la municipalidad queda dada de alta
- * y sembrada —eso ya confirmo—, y la corrida sale distinta de cero para que el despliegue la
- * repita. Tragarselo dejaria una implantacion en verde con una copia que no sabe nada de lo que
- * {@code identidad} ya dijo.
+ * alguien haya configurado despues—, y lo que falta se crea. Nunca borra. Y la comprobacion del
+ * paso 3 cuenta <b>filas de {@code usuario}</b> y no hechos aplicados, precisamente por eso: un
+ * segundo despliegue aplica cero hechos —los acuso el primero— y tiene a quien entrar.
  */
 @Component
 @Profile("batch")
@@ -79,20 +90,30 @@ public class ImplantarMunicipalidad implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(ImplantarMunicipalidad.class);
 
+    /** Lo que hay que hacer antes, y va dentro de los tres mensajes de {@link SinAutorizacion}. */
+    private static final String REMEDIO =
+            "Remedio: implantar `identidad` PRIMERO —es el dueño de la autorizacion (ADR-0039)— y"
+                    + " darle a este proceso las variables del consumidor: KAMAYUK_IDENTIDAD_URL,"
+                    + " _TOKEN, _CLIENTE y _CREDENCIAL. Despues, repetir esta implantacion: es"
+                    + " idempotente.";
+
     private final RegistroDeMunicipalidadesJdbc registro;
-    private final SembradorDeLaCopiaLocal sembrador;
+    private final SembradorDelCatalogo sembrador;
     private final DatosDeImplantacion datos;
     private final @Nullable ConsumirEventosDeIdentidad consumidor;
 
     public ImplantarMunicipalidad(
             RegistroDeMunicipalidadesJdbc registro,
-            SembradorDeLaCopiaLocal sembrador,
+            SembradorDelCatalogo sembrador,
             DatosDeImplantacion datos,
             ObjectProvider<ConsumirEventosDeIdentidad> consumidor) {
         this.registro = registro;
         this.sembrador = sembrador;
         this.datos = datos;
         // `getIfAvailable`: el consumidor solo existe si el despliegue dijo donde esta el buzon.
+        // Desde la etapa 5 que no exista NO es un estado admisible al implantar, y quien lo dice
+        // es `traerLaAutorizacionDeIdentidad`: aqui no se puede lanzar todavia, porque este
+        // constructor corre al montar el contexto y el rojo saldria sin haber hecho ni el paso 1.
         this.consumidor = consumidor.getIfAvailable();
     }
 
@@ -110,8 +131,6 @@ public class ImplantarMunicipalidad implements ApplicationRunner {
         try {
             int nuevos =
                     sembrador.sembrar(
-                            datos.administrador(),
-                            datos.nombreDelAdministrador(),
                             Observacion.de(
                                     "Implantacion de la municipalidad "
                                             + datos.ubigeo()
@@ -121,44 +140,85 @@ public class ImplantarMunicipalidad implements ApplicationRunner {
             // se puede comprobar mirando pantallas. Una instalacion que se creia de demostracion y
             // salio real emite papeles sin marca, y quien lo descubre es quien recibe uno (#122).
             log.info(
-                    "Municipalidad {} lista en normativa ({}): id {}, {} accesos nuevos,"
-                            + " administrador '{}'",
+                    "Municipalidad {} lista en normativa ({}): id {}, {} accesos nuevos del"
+                            + " catalogo de este sistema",
                     datos.ubigeo(),
                     datos.esDemostracion() ? "DEMOSTRACION" : "instalacion real",
                     municipalidadId,
-                    nuevos,
-                    datos.administrador());
+                    nuevos);
 
-            traerLoQueIdentidadYaPublico();
+            traerLaAutorizacionDeIdentidad();
         } finally {
             OrigenContext.limpiar();
             TenantContext.limpiar();
         }
     }
 
-    /** La pasada del consumidor, con el contexto de tenant que este runner ya fijo. */
-    private void traerLoQueIdentidadYaPublico() {
+    /**
+     * El paso 3: la pasada del consumidor, con el contexto de tenant que este runner ya fijo, y la
+     * comprobacion de que dejo a alguien que pueda entrar.
+     *
+     * <p>Las tres formas de no conseguirlo se distinguen porque se arreglan de tres maneras: falta
+     * configuracion, {@code identidad} no contesta, o contesta y no tiene nada que decir de esta
+     * municipalidad —que es el orden equivocado: implantar este sistema antes que su dueño—.
+     */
+    private void traerLaAutorizacionDeIdentidad() {
         if (consumidor == null) {
-            log.info(
-                    "Sin identidad configurada (kamayuk.identidad.url): la copia local de la"
-                            + " autorizacion queda como la sembro esta implantacion. Lo que"
-                            + " `identidad` haya publicado no llega hasta que se configure el"
-                            + " consumidor (ADR-0039, etapa 4)");
-            return;
+            throw new SinAutorizacion(
+                    "Este despliegue no configuro el consumidor del buzon de `identidad` (falta"
+                            + " kamayuk.identidad.url), asi que la copia local de la autorizacion se"
+                            + " queda VACIA: desde la etapa 5 de ADR-0039 el administrador ya no se"
+                            + " siembra aqui, llega por el buzon. Sin el, esta municipalidad queda"
+                            + " implantada y sin una sola cuenta que pueda entrar. "
+                            + REMEDIO);
         }
         try {
             consumidor.correr();
         } catch (BuzonDeIdentidad.IdentidadNoContesta noContesta) {
-            // La municipalidad YA esta implantada —eso se confirmo arriba— y lo que no llego es
-            // la frescura de la copia local, que el CronJob del consumidor trae en su siguiente
-            // ventana. Tumbar el Job aqui dejaria un despliegue sin municipalidad por un sistema
-            // que no es este, que es justo lo que ADR-0039 §«Lo que cuesta» (2) excluye: con
-            // `identidad` caido, los otros cuatro siguen. Se dice, y con la causa entera.
-            log.warn(
-                    "La implantacion termino, y la pasada del consumidor de `identidad` NO: {}. La"
-                            + " copia local de la autorizacion queda como la sembro esta implantacion"
-                            + " hasta la siguiente vuelta del consumidor (ADR-0039, etapa 4)",
-                    noContesta.getMessage());
+            // Antes esto era un WARN y la implantacion terminaba en verde. Con el sembrador
+            // retirado eso dejaria un `Job` en `Complete` sobre una base sin usuarios, que es
+            // exactamente el modo de fallo de C-18: verde, y nada funciona.
+            throw new SinAutorizacion(
+                    "No se pudo traer la autorizacion del buzon de `identidad`: "
+                            + noContesta.getMessage()
+                            + ". La municipalidad quedo dada de alta y con su catalogo sembrado,"
+                            + " pero sin ninguna cuenta: nadie puede entrar. "
+                            + REMEDIO,
+                    noContesta);
+        }
+        long cuentas = consumidor.cuentasEnLaCopia();
+        if (cuentas == 0) {
+            throw new SinAutorizacion(
+                    "El buzon de `identidad` contesto y no publico ni una cuenta para la"
+                            + " municipalidad "
+                            + datos.ubigeo()
+                            + ": la copia local se queda con CERO usuarios y nadie puede entrar."
+                            + " Lo normal es que sea el orden: esta municipalidad todavia no esta"
+                            + " implantada en `identidad`, asi que alli no hay nada publicado que"
+                            + " traer. "
+                            + REMEDIO);
+        }
+        log.info(
+                "Autorizacion traida del buzon de `identidad`: la copia local de la municipalidad"
+                        + " {} tiene {} cuenta(s)",
+                datos.ubigeo(),
+                cuentas);
+    }
+
+    /**
+     * La implantacion no pudo dejar a nadie que entre. Sale sin capturar: el {@code
+     * ApplicationRunner} la propaga, el proceso termina distinto de cero y el {@code Job} del
+     * despliegue queda {@code Failed} en vez de {@code Complete}.
+     */
+    public static final class SinAutorizacion extends RuntimeException {
+        @java.io.Serial private static final long serialVersionUID = 1L;
+
+        public SinAutorizacion(String mensaje) {
+            super(mensaje);
+        }
+
+        public SinAutorizacion(String mensaje, Throwable causa) {
+            super(mensaje, causa);
         }
     }
 }

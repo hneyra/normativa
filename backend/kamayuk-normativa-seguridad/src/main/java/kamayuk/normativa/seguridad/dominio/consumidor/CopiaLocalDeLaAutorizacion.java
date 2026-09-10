@@ -44,6 +44,19 @@ public interface CopiaLocalDeLaAutorizacion {
     long apartadosSinExplicar();
 
     /**
+     * Cuantas cuentas hay HOY en la copia local: la respuesta a «¿queda alguien que pueda entrar?».
+     *
+     * <p>Existe desde la etapa 5 de ADR-0039, cuando el sembrador dejo de escribir el primer
+     * administrador: desde entonces la unica forma de que esta base conozca a alguien es que llegue
+     * por el buzon, y {@code ImplantarMunicipalidad} lo comprueba antes de darse por buena.
+     *
+     * <p><b>Se cuentan FILAS y no hechos aplicados</b>, y no es lo mismo: una reimplantacion aplica
+     * <b>cero</b> hechos —los acuso la primera— y sin embargo tiene a quien entrar. Exigir «al
+     * menos un evento aplicado» dejaria todo segundo despliegue en rojo por hacer lo correcto.
+     */
+    long cuentasEnLaCopia();
+
+    /**
      * La FILA de esta copia que ese hecho escribe, en clave natural —{@code usuario:jperez}, {@code
      * grupo:Caja}, {@code miembro:Caja/jperez}, {@code permiso:GRUPO/Caja/normativa/…}—, o {@code
      * null} si el hecho no se puede leer (que es un caso de {@link NoSePuedeAplicar} y lo decide

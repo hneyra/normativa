@@ -133,10 +133,13 @@ services:
       KAMAYUK_IDENTIDAD_CLIENTE: kamayuk-normativa-servicio-${KAMAYUK_UBIGEO:?falta KAMAYUK_UBIGEO en el .env de la plataforma}
       # La clave de ese cliente confidencial, que crea `reconciliar-identidades.sh
       # servicios` en el Keycloak de la plataforma. VACIA POR OMISION, y a
-      # proposito: sin ella la peticion sale sin credencial, `identidad` contesta
-      # 401, y la implantacion lo DICE y termina igual —la municipalidad ya esta—;
-      # la copia local queda como la sembro hasta que haya credencial. Lo que no
-      # hace es inventar una cadena que ningun emisor firmo (#21).
+      # proposito: lo que NO hace es inventar una cadena que ningun emisor firmo
+      # (#21). Sin ella la peticion sale sin credencial e `identidad` contesta
+      # 401 — y desde la etapa 5 de ADR-0039 eso ya no es un aviso: la
+      # implantacion FALLA. El administrador dejo de sembrarse aqui, asi que sin
+      # credencial la copia local se queda sin una sola cuenta y la municipalidad
+      # queda implantada sin nadie que pueda entrar. Hay que levantar `identidad`
+      # PRIMERO y poner esta clave.
       KAMAYUK_IDENTIDAD_CREDENCIAL: ${KAMAYUK_CREDENCIAL_NORMATIVA_IDENTIDAD:-}
       # A quien se avisa cuando un evento no se puede aplicar nunca y se aparta.
       KAMAYUK_IDENTIDAD_CONSUMIDOR_RESPONSABLE: ${KAMAYUK_RESPONSABLE:-Quien levanto este compose}

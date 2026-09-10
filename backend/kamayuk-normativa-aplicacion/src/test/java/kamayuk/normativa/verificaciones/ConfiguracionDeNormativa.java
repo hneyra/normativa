@@ -308,27 +308,33 @@ public final class ConfiguracionDeNormativa implements ConfiguracionDeLasVerific
     }
 
     /**
-     * Regla 12 (ADR-0039): las DOS clases de este sistema que escriben {@code usuario}, {@code
-     * grupo}, {@code miembro} o {@code permiso}, cada una con su motivo. Declararlas ENCIENDE la
-     * prohibicion: desde aqui, cualquier otra clase que escriba una de las cuatro sale roja
-     * nombrada, y {@code ProhibicionesEnElCodigoFuenteTest} imprime «SI se vigila aqui».
+     * Regla 12 (ADR-0039): la UNICA clase de este sistema que escribe {@code usuario}, {@code
+     * grupo}, {@code miembro} o {@code permiso}, con su motivo. Declararla ENCIENDE la prohibicion:
+     * desde aqui, cualquier otra clase que escriba una de las cuatro sale roja nombrada, y {@code
+     * ProhibicionesEnElCodigoFuenteTest} imprime «SI se vigila aqui».
      *
      * <ul>
-     *   <li>{@code SembradorDeLaCopiaLocal}: siembra el primer administrador al implantar. <b>Hasta
-     *       la etapa 5</b>, cuando la copia la escriba solo el consumidor y esta entrada se quite
-     *       —y el escaner la cace si alguien la deja—.
      *   <li>{@code CopiaLocalDeLaAutorizacionJdbc}: el consumidor del buzon de {@code identidad},
      *       que aplica lo que aquel sistema publica. <b>Sin fecha de fin</b>: es el consumidor, y
      *       escribir las cuatro es lo suyo. Lo que no puede es DECIDIR, y eso no lo ve un escaner
      *       de texto: lo sostiene que todo lo que escribe sale de un hecho con {@code evento_id}.
      * </ul>
      *
+     * <p><b>Eran dos hasta la etapa 5.</b> La otra era {@code SembradorDeLaCopiaLocal}, que
+     * escribia el primer administrador al implantar y llevaba escrito «hasta la etapa 5, cuando la
+     * copia la escriba solo el consumidor y esta entrada se quite —y el escaner la cace si alguien
+     * la deja—». Esa etapa es esta: el sembrador es hoy {@code SembradorDelCatalogo} y solo escribe
+     * {@code modulo_sistema} y {@code acceso}. La entrada se retira, y las dos direcciones estan
+     * medidas: dejarla con el nombre viejo la caza {@code SujetosDeLaConfiguracion} —no nombra
+     * ninguna clase de produccion—, y devolverle un {@code INSERT INTO usuario} al sembrador lo
+     * caza el escaner de la regla 12, con archivo y linea.
+     *
      * <p>Se nombran por el NOMBRE SIMPLE, que es lo que el escaner compara contra el archivo; una
      * entrada que no nombre una clase de produccion la caza {@code SujetosDeLaConfiguracion}.
      */
     @Override
     public Set<String> escritoresDeLaAutorizacionConMotivo() {
-        return Set.of("SembradorDeLaCopiaLocal", "CopiaLocalDeLaAutorizacionJdbc");
+        return Set.of("CopiaLocalDeLaAutorizacionJdbc");
     }
 
     /**
