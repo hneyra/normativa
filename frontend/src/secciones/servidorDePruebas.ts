@@ -44,7 +44,7 @@ export function problema(codigo: string, estado: number, mensaje: string): Respu
   return {
     estado,
     cuerpo: {
-      type: `https://sgtm.gob.pe/errores/${codigo.toLowerCase()}`,
+      type: `https://kamayuk.gob.pe/errores/${codigo.toLowerCase()}`,
       title: codigo,
       status: estado,
       codigo,

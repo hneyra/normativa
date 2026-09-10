@@ -19,7 +19,7 @@ function fetchQueContesta(respuesta: Response) {
 function problema(estado: number, codigo: string, extra: Record<string, unknown> = {}): Response {
   return new Response(
     JSON.stringify({
-      type: `https://sgtm.gob.pe/errores/${codigo.toLowerCase()}`,
+      type: `https://kamayuk.gob.pe/errores/${codigo.toLowerCase()}`,
       title: 'Un titulo cualquiera',
       status: estado,
       detail: 'El detalle',
