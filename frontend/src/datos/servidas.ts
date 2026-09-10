@@ -23,8 +23,8 @@
  *   <li><b>Esta interfaz no consigue un token.</b> ADR-0030 §3 pone la sesion en `rentas`, y
  *       **no hay cliente OIDC de `normativa-web` en ninguno de los dos realms de Keycloak**.
  *       Comprobado en `infrastructure/despliegue/identidad/`: `realm-sgtm.json` declara
- *       `sgtm-backoffice` y `sgtm-verificacion`; `realm-sgtm-ciudadano.json` declara
- *       `sgtm-portal` y `sgtm-verificacion`. Ninguno mas. Cablearlo necesita un cliente publico
+ *       `kamayuk-backoffice` y `kamayuk-verificacion`; `realm-sgtm-ciudadano.json` declara
+ *       `kamayuk-portal` y `kamayuk-verificacion`. Ninguno mas. Cablearlo necesita un cliente publico
  *       con PKCE `S256`, y eso es de `infrastructure`.</li>
  *   <li><b>No hay a donde mandar la peticion.</b> `vite.config.ts` no declara `server.proxy`,
  *       asi que en desarrollo `/normativa/api/v1/...` lo atiende el propio servidor de Vite y
