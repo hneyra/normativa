@@ -1221,3 +1221,63 @@
   box-shadow: var(--sombra-flotante);
   max-width: calc(100vw - 40px);
 }
+
+/* ── La puerta de identidad ─────────────────────────────────────────────────
+   Lo que se ve cuando no hay token (#39). Va en esta hoja y no en una propia
+   porque el orden de los `@import` de `estilos.css` esta fijado por
+   `verificaciones/tokens-del-artboard.test.ts`: una hoja nueva es una linea mas
+   en ese orden, y el orden es lo que decide quien gana a igualdad de
+   especificidad. La puerta es marco —compone el `Aviso` y el `Boton`, como el
+   dialogo de cierre— asi que su sitio es este.
+
+   **No es una pantalla del artboard**, y por eso no hay medidas que portar: V6
+   dibuja el sistema con la sesion ya abierta. Lo que hay aqui es el mismo bloque
+   centrado del `Aviso`, con la marca encima, y ni un pixel inventado que
+   contradiga una medida del prototipo. */
+
+.kn-puerta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: var(--relleno-vacio);
+  background: var(--fondo);
+}
+
+.kn-puerta__caja {
+  width: 100%;
+  max-width: 520px;
+  border: 1px solid var(--linea);
+  border-radius: var(--radio-grande);
+  background: var(--superficie);
+  box-shadow: var(--sombra-flotante);
+}
+
+.kn-puerta__marca {
+  margin: 0;
+  padding: 20px var(--relleno-vacio) 0;
+  font-size: var(--texto-titulo);
+  font-weight: var(--peso-titulo);
+  color: var(--azul);
+  text-align: center;
+}
+
+.kn-puerta__marca-nota {
+  display: block;
+  margin-top: var(--hueco-etiqueta);
+  font-size: var(--texto-etiqueta);
+  font-weight: var(--peso-normal);
+  color: var(--tinta-3);
+}
+
+/* El remedio va ANTES del boton y con su propio tono: quien lea sólo el botón
+   se lleva «volver a identificarse» sin enterarse de que el problema puede no
+   estar aquí. Es la mitad del aviso que dice qué hacer cuando el botón no
+   basta. */
+.kn-puerta__remedio {
+  margin: 0 auto var(--hueco-aviso);
+  max-width: var(--ancho-aviso);
+  font-size: var(--texto-celda);
+  line-height: var(--linea-ayuda);
+  color: var(--tinta-2);
+}

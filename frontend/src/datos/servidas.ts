@@ -11,42 +11,44 @@
  *
  * **Las cuatro operaciones existen de verdad.** No son cuatro rutas del contrato pendientes de
  * implementar: estan publicadas, medidas sobre `src/main`, y son las cuatro que
- * `datos/operaciones.ts` declara con la forma de su `record`. Lo que falta no es el servidor:
- * es **la credencial**.
+ * `datos/operaciones.ts` declara con la forma de su `record`.
+ *
+ * <h2>Los TRES motivos de F-4, y cuales quedan (#39)</h2>
  *
  * <ol>
- *   <li><b>Las cuatro exigen token.</b> `SeguridadWeb.cadenaDeSeguridad` deja
- *       `authenticated()` todo lo que cuelga de la raiz de la API —las sondas y las metricas son
- *       lo unico con `permitAll()`, y lo demas `denyAll()`—, y `TenantContextFilter` exige
- *       ademas el claim `municipalidad_id`: sin el, **403 `SIN_MUNICIPALIDAD`** escrito por
- *       `RespuestaDeError` desde fuera del `DispatcherServlet`.</li>
- *   <li><b>Esta interfaz no consigue un token.</b> ADR-0030 §3 pone la sesion en `rentas`, y
- *       **no hay cliente OIDC de `normativa-web` en ninguno de los dos realms de Keycloak**.
- *       Comprobado en `infrastructure/despliegue/identidad/`: `realm-sgtm.json` declara
- *       `kamayuk-backoffice` y `kamayuk-verificacion`; `realm-sgtm-ciudadano.json` declara
- *       `kamayuk-portal` y `kamayuk-verificacion`. Ninguno mas. Cablearlo necesita un cliente publico
- *       con PKCE `S256`, y eso es de `infrastructure`.</li>
- *   <li><b>No hay a donde mandar la peticion.</b> `vite.config.ts` no declara `server.proxy`,
- *       asi que en desarrollo `/normativa/api/v1/...` lo atiende el propio servidor de Vite y
- *       devuelve el `index.html` de la aplicacion: un `200` con HTML donde la pantalla espera
- *       JSON, que es peor que un error porque no parece uno.</li>
+ *   <li><b>Las cuatro exigen token.</b> Sigue siendo cierto y no va a cambiar:
+ *       `SeguridadWeb.cadenaDeSeguridad` deja `authenticated()` todo lo que cuelga de la raiz de
+ *       la API —las sondas y las metricas son lo unico con `permitAll()`, y lo demas
+ *       `denyAll()`—, y `TenantContextFilter` exige ademas el claim `municipalidad_id`: sin el,
+ *       **403 `SIN_MUNICIPALIDAD`** escrito por `RespuestaDeError` desde fuera del
+ *       `DispatcherServlet`.</li>
+ *   <li><s><b>Esta interfaz no consigue un token.</b></s> <b>CERRADO en #39.</b> Decia que no
+ *       habia cliente OIDC de `normativa-web` en ningun realm; la decision fue **no crear uno** y
+ *       reusar `kamayuk-backoffice` —mismo realm, mismos usuarios, y la autorizacion la hace este
+ *       backend contra su copia local—. `api/identidad.ts` hace el codigo de autorizacion con
+ *       PKCE S256 y `api/cliente.ts` manda la cabecera.</li>
+ *   <li><s><b>No hay a donde mandar la peticion.</b></s> <b>CERRADO en #39.</b> `vite.config.ts`
+ *       declara `server.proxy` hacia el ingreso, asi que `/normativa/api/v1/...` deja de
+ *       atenderlo el servidor de Vite con el `index.html` y un `200`.</li>
  * </ol>
  *
- * Encender una ruta hoy no traeria datos: traeria un 401 o un HTML. Y el proxy, que solo
- * repliega ante 404 y 501, lo dejaria pasar tal cual a la pantalla.
+ * <h2>Por que sigue vacia, entonces</h2>
  *
- * <h2>El orden para encender la primera, que es lo unico que hay que hacer</h2>
+ * Porque **nadie ha visto contestar a ninguna de las cuatro con un token de esta interfaz**, y
+ * encender una ruta que no se ha ejercido es exactamente lo que este repositorio no hace. Lo que
+ * #39 SI midio, con la plataforma levantada y el backend en pie, es que la peticion **llega**:
+ * `GET http://localhost:8082/normativa/api/v1/conjuntos` por el mismo origen que sirve la
+ * pantalla contesta `401 NO_AUTENTICADO` en `application/problem+json`, y no el `index.html` con
+ * un 200 — o sea que el reparto de la ruta funciona y lo unico que falta es la credencial. Lo que
+ * no se pudo medir en esa maquina fue el rebote entero: la clave del `administrador` la imprime
+ * `preparar-identidades.sh` al crearlo y no queda escrita en ningun sitio.
  *
- * <ol>
- *   <li><b>Token en `solicitar()`</b> (`src/api/cliente.ts`): una cabecera `Authorization` con
- *       el token en memoria — nunca en `localStorage` ni en `sessionStorage`.</li>
- *   <li><b>`server.proxy` de Vite</b> hacia el backend, para que `/normativa/api/v1` salga del
- *       servidor de desarrollo en vez de devolver el `index.html`.</li>
- *   <li><b>Mover la ruta a `servidas.ts`</b>: una entrada en `YA_SERVIDAS`, y nada mas.</li>
- * </ol>
+ * <h2>Lo que hay que hacer para encender la primera</h2>
  *
- * Y en ese orden: al reves, el paso 3 solo consigue que la pantalla ensene un 401 en vez de un
- * dato inventado, que no es progreso — es cambiar un sintoma por otro.
+ * Una entrada en `YA_SERVIDAS`, **y haberla ejercido antes**: `yarn dev` con la plataforma y el
+ * backend levantados, entrar por la puerta, y ver la pantalla dibujar lo que contesto la API.
+ * Al reves —la entrada primero— lo unico que se consigue es cambiar un dato inventado por un 401
+ * en la pantalla, que no es progreso: es cambiar un sintoma por otro.
  *
  * <h2>El mecanismo si esta, y se prueba</h2>
  *
@@ -63,7 +65,7 @@ export interface OperacionServida {
 }
 
 /**
- * Ninguna, hoy. Los tres motivos, arriba.
+ * Ninguna, hoy. El motivo que queda, arriba.
  *
  * El tipo es `readonly OperacionServida[]` y no `never[]`: lo que cambia el dia que se encienda
  * la primera es esta linea, y nada mas.

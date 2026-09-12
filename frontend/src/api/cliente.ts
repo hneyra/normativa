@@ -21,17 +21,27 @@
  *       cuerpo con `crypto.subtle.digest` y se compara con el `ETag`.</li>
  * </ul>
  *
- * <h2>Y lo que sigue sin estar: el token</h2>
+ * <h2>Y el token, que desde #39 SI esta</h2>
  *
- * `solicitar()` no manda `Authorization`, y eso **no es un olvido sino el motivo de que
- * `datos/servidas.ts` este vacio**: esta interfaz no consigue un token porque no hay cliente
- * OIDC de `normativa-web` en ninguno de los dos realms —`realm-sgtm.json` declara
- * `kamayuk-backoffice` y `kamayuk-verificacion`; `realm-sgtm-ciudadano.json`, `kamayuk-portal` y
- * `kamayuk-verificacion`—, y eso es de `infrastructure`. Cuando lo haya, el token vive **en
- * memoria**: nunca en `localStorage` ni en `sessionStorage`, porque en una PC de ventanilla
- * compartida entre turnos un token persistido sobrevive al cierre del navegador. Lo vigila la
- * prohibicion `token-en-almacenamiento` de `eslint.prohibiciones.mjs`.
+ * `solicitar()` manda `Authorization: Bearer` cuando hay token, y lo toma de `api/identidad.ts`
+ * —una variable de modulo que muere con la pestana—. Nunca de `localStorage` ni de
+ * `sessionStorage`: en una PC de ventanilla compartida entre turnos un token persistido
+ * sobrevive al cierre del navegador, y aqui quien entra sin ser quien dice se lleva el snapshot
+ * entero de un ejercicio. Lo vigila la prohibicion `token-en-almacenamiento` de
+ * `eslint.prohibiciones.mjs`, con su muestra que la viola.
+ *
+ * **Hasta #39 esta cabecera no existia, y su ausencia estaba razonada**: no habia cliente OIDC
+ * de esta interfaz en ningun realm. La decision de #39 es no crear uno y reusar
+ * `kamayuk-backoffice` —mismo realm, mismos usuarios, y la autorizacion la hace este backend
+ * contra su copia local—; el porque entero esta en la cabecera de `api/identidad.ts`.
+ *
+ * **La cabecera se pone SOLO cuando hay token**, y no vacia: `Authorization: Bearer ` sin nada
+ * detras no es «sin credencial», es una credencial ilegible: lo que contesta el backend deja de
+ * ser el 401 `NO_AUTENTICADO` limpio y pasa a depender de como interprete un `Bearer` vacio la
+ * cadena de seguridad, que es un desenlace que aqui nadie ha medido.
  */
+
+import { token } from './identidad.ts';
 
 /**
  * Todo lo de este sistema cuelga de `normativa/` (ADR-0030 §2): la ruta dice quien
@@ -202,11 +212,20 @@ export interface SnapshotVerificado<T> {
   readonly cacheControl: string | null;
 }
 
-/** Las cabeceras de una peticion, con `Content-Type` solo cuando hay cuerpo que tipar. */
+/**
+ * Las cabeceras de una peticion: `Accept` siempre, `Content-Type` si hay cuerpo que tipar y
+ * `Authorization` si hay token.
+ *
+ * El token se lee **en cada peticion** y no se captura al importar el modulo: entra despues del
+ * canje, asi que una constante de modulo lo congelaria en `null` y todas las peticiones saldrian
+ * sin credencial — con un 401 por respuesta y ninguna pista de por que.
+ */
 function cabecerasDe(opciones: OpcionesDeSolicitud): Record<string, string> {
+  const credencial = token();
   return {
     Accept: 'application/json',
     ...(opciones.cuerpo === undefined ? {} : { 'Content-Type': 'application/json' }),
+    ...(credencial === null ? {} : { Authorization: `Bearer ${credencial}` }),
   };
 }
 

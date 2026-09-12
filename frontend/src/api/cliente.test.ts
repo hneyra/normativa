@@ -7,6 +7,7 @@ import {
   solicitar,
   solicitarSnapshot,
 } from './cliente.ts';
+import { fijarToken } from './identidad.ts';
 
 /** Sustituye `fetch` por uno que contesta lo que se le diga, y devuelve el espia. */
 function fetchQueContesta(respuesta: Response) {
@@ -45,6 +46,7 @@ async function snapshotCon(cuerpo: string, etag?: string): Promise<Response> {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  fijarToken(null);
 });
 
 describe('el cliente de la API de normativa', () => {
@@ -280,5 +282,71 @@ describe('el snapshot se verifica, no se cree (AC10)', () => {
     await expect(solicitarSnapshot('/conjuntos/9/snapshot?ambito=VALUACION')).rejects.toMatchObject(
       { codigo: 'NO_ENCONTRADO', estado: 404 },
     );
+  });
+});
+
+
+/**
+ * La credencial, que hasta #39 no existia.
+ *
+ * `solicitar()` no mandaba `Authorization` porque no habia cliente OIDC de esta interfaz en
+ * ningun realm, y esa ausencia era **el motivo de que `datos/servidas.ts` estuviera vacia**. La
+ * decision de #39 es reusar `kamayuk-backoffice`; el porque entero esta en la cabecera de
+ * `identidad.ts`.
+ */
+describe('el token viaja en la cabecera, y solo cuando lo hay (#39)', () => {
+  const TOKEN = 'eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJhZG1pbmlzdHJhZG9yIn0.firma';
+
+  /** La cabecera que salio al transporte en la llamada numero `cual`. */
+  function cabecera(espia: ReturnType<typeof fetchQueContesta>, cual = 0): string | undefined {
+    const enviadas = (espia.mock.calls[cual]?.[1]?.headers ?? {}) as Record<string, string>;
+    return enviadas['Authorization'];
+  }
+
+  it('con token, «Authorization: Bearer <token>»', async () => {
+    fijarToken(TOKEN);
+    const espia = fetchQueContesta(Response.json({ ok: true }));
+
+    await solicitar('/conjuntos');
+
+    expect(cabecera(espia)).toBe(`Bearer ${TOKEN}`);
+  });
+
+  it('y el snapshot tambien la lleva: las cuatro operaciones exigen token', async () => {
+    fijarToken(TOKEN);
+    const espia = fetchQueContesta(await snapshotCon('{"a":1}'));
+
+    await solicitarSnapshot('/conjuntos/7/snapshot');
+
+    expect(cabecera(espia)).toBe(`Bearer ${TOKEN}`);
+  });
+
+  it('sin token NO se manda la cabecera vacia: se omite', async () => {
+    const espia = fetchQueContesta(Response.json({ ok: true }));
+
+    await solicitar('/conjuntos');
+
+    // `Authorization: Bearer ` sin nada detras no es «sin credencial»: es una credencial
+    // ilegible, y lo que contesta el backend deja de ser el 401 `NO_AUTENTICADO` limpio para
+    // pasar a depender de como interprete un `Bearer` vacio la cadena de seguridad.
+    expect(cabecera(espia)).toBeUndefined();
+  });
+
+  it('el token se lee en CADA peticion, no al importar el modulo', async () => {
+    // Entra despues del canje, asi que una constante de modulo lo congelaria en `null` y todas
+    // las peticiones saldrian sin credencial — con un 401 por respuesta y ninguna pista.
+    //
+    // Un `Response` NUEVO por llamada: el cuerpo se lee una sola vez, y reutilizarlo daria un
+    // «Body is unusable» que no habla de lo que se esta probando.
+    const espia = vi.fn<typeof fetch>(() => Promise.resolve(Response.json({ ok: true })));
+    vi.stubGlobal('fetch', espia);
+
+    await solicitar('/conjuntos');
+    expect(cabecera(espia, 0)).toBeUndefined();
+
+    fijarToken(TOKEN);
+    await solicitar('/conjuntos');
+
+    expect(cabecera(espia, 1)).toBe(`Bearer ${TOKEN}`);
   });
 });

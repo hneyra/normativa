@@ -1,0 +1,44 @@
+# Lo que NO viaja al contexto de `frontend/Dockerfile`.
+#
+# ESTE ARCHIVO SOLO CUENTA DESDE `frontend/`, que es la raiz del contexto de esta imagen. El
+# `.dockerignore` de la raiz del repositorio —el de `backend/Dockerfile`— excluye `frontend/`
+# entero, asi que no dice absolutamente nada de lo que entra aqui.
+
+# El clon y su historia. Sin esto el contexto se lleva `.git` entero, y ademas un `git gc`
+# cambiaria la huella de la capa y reconstruiria la imagen sin que ninguna fuente cambiara.
+.git
+.github
+
+# Se reinstalan dentro con `yarn install --frozen-lockfile`, y lo que hay en el disco de quien
+# construye puede ser de otra plataforma: un binario nativo compilado para el anfitrion dentro de
+# una imagen `alpine` no falla al copiar, falla al ejecutar.
+node_modules
+
+# El `dist/` de quien construye. Si entrara, la etapa `interfaz` podria copiar un paquete viejo
+# —construido con OTRA bandera— y la imagen serviria algo que este `Dockerfile` no produjo.
+dist
+
+# TODOS los archivos de entorno que Vite lee, y no solo los que `.gitignore` nombra.
+#
+# Es la segunda valla del proxy de datos, y hace falta: `vite build` no carga `.env.development`,
+# pero SI carga `.env`, `.env.local`, `.env.production` y `.env.production.local`. Cualquiera de
+# ellos con `VITE_KAMAYUK_PROXY_DE_DATOS=true` dentro devolveria al paquete la UIT de cinco
+# ejercicios, los tramos con sus alicuotas y filas de los tres cuadros nacionales — publicadas por
+# el repositorio que existe para que las cifras vivan en el corpus firmado a dos manos.
+#
+# El patron cubre los cuatro de golpe, incluido el `.env.development` versionado. Es el hallazgo
+# de `caja`#47: `*.local.*` NO casa con `.env.local`, porque exige algo detras del `.local`.
+.env
+.env.*
+
+# El diseno: el artboard `NormativaV6.dc.html` y lo que lo acompana. No entra en ningun `import`
+# del paquete —lo comprueba `verificaciones/arbol-del-artboard.test.ts`— y lleva dentro las cifras
+# del corpus. Un archivo que no se usa y que lleva lo que la imagen no puede llevar no tiene por
+# que estar en el contexto.
+diseno
+
+# Lo que no construye nada: las barreras y sus muestras, que ya corrieron en `frontend.yml`.
+verificaciones
+
+.idea
+.claude
