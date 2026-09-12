@@ -4,9 +4,9 @@
    esquivada, que en una convencion de proceso es peor todavia — el peaje se aprende a
    rodear y la tabla se queda igual de vacia.
 
-   Asi que se corre la comprobacion contra seis situaciones fabricadas, tres que tiene
-   que rechazar y tres que tiene que dejar pasar, y se exige que el rechazo **nombre el
-   issue**: rechazar por el motivo equivocado seria pasar por casualidad.
+   Asi que se corre la comprobacion contra siete situaciones fabricadas, cuatro que
+   tiene que rechazar y tres que tiene que dejar pasar, y se exige que el rechazo
+   **nombre el issue**: rechazar por el motivo equivocado seria pasar por casualidad.
 
    Uso: node docs/00-gobierno/verificar-las-muestras-del-registro.mjs
 */
@@ -48,6 +48,17 @@ const CASOS = [
     anadido: '+| Una fila cualquiera (#711) | … | … |',
     esperado: 'rojo',
     dice: '#71',
+  },
+  {
+    // Esta es la que fija el arreglo de `nombra()`. La cabecera de `docs/agent/HISTORY.md` cita
+    // el issue de la mudanza, asi que con la version anterior —que buscaba el numero en
+    // CUALQUIER linea anadida— este caso salia verde y la fila podia no existir.
+    nombre: 'una cabecera o un parrafo que citen el issue NO valen como fila',
+    cuerpo: 'Cierra #711.',
+    archivos: ['backend/kamayuk-normativa/src/main/java/kamayuk/normativa/Algo.java'],
+    anadido: '+# Registro\n+\n+Se mudo aqui por #711, y esto no es una fila.',
+    esperado: 'rojo',
+    dice: '#711',
   },
   {
     nombre: 'cierra un issue, toca backend y SI deja su fila',

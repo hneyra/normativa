@@ -30,8 +30,9 @@
    Copiada de `sgtm`, donde nacio con #711. Lo unico que cambia es QUE cuenta como
    codigo de produccion en ESTE repositorio —la lista `RUTAS_DE_CODIGO` de abajo— y el
    nombre de la variable de entorno, que aqui es `KAMAYUK_CUERPO_DEL_PR`. La tabla que
-   protege es la de `CLAUDE.md`, que en este repositorio **nace vacia**: el registro
-   anterior es historia de `sgtm` y no viaja.
+   protege es la de `docs/agent/HISTORY.md` desde el 2026-09-12
+   (`infrastructure`#114); en `CLAUDE.md` se queda la doctrina —que es una fila y que
+   tiene que demostrar— y la cabecera de la tabla vacia, que es su forma.
 
    ## Uso
 
@@ -57,16 +58,18 @@ const RUTAS_DE_CODIGO = [
 ];
 
 /**
- * Donde puede estar la fila. **Son dos a proposito, y es una ventana de compatibilidad**
- * (#114): el registro se muda de `CLAUDE.md` a `docs/agent/HISTORY.md` —eran el 84 % de un
- * archivo que cada sesion carga entero— y los seis repositorios no migran a la vez.
+ * Donde vive la fila. **Es una sola, y ya no es una ventana de compatibilidad**
+ * (`infrastructure`#114): el registro se mudo de `CLAUDE.md` a `docs/agent/HISTORY.md` —eran
+ * el 84 % de un archivo que cada sesion carga entero— y **los seis repositorios migraron el
+ * 2026-09-12**, asi que la ventana que admitia los dos sitios se cierra aqui, en su cambio
+ * propio, que es como se dijo que se cerraria.
  *
- * Mientras las dos esten aqui, una fila escrita en cualquiera de los dos cuenta. El dia que
- * los seis hayan migrado se retira `CLAUDE.md` **en un cambio propio**, y entonces una fila
- * en el sitio viejo deja de contar. Estrechar antes deja rojos cruzados en los que aun no
- * han migrado.
+ * Desde ahora una fila escrita en `CLAUDE.md` **no cuenta**. No es una formalidad: ese archivo
+ * conserva la doctrina y la cabecera de la tabla vacia, asi que escribir la fila ahi sale
+ * plausible y deja el registro creciendo justo donde se acaba de vaciar — y con los dos sitios
+ * aceptados, sin que nada lo diga.
  */
-const DONDE_VIVE_LA_FILA = ['docs/agent/HISTORY.md', 'CLAUDE.md'];
+const DONDE_VIVE_LA_FILA = ['docs/agent/HISTORY.md'];
 
 /** Como se declara que un PR cierra un issue. GitHub admite estas y alguna mas. */
 const CIERRA = /\b(?:cierra|closes?|close|fixes?|fix|resuelve|resolves?)\s+#(\d+)/gi;
@@ -131,9 +134,31 @@ console.log(`Cada issue que este PR cierra tiene su fila: #${issues.join(', #')}
 
 // ---------------------------------------------------------------------------
 
-/** Si ese texto nombra al issue como tal y no como parte de otro numero. */
+/**
+ * Si alguna de esas lineas anadidas **es una fila** que nombra al issue.
+ *
+ * Son dos exigencias y las dos hacen falta. La primera, que el numero aparezca como tal y no
+ * como parte de otro mas largo: `#711` no es la fila de `#71`. La segunda, que la linea que lo
+ * nombra **empiece por `|`**, o sea que sea una fila de la tabla y no una cabecera, un parrafo
+ * o una nota.
+ *
+ * **La segunda se anadio despues, y la destaparon TRES carriles a la vez** al mudar el registro
+ * a `docs/agent/HISTORY.md` (`infrastructure`#114). El archivo nuevo nace con una cabecera que
+ * cuenta de donde viene el registro **citando el issue de la propia mudanza**, asi que la rotura
+ * de control de aquel trabajo —quitar la fila y exigir rojo— salia **VERDE**: la satisfacia esa
+ * cabecera. La guarda no fallaba en el sentido de romperse; aprobaba prosa que no es el registro,
+ * que es peor, porque el PR pasa y la fila no esta. **Este carril, el de `normativa`, fue el
+ * primero de los tres en verlo.**
+ *
+ * El texto llega tal cual sale del `git diff`, asi que cada linea trae su `+` delante: se le
+ * quita antes de mirar si empieza por `|`.
+ */
 function nombra(texto, numero) {
-  return new RegExp(`#${numero}(?![0-9])`).test(texto);
+  const comoTal = new RegExp(`#${numero}(?![0-9])`);
+  return texto
+    .split('\n')
+    .map((linea) => linea.replace(/^\+/, '').trim())
+    .some((linea) => linea.startsWith('|') && comoTal.test(linea));
 }
 
 function lineas(texto) {
