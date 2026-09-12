@@ -40,13 +40,24 @@ cd backend && ./gradlew verificarArquitectura
 
 # 3 · El descriptor de despliegue. Tampoco necesita Pulumi, ni token, ni cluster
 cd ../infrastructure && yarn install && yarn verificar
+
+# 4 · La interfaz. Tampoco necesita Docker: `yarn verificar` no levanta nada
+cd ../frontend && yarn install --frozen-lockfile && yarn verificar
 ```
 
 Con eso ya corre todo lo que hoy hay que correr en este repositorio. **Lo que todavía no hay es
-una aplicación que arrancar**: no existe ni una clase de negocio, así que no hay `bootRun`, ni
-API, ni pantalla. Levantar la plataforma sirve para tener la base y la identidad esperando —y
-para descubrir hoy lo que si no se descubre el día que haya código—, y está en
+un backend con negocio que arrancar**: no existe ni una clase de negocio, así que no hay
+`bootRun` con nada dentro. Levantar la plataforma sirve para tener la base y la identidad
+esperando —y para descubrir hoy lo que si no se descubre el día que haya código—, y está en
 [DEV-01 §3](entorno-local.md).
+
+**Pantalla sí hay, desde [#39](https://github.com/hneyra/normativa/issues/39)**, y entra por la
+puerta de identidad: `yarn dev` sirve en `http://localhost:5173/normativa/` —con el prefijo, que
+es el `base` de `vite.config.ts`— y al arrancar rebota a Keycloak con PKCE S256. Necesita la
+plataforma levantada; sin ella el rebote no llega a ningún sitio y la pantalla lo dice en vez de
+quedarse en blanco. Las peticiones a `/normativa/api/v1` las reenvía Vite al ingreso —el puerto
+sale de `KAMAYUK_BACKEND`, con `http://localhost:8082` por omisión—, porque el backend **no
+publica ninguna cabecera CORS**: la única vía es que todo cuelgue del mismo origen.
 
 ## Qué comando para qué tarea
 
@@ -57,6 +68,9 @@ para descubrir hoy lo que si no se descubre el día que haya código—, y está
 | Todo, más el formato | `./gradlew build` | `backend/` |
 | Arreglar el formato | `./gradlew spotlessApply` | `backend/` |
 | Verificar el descriptor | `yarn verificar` | `infrastructure/` |
+| Verificar la interfaz | `yarn verificar` | `frontend/` |
+| Ver la interfaz mientras se trabaja | `yarn dev` → `http://localhost:5173/normativa/` | `frontend/` |
+| Construir su imagen y levantarla | `docker compose --env-file ../infrastructure/despliegue/.env -f despliegue/compose.yaml up -d --build normativa-interfaz` | raíz |
 | Levantar la plataforma | `docker compose -f despliegue/plataforma.compose.yaml up -d --wait` | `../infrastructure/` |
 | Lo que hay que pasar antes de un PR | `./gradlew build verificarAislamiento verificarArquitectura` · `yarn verificar` | ambos |
 

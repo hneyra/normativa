@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import type { Contenedor, EntornoDelDescriptor, Manifiesto } from "@kamayuk/infra-contrato";
+import type {
+  ConfigMap,
+  Contenedor,
+  EntornoDelDescriptor,
+  Deployment,
+  IngressRoute,
+  Manifiesto,
+  Service,
+} from "@kamayuk/infra-contrato";
 import { normativa } from "../src/descriptor";
 
 /**
@@ -163,6 +171,21 @@ describe("el descriptor de normativa", () => {
 });
 
 /**
+ * Como se nombra un destino de egreso en un rojo: su namespace, y su `componente` si lo lleva.
+ *
+ * `kamayuk-stg/postgres` se lee; `{ namespaceSelector: { matchLabels: … } }` no. Un rojo que
+ * imprime el objeto entero obliga a leer JSON para saber si lo que sobra es el motor o el buzon.
+ */
+function nombreDelDestino(destino: {
+  namespaceSelector?: { matchLabels?: Record<string, string> };
+  podSelector?: { matchLabels?: Record<string, string> };
+}): string {
+  const namespace = destino.namespaceSelector?.matchLabels?.["kubernetes.io/metadata.name"] ?? "?";
+  const componente = destino.podSelector?.matchLabels?.["componente"];
+  return componente === undefined ? namespace : `${namespace}/${componente}`;
+}
+
+/**
  * Los SISTEMAS a los que este descriptor declara egreso. El motor y Keycloak no cuentan, y se
  * distinguen por el NAMESPACE de destino y no por el nombre de la etiqueta: `identidad` es
  * Keycloak en el namespace de la plataforma y el sistema en el suyo (la leccion de la etapa 1 de
@@ -204,8 +227,18 @@ describe("C-14 — que esto se pueda desplegar", () => {
     expect(declara(c, "KAMAYUK_DB_USUARIO")).toBe(false);
   });
 
-  it("y las dos imagenes son los dos objetivos del Dockerfile", () => {
-    expect(normativa.imagenes).toEqual(["normativa", `${"normativa"}-migrador`]);
+  /**
+   * TRES imagenes y DOS `Dockerfile` (#39).
+   *
+   * `normativa` y `normativa-migrador` son dos objetivos del mismo `backend/Dockerfile`, con el
+   * contexto en la raiz del repositorio. `normativa-interfaz` sale de `frontend/Dockerfile`, con
+   * el contexto en `frontend/` — y esa diferencia no es cosmetica: un `.dockerignore` solo cuenta
+   * desde la raiz de SU contexto, asi que construir aquel con el contexto en la raiz se llevaria
+   * dentro `node_modules`, los `.env` —y con ellos la bandera que devuelve las cifras del corpus
+   * al paquete— y el artboard entero.
+   */
+  it("y las tres imagenes son los objetivos de los dos Dockerfile", () => {
+    expect(normativa.imagenes).toEqual(["normativa", "normativa-migrador", "normativa-interfaz"]);
   });
 
   /**
@@ -388,18 +421,275 @@ describe("C-17 — que el despliegue pase de verdad", () => {
    * anadida a mano sobre el clúster, las ocho tareas de los cuatro sistemas pasaron de `Failed` a
    * `Complete` (C-17, punto 3).
    */
-  it("abre DNS hacia kube-system, en UDP y en TCP", () => {
-    const reglas = normativa.egreso(ENTORNO).flatMap((p) => p.spec.egress ?? []);
-    const dns = reglas.filter((r) =>
-      (r.to ?? []).some(
-        (d) => d.namespaceSelector?.matchLabels?.["kubernetes.io/metadata.name"] === "kube-system",
-      ),
+  it("abre DNS hacia kube-system, en UDP y en TCP, en TODA politica de egreso", () => {
+    // Desde #39 hay DOS politicas de egreso —la del backend y la de la interfaz— y las dos la
+    // necesitan. Se cuenta por politica y no en total: dos reglas de DNS en la misma politica y
+    // ninguna en la otra darian la misma suma y dejarian un pod sin resolver un solo nombre.
+    const politicas = normativa.egreso(ENTORNO).filter((p) => (p.spec.egress ?? []).length > 0);
+
+    expect(politicas.length, "ninguna politica declara egreso: ¿se dejo de leer?").toBeGreaterThan(1);
+    for (const politica of politicas) {
+      const dns = (politica.spec.egress ?? []).filter((r) =>
+        (r.to ?? []).some(
+          (d) => d.namespaceSelector?.matchLabels?.["kubernetes.io/metadata.name"] === "kube-system",
+        ),
+      );
+
+      expect(
+        dns,
+        `«${politica.metadata.name}» no abre DNS: sin el, ninguna de sus demas reglas puede resolver un nombre`,
+      ).toHaveLength(1);
+      expect(
+        (dns[0]?.ports ?? []).map((p) => `${p.protocol}/${p.port}`).sort(),
+        "TCP tambien: una respuesta que no cabe en un datagrama se reintenta por TCP",
+      ).toEqual(["TCP/53", "UDP/53"]);
+    }
+  });
+});
+
+/**
+ * La interfaz desplegada (#39).
+ *
+ * Ninguna de estas propiedades falla haciendo ruido. Es la lista de las que, rotas, dejan un
+ * despliegue que arranca:
+ *
+ *   · Las dos prioridades del ingreso al reves hacen que la API la conteste el nginx, **con un
+ *     200 y el `index.html` dentro**.
+ *   · El prefijo quitado en la ruta del backend lo deja buscando `/api/v1/...` y contestando 404.
+ *   · La interfaz heredando la etiqueta del backend gana salida a PostgreSQL y al buzon de
+ *     `identidad`, que es superficie que nadie pidio.
+ *   · Y un `ConfigMap` con el JWKS en vez del emisor publico da una interfaz que manda al
+ *     navegador a una direccion de la red interna del cluster.
+ */
+describe("#39 — la interfaz desplegada", () => {
+  const manifiestos = normativa.despliegue(ENTORNO);
+  // Con `is` y no con `as`: el `kind` es el discriminante de la union, asi que narrar por el es
+  // lo que hace que el compilador lea la forma de verdad. Un `as` la afirmaria sin comprobarla,
+  // y una ruta que dejara de existir saldria como `undefined` en vez de como un rojo.
+  const rutaDe = (ms: Manifiesto[]): IngressRoute => {
+    const encontrada = ms.find((m): m is IngressRoute => m.kind === "IngressRoute");
+    expect(encontrada, "el ingreso no declara ningun IngressRoute").toBeDefined();
+    return encontrada!;
+  };
+  const rutas = rutaDe(normativa.ingreso(ENTORNO)).spec.routes;
+  const deLaApi = rutas.find((r) => r.match.includes("/normativa/api/v1"));
+  const deLaInterfaz = rutas.find((r) => !r.match.includes("/normativa/api/v1"));
+
+  const interfazDe = (ms: Manifiesto[]) =>
+    contenedoresDe(
+      ms.filter((m) => m.kind === "Deployment" && m.metadata.name === "kamayuk-normativa-interfaz"),
     );
 
-    expect(dns, "sin DNS ninguna de las demas reglas de egreso puede resolver un nombre").toHaveLength(1);
+  /**
+   * Desde #39 son dos `Deployment` y no uno: el backend en perfil `web` y la interfaz, que es un
+   * nginx y no una JVM.
+   */
+  it("produce DOS Deployment —el backend y la interfaz— y ninguno en perfil `batch`", () => {
+    const nombres = manifiestos.filter((m) => m.kind === "Deployment").map((m) => m.metadata.name);
+    expect(nombres.sort()).toEqual(["kamayuk-normativa-interfaz", "kamayuk-normativa-web"]);
+  });
+
+  /**
+   * La interfaz no hereda NADA de la configuracion del backend.
+   *
+   * Es la mitad que no se ve mirando lo que si declara: un nginx que sirve archivos no necesita
+   * la URL de la base, ni el emisor, ni un `secretKeyRef`. Un `Secret` montado aqui seria una
+   * credencial regalada a un proceso que no la usa.
+   */
+  it("la interfaz no declara ni una variable de entorno ni un solo secreto", () => {
+    const interfaz = interfazDe(manifiestos);
+    expect(interfaz).toHaveLength(1);
+    expect(interfaz[0]?.env ?? []).toEqual([]);
+    expect(JSON.stringify(interfaz[0])).not.toContain("secretKeyRef");
+  });
+
+  /**
+   * Las sondas piden `/index.html` y no `/`.
+   *
+   * Con el `try_files` de `nginx.conf`, `/` devuelve la pantalla caiga lo que caiga, asi que
+   * pedirlo no distingue «nginx levantado» de «nginx levantado sobre el `dist/` que se copio».
+   */
+  it("sus dos sondas piden un archivo por su nombre", () => {
+    const contenedor = interfazDe(manifiestos)[0]!;
+    for (const sonda of [contenedor.readinessProbe, contenedor.livenessProbe]) {
+      expect(sonda?.httpGet?.path, "«/» cae al index.html pase lo que pase").toBe("/index.html");
+    }
+    // Sin `startupProbe`, al reves que el backend: un nginx escucha en menos de un segundo, y una
+    // sonda de arranque aqui solo retrasaria la primera lectura.
+    expect(contenedor.startupProbe).toBeUndefined();
+  });
+
+  /**
+   * Las dos prioridades, **escritas y no heredadas de la longitud de la regla**.
+   *
+   * Traefik v3 ordena por longitud del `match` cuando nadie declara `priority`, asi que hoy
+   * saldria bien por accidente. Y al reves el fallo no grita: la API la contestaria el nginx con
+   * un 200 y el `index.html` dentro. La pantalla pide JSON y recibe HTML con codigo de exito.
+   */
+  it("la ruta va partida en dos, y la de la API gana por prioridad ESCRITA", () => {
+    expect(rutas, "la ruta va partida en dos: la API y la interfaz").toHaveLength(2);
+    expect(deLaApi?.priority).toBeTypeOf("number");
+    expect(deLaInterfaz?.priority).toBeTypeOf("number");
     expect(
-      (dns[0]?.ports ?? []).map((p) => `${p.protocol}/${p.port}`).sort(),
-      "TCP tambien: una respuesta que no cabe en un datagrama se reintenta por TCP",
-    ).toEqual(["TCP/53", "UDP/53"]);
+      deLaApi!.priority!,
+      "[con la precedencia al reves, «/normativa/api/v1/conjuntos» lo atiende el nginx de la\n" +
+        "interfaz: su `try_files $uri /index.html` devuelve el index.html con un **200**, asi que\n" +
+        "la pantalla pide JSON y recibe HTML con codigo de exito. No un error: una pagina]",
+    ).toBeGreaterThan(deLaInterfaz!.priority!);
+  });
+
+  /**
+   * El prefijo se quita SOLO en la de la interfaz.
+   *
+   * `Api.RAIZ` del backend es `/normativa/api/v1` entera, asi que quitarselo lo dejaria buscando
+   * `/api/v1/...` y contestando 404 a todo. Y a la interfaz hay que quitarselo porque su nginx
+   * sirve en la raiz de su contenedor.
+   */
+  it("el prefijo se quita SOLO en la ruta de la interfaz", () => {
+    expect(deLaApi?.middlewares, "el backend espera la ruta entera").toBeUndefined();
+    expect((deLaInterfaz?.middlewares ?? []).map((m) => m.name)).toEqual([
+      "kamayuk-normativa-quitar-prefijo",
+    ]);
+
+    // El `Middleware` de Traefik esta en la union `Manifiesto` y el contrato **no exporta su
+    // tipo suelto**, asi que se saca de la union con `Extract` en vez de escribir su forma aqui:
+    // una forma copiada a mano no se enteraria el dia que el contrato la cambie.
+    const middleware = normativa
+      .ingreso(ENTORNO)
+      .find(
+        (m): m is Extract<Manifiesto, { kind: "Middleware" }> => m.kind === "Middleware",
+      );
+    expect(middleware?.metadata.name).toBe("kamayuk-normativa-quitar-prefijo");
+    expect(middleware?.spec["stripPrefix"]).toEqual({ prefixes: ["/normativa"] });
+  });
+
+  /** Cada ruta a SU servicio, y el de la interfaz no es el del backend. */
+  it("la API va al backend y la interfaz a la interfaz", () => {
+    expect(deLaApi?.services.map((s) => s.name)).toEqual(["kamayuk-normativa-web"]);
+    expect(deLaInterfaz?.services.map((s) => s.name)).toEqual(["kamayuk-normativa-interfaz"]);
+  });
+
+  /**
+   * La interfaz **no hereda** las aristas del backend, y el vehiculo es la etiqueta.
+   *
+   * `egreso()` selecciona por `componente: normativa`. Con esa misma etiqueta, el `podSelector`
+   * del backend la seleccionaria y un nginx de archivos estaticos tendria salida a PostgreSQL y
+   * al buzon de `identidad`.
+   */
+  it("la interfaz no sale a PostgreSQL ni al buzon de identidad: solo DNS", () => {
+    // La etiqueta se LEE del pod de la interfaz, no se escribe aqui: si alguien le pusiera la del
+    // backend, esto no daria «no encuentro sus politicas» —que manda a mirar el sitio
+    // equivocado— sino la acusacion de verdad, que es que sale a sitios que no necesita.
+    const suPod = manifiestos.find(
+      (m): m is Deployment =>
+        m.kind === "Deployment" && m.metadata.name === "kamayuk-normativa-interfaz",
+    );
+    const suComponente = suPod?.spec.template.metadata?.labels?.["componente"];
+
+    const alcanzan = normativa
+      .egreso(ENTORNO)
+      .filter(
+        (p) =>
+          (p.spec.policyTypes ?? []).includes("Egress") &&
+          p.spec.podSelector.matchLabels?.["componente"] === suComponente,
+      );
+    const destinos = alcanzan
+      .flatMap((p) => p.spec.egress ?? [])
+      .flatMap((r) => (r.to ?? []).map((d) => nombreDelDestino(d)))
+      .sort();
+
+    expect(
+      destinos,
+      "[una interfaz que solo sirve archivos no habla con nadie: el mismo origen lo consigue el\n" +
+        "ingreso, un piso mas arriba, y `nginx.conf` no tiene un solo reenvio. Si aqui aparece el\n" +
+        "motor o el buzon, este nginx heredo las aristas del backend por llevar su etiqueta]",
+    ).toEqual(["kube-system"]);
+
+    expect(alcanzan.map((p) => p.metadata.name)).toEqual(["kamayuk-normativa-interfaz-egreso"]);
+  });
+
+  /**
+   * Y la de entrada abre el puerto del POD, no el del `Service`.
+   *
+   * Una `NetworkPolicy` filtra sobre el puerto del pod, y el mapeo 80 -> 8080 lo deshace el
+   * `Service` antes de que la politica mire nada. Escribir 80 aqui seria una politica que no
+   * admite absolutamente nada, y el sintoma seria el navegador esperando con el pod sano.
+   */
+  it("la entrada viene del ingreso y abre el 8080 del contenedor", () => {
+    const entrada = normativa
+      .egreso(ENTORNO)
+      .find((p) => p.metadata.name === "kamayuk-normativa-interfaz-ingreso");
+    expect((entrada?.spec.ingress ?? []).flatMap((r) => r.ports ?? [])).toEqual([
+      { protocol: "TCP", port: 8080 },
+    ]);
+
+    const servicio = manifiestos.find(
+      (m): m is Service =>
+        m.kind === "Service" && m.metadata.name === "kamayuk-normativa-interfaz",
+    );
+    expect(servicio?.spec.ports).toEqual([{ name: "http", port: 80, targetPort: 8080 }]);
+  });
+
+  /**
+   * El `ConfigMap` lleva el emisor PUBLICO, que es el que el navegador tiene que alcanzar.
+   *
+   * `plataforma.jwks` NO vale aqui: es una direccion de la red interna del cluster, que el
+   * navegador no puede alcanzar. Confundirlas daria una interfaz que manda a identificarse a una
+   * URL que solo existe dentro del cluster — y el sintoma es un rebote que no llega a ningun
+   * sitio, con el pod perfectamente sano.
+   */
+  it("las senias del ambiente llevan el emisor publico y el cliente que se reusa", () => {
+    const configuracion = manifiestos.find(
+      (m): m is ConfigMap => m.kind === "ConfigMap" && m.metadata.name.includes("interfaz"),
+    );
+    const guion = (configuracion?.data ?? {})["configuracion.js"] ?? "";
+
+    expect(guion).toContain("window.__KAMAYUK_NORMATIVA__");
+    expect(guion).toContain(ENTORNO.plataforma.emisor);
+    expect(guion, "el JWKS es interno: el navegador no lo alcanza").not.toContain(
+      ENTORNO.plataforma.jwks,
+    );
+    // Se REUSA el de `rentas` en vez de declarar uno propio: mismo realm, mismos usuarios, y la
+    // autorizacion la hace este backend contra su copia local. Ver `CLIENTE_OIDC_DE_LA_INTERFAZ`.
+    expect(guion).toContain("kamayuk-backoffice");
+    // Sin `offline_access`: el token vive en una variable de modulo y muere con la pestana, asi
+    // que una credencial de vida larga seria justo lo que ese diseno evita.
+    expect(guion).not.toContain("offline_access");
+  });
+
+  /**
+   * El montaje cae sobre el archivo que `nginx` sirve, y con `subPath`.
+   *
+   * Sin `subPath` el montaje tapa el directorio entero y se lleva por delante el `index.html` y
+   * todo `assets/`: la imagen serviria un directorio con un solo archivo dentro.
+   */
+  it("el ConfigMap se monta sobre configuracion.js, con subPath", () => {
+    const contenedor = interfazDe(manifiestos)[0]!;
+    expect(contenedor.volumeMounts).toEqual([
+      {
+        name: "configuracion",
+        mountPath: "/usr/share/nginx/html/configuracion.js",
+        subPath: "configuracion.js",
+        readOnly: true,
+      },
+    ]);
+  });
+
+  /**
+   * `runAsNonRoot` sin `runAsUser`, y eso solo vale porque la imagen declara su uid en NUMERO.
+   *
+   * La otra mitad —que `frontend/Dockerfile` diga `USER 101` y no `USER nginx`— la comprueba
+   * `frontend/verificaciones/imagen-y-despliegue.test.ts`, leyendo el archivo. Con un `USER` no
+   * numerico el kubelet se niega a crear el contenedor con un `CreateContainerConfigError`, y eso
+   * solo aparece al desplegar.
+   */
+  it("la interfaz corre sin root, con el mismo endurecimiento que el backend", () => {
+    const contenedor = interfazDe(manifiestos)[0]!;
+    expect(contenedor.securityContext).toEqual({
+      runAsNonRoot: true,
+      allowPrivilegeEscalation: false,
+      capabilities: { drop: ["ALL"] },
+    });
+    expect(contenedor.resources?.limits, "sin limites, `infrastructure` lo rechaza").toBeDefined();
   });
 });
