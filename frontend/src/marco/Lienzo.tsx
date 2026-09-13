@@ -1,4 +1,4 @@
-import { Aviso, Boton, Campo, Icono } from '../ds/index.ts';
+import { Aviso, Boton, Icono } from '../ds/index.ts';
 import { Cuadros, Publicacion } from '../secciones/index.ts';
 import { Ediciones } from '../secciones/Ediciones.tsx';
 import { Panel } from '../secciones/Panel.tsx';
@@ -10,28 +10,52 @@ import { Trazos } from './Trazos.tsx';
 /**
  * El lienzo: lo que hay debajo de las pestanas.
  *
- * Tiene **cuatro estados**, y ninguno de ellos es una pantalla:
+ * Decide QUE se dibuja, y **no dibuja ningun campo propio**: lo que se escribe, se escribe
+ * dentro de una seccion. Tiene **cinco estados**, en el orden en que el codigo los mira:
  *
  *   1. **sin pestanas** — no hay nada abierto, y se dice;
- *   2. **una hoja ajena** — la ficha del AC9, que explica de que sistema es esa pantalla y
+ *   2. **una clave que no esta en el arbol** — no puede pasar, y se contesta igual;
+ *   3. **una hoja ajena** — la ficha del AC9, que explica de que sistema es esa pantalla y
  *      deja la pestana abierta para volver a ella;
- *   3. **una seccion propia CONSTRUIDA** — se monta. Desde #15 lo estan «Cuadros de
- *      valuación» y «Publicación»;
- *   4. **una seccion propia todavia sin construir** — el hueco: se declara en que issue
- *      llega la pantalla, y se ofrece el campo «Observación»;
- *   5. **una clave que no esta en el arbol** — no puede pasar, y se contesta igual.
+ *   4. **una seccion propia** — se monta. Las cuatro lo estan: «Panel» y «Ediciones» desde
+ *      #14, «Cuadros de valuación» y «Publicación» desde #15;
+ *   5. **el hueco** — una seccion propia que el arbol declara y este lienzo no sabe dibujar.
+ *      Hoy no llega ninguna, y el `Aviso` dice que llegar ahi es un defecto del codigo.
  *
- * <h2>Por que el hueco lleva un campo, y por que es ESE campo</h2>
+ * <h2>Por que el hueco ya no lleva el campo «Observación» (#24)</h2>
  *
- * El AC6 pide que **editar un campo** marque la pestana con su asterisco. Un lienzo del todo
- * vacio no tiene ninguno con el que demostrarlo, asi que el hueco trae uno — y el que trae
- * no es un relleno cualquiera: la regla 10 del repositorio dice que **toda modificacion de
- * datos exige observacion del usuario**, de modo que el campo que toda pantalla de este
- * sistema va a tener sí o sí es justo este. Cuando #14 construya las dos que faltan, el
- * hueco baja con su campo y la mecanica del estado sucio se queda donde de verdad se
- * escribe.
+ * Lo llevo desde #12 para una sola cosa: el AC6 pedia que **editar un campo** marcara la
+ * pestana con su asterisco, y un lienzo sin ninguna seccion construida no tenia otro campo con
+ * el que demostrarlo. Con #14 y #15 las cuatro secciones estan cableadas, al hueco no llega
+ * ningun submodulo propio, y el campo —con sus dos props, el estado `observaciones` del marco
+ * y su llamada a `alEnsuciar`— se quedo sin alcanzar.
  *
- * <h2>Y por que las dos de #15 NO lo traen</h2>
+ * De las tres salidas que #24 dejaba escritas se eligio **quitarlo**, y no dejarlo como
+ * andamiaje ni subirlo al marco como sitio comun de las observaciones. Por tres motivos:
+ *
+ *   - **la mecanica que demostraba ya se ejerce donde de verdad se escribe**: los tres
+ *     formularios de «Ediciones» llaman a `alEnsuciar`, y las pruebas del AC6 y del AC7 de
+ *     `Marco.test.tsx` escriben ahi, se van a otra pestana y vuelven;
+ *   - **este repositorio no admite ramas muertas**: una prop que solo alimenta codigo al que no
+ *     llega nadie tiene la misma forma que el conmutador A/B/C que impide
+ *     `verificaciones/marco-sin-selector.test.ts`, y tampoco la pone roja ninguna prueba de
+ *     comportamiento — la pantalla se dibuja igual con ella que sin ella;
+ *   - **y subirlo no tendria a quien servir**: la unica seccion que escribe guarda su
+ *     observacion con el resto de su formulario, en `EstadoDeEdiciones` —que tambien vive en
+ *     el marco, y por el mismo motivo—, y las otras tres no escriben nada. Un sitio comun para
+ *     una sola seccion seria un segundo sitio donde buscar la misma observacion.
+ *
+ * Que no vuelva lo vigila `verificaciones/lienzo-sin-campo-propio.test.ts`, que lee el codigo
+ * fuente: es la unica forma de ver una prop que no cambia nada de lo que se dibuja.
+ *
+ * <h2>Lo que el hueco conserva: la red</h2>
+ *
+ * Su `Aviso`. Un quinto submodulo anadido al arbol sin cablearlo aqui cae en el, y lo pone rojo
+ * la prueba `ningun submodulo propio cae al hueco` de `Marco.test.tsx`, que busca su titulo.
+ * **Sin el hueco esa prueba no protege nada**: el submodulo sin cablear dibujaria un lienzo en
+ * blanco, no encontraria el titulo, y saldria verde.
+ *
+ * <h2>Por que «Cuadros de valuación» y «Publicación» no piden observacion</h2>
  *
  * Porque en ninguna de las dos se escribe nada. Los tres cuadros son NACIONALES —en la base
  * lo impide un CHECK de `municipalidad_id IS NULL`, y escribirlos es del rol
@@ -55,13 +79,6 @@ export interface LienzoProps {
   readonly alAvisar: (texto: string) => void;
   /** Marca la pestana activa como sucia: es lo que pone el asterisco (AC6). */
   readonly alEnsuciar: () => void;
-  /**
-   * Lo escrito en la observacion de la seccion activa. **Vive en el marco, no aqui** (AC7):
-   * el marco desmonta la seccion al cambiar de pestana, y con el estado dentro, escribir e
-   * irse al panel dejaria el campo en blanco **con el asterisco puesto**.
-   */
-  readonly observacion: string;
-  readonly alEscribirObservacion: (texto: string) => void;
   /** Lo escrito en «Ediciones». Vive en el marco porque el marco desmonta la seccion. */
   readonly ediciones: EstadoDeEdiciones;
   /** Y como se cambia, que es lo que el Panel usa para abrir una edicion concreta. */
@@ -75,8 +92,6 @@ export function Lienzo({
   ejercicio,
   alAvisar,
   alEnsuciar,
-  observacion,
-  alEscribirObservacion,
   ediciones,
   alCambiarEdiciones,
 }: LienzoProps) {
@@ -210,19 +225,6 @@ export function Lienzo({
             'un defecto del código, no un issue pendiente.'
           }
         />
-        <div className="kn-marco__observacion">
-          <Campo
-            etiqueta="Observación"
-            tipo="area"
-            valor={observacion}
-            ph="Por qué se toca lo que se toca"
-            ayuda="Regla 10: toda modificación de datos exige observación del usuario. Escribir aquí marca la pestaña con su asterisco."
-            alCambiar={(texto) => {
-              alEscribirObservacion(texto);
-              alEnsuciar();
-            }}
-          />
-        </div>
       </div>
     </main>
   );
