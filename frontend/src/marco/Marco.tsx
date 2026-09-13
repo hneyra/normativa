@@ -119,14 +119,15 @@ export function Marco() {
   const [avisoAbierto, fijarAvisoAbierto] = useState(false);
   const [ejercicio, fijarEjercicio] = useState('2026');
   const [toast, fijarToast] = useState('');
-  // AC7 — el estado de la seccion vive AQUI y no dentro de la seccion: el marco la desmonta
+  // AC7 — el estado de «Ediciones» vive AQUI y no dentro de la seccion: el marco la desmonta
   // al cambiar de pestana, y con el estado dentro, escribir la observacion e irse al panel
-  // dejaria el campo en blanco **con el asterisco puesto**. Una por seccion, indexada por su
-  // clave: dos pestanas abiertas son dos observaciones distintas.
-  const [observaciones, fijarObservaciones] = useState<Readonly<Record<string, string>>>({});
-  // Lo mismo, para «Ediciones»: el buscador, el chip, el orden, la pagina, la edicion abierta,
-  // el paso, lo tecleado y si ya se intento guardar. Es UNA y no una por clave porque la
-  // seccion es una sola; lo que la separa de las demas es que aqui vive el formulario.
+  // dejaria el formulario en blanco **con el asterisco puesto**. Es el buscador, el chip, el
+  // orden, la pagina, la edicion abierta, el paso, lo tecleado —la observacion incluida— y si
+  // ya se intento guardar. Es UNO y no uno por clave porque la seccion que escribe es una sola.
+  //
+  // Hasta #24 habia al lado un segundo estado, `observaciones`, uno por clave, para el campo
+  // del hueco del lienzo. Con las cuatro secciones cableadas al hueco no llegaba nadie, y se
+  // quito: el motivo esta en el javadoc de `Lienzo`.
   const [ediciones, fijarEdiciones] = useState<EstadoDeEdiciones>(EDICIONES_AL_EMPEZAR);
 
   const abrir = useCallback((destino: string) => {
@@ -373,12 +374,6 @@ export function Marco() {
             alAvisar={fijarToast}
             alEnsuciar={() => {
               despachar({ tipo: 'ensuciar' });
-            }}
-            observacion={activa === null ? '' : (observaciones[activa] ?? '')}
-            alEscribirObservacion={(texto) => {
-              if (activa !== null) {
-                fijarObservaciones((actuales) => ({ ...actuales, [activa]: texto }));
-              }
             }}
             ediciones={ediciones}
             alCambiarEdiciones={(cambio) => {

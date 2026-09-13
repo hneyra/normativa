@@ -84,7 +84,12 @@ const lanzarUnToast = () => {
   fireEvent.change(screen.getByLabelText('Ejercicio de trabajo'), { target: { value: '2025' } });
 };
 
-/** Escribe en la observacion del hueco, que es lo que ensucia la pestana (AC6). */
+/**
+ * Escribe en la observacion de «Ediciones», que es lo que ensucia la pestana (AC6).
+ *
+ * Hasta #14 escribia en el campo del hueco del lienzo, que fue el unico campo del marco mientras
+ * no hubo ninguna seccion; #24 lo quito cuando al hueco dejo de llegar nadie.
+ */
 const ensuciar = async (usuario: ReturnType<typeof userEvent.setup>) => {
   await usuario.click(submodulo('Ediciones'));
   await usuario.type(screen.getByLabelText('Observación'), 'Ratificada por acuerdo');
@@ -486,8 +491,15 @@ describe('AC7 — el estado de la seccion vive en el marco', () => {
    * quinto submódulo añadido al árbol sin cablearlo en el `Lienzo` sale rojo aquí, que es
    * exactamente el defecto que el hueco existe para hacer visible.
    *
-   * Que la observación sea por sección y no compartida lo sigue midiendo el caso de arriba: se
-   * escribe en «Ediciones», se va a «Panel» —donde el campo ya no existe— y al volver sigue ahí.
+   * Que lo escrito sobreviva al cambio de pestaña lo sigue midiendo el caso de arriba: se escribe
+   * en «Ediciones», se va a «Panel» —donde el campo ya no existe— y al volver sigue ahí. Lo que ya
+   * no hay que medir es que la observación sea «por sección»: desde #24 el marco no guarda
+   * observaciones por clave, porque la única sección que escribe guarda la suya en su propio
+   * estado, y el hueco perdió el campo que las necesitaba.
+   *
+   * **Y esta prueba depende de que el hueco conserve su `Aviso`**: sin él, un submódulo sin
+   * cablear dibujaría un lienzo en blanco, no encontraría el título y saldría verde. Eso lo
+   * vigila `verificaciones/lienzo-sin-campo-propio.test.ts`, que lee el `Lienzo`.
    */
   it('ningun submodulo propio cae al hueco: los cuatro estan cableados', async () => {
     const usuario = userEvent.setup();

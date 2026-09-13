@@ -1106,19 +1106,13 @@
   color: var(--tinta-3);
 }
 
-/* El hueco de una seccion propia todavia sin construir (#14, #15). */
+/* El hueco: una seccion propia que el arbol declara y el lienzo no sabe dibujar. Desde #24
+   lleva solo su aviso; la caja de `.kn-marco__observacion` se fue con el campo que la usaba. */
 .kn-marco__hueco {
   max-width: 640px;
   display: flex;
   flex-direction: column;
   gap: 16px;
-}
-
-.kn-marco__observacion {
-  background: var(--superficie);
-  border: 1px solid var(--linea);
-  border-radius: 8px;
-  padding: 15px 16px;
 }
 
 /* ── El dialogo de cierre con cambios sin guardar ─────────────────────────── */
