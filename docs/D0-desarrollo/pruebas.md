@@ -8,7 +8,7 @@
 | `./gradlew verificarAislamiento` | Los cuatro roles, `FORCE ROW LEVEL SECURITY`, el `WITH CHECK`, que sin contexto la consulta **reviente en vez de devolver vacío**, y la trampa del superusuario | PostgreSQL 16 | **9 pruebas** |
 | `./gradlew build` | Lo anterior más Spotless | PostgreSQL 16 | |
 | `yarn verificar` (en `infrastructure/`) | El descriptor de despliegue: lint, tipos y pruebas | nada | |
-| `node docs/00-gobierno/verificar-las-muestras-del-registro.mjs` | Que la guarda de #711 muerde y no muerde de más | nada | **6 muestras** |
+| `node docs/00-gobierno/verificar-las-muestras-del-registro.mjs` | Que la guarda de #711 muerde y no muerde de más: que la **fila** se exija, y —desde [`infrastructure`#165](https://github.com/hneyra/infrastructure/issues/165)— que el cierre declarado sea uno que **GitHub entienda** | nada | **12 muestras** |
 
 **Las dos de Gradle son bloqueantes**, y van en pasos separados en CI a propósito: cuando algo se
 rompe, el nombre del paso ya dice qué barrera cayó.
