@@ -1,0 +1,1175 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="normativa-tokens.css" />
+<style>
+  html, body { margin: 0; background: var(--fondo); color: var(--tinta); font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.45 }
+  * { box-sizing: border-box }
+  a { color: var(--azul) }
+  a:hover { color: var(--azul-hover) }
+  input, select, button, textarea { font-family: inherit; font-size: 14px; color: var(--tinta) }
+  :focus-visible { outline: 2px solid var(--azul); outline-offset: 1px }
+  input:focus, select:focus { border-color: var(--azul); box-shadow: 0 0 0 3px var(--foco); outline: none }
+  ::placeholder { color: var(--tinta-3) }
+  table { border-collapse: collapse; width: 100% }
+  @media (max-width: 1040px) { [data-side][data-open="0"] { display: none !important } }
+  @media (max-width: 880px) { [data-sm-hide] { display: none !important } }
+</style>
+</helmet>
+
+<div style="height:100vh; overflow:hidden; display:flex; flex-direction:column; background:var(--fondo)">
+
+  <sc-if value="{{ velo }}">
+    <div onClick="{{ cerrarTodo }}" style="position:fixed; inset:0; z-index:78"></div>
+  </sc-if>
+
+  <!-- data-shadcn marca la pieza que le toca a cada región al portar -->
+  <div data-shadcn="header + SidebarTrigger" style="flex:0 0 auto; position:relative; z-index:79; display:flex; align-items:stretch; flex-wrap:wrap; background:var(--azul-oscuro); color:var(--sobre-barra)">
+    <span style="display:flex; align-items:center; gap:12px; padding:9px 16px; flex:1 1 auto; min-width:0">
+      <button onClick="{{ alternarSide }}" aria-label="Mostrar u ocultar el menú" style="display:grid; place-items:center; width:32px; height:32px; border:0; border-radius:var(--radio-sm); background:var(--barra-control); color:var(--sobre-barra); cursor:pointer; flex:0 0 auto" style-hover="background:var(--barra-hover)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"></path></svg>
+      </button>
+      <!-- El escudo NO se dibuja: el archivo no está en este repositorio y la V6
+           tampoco lo portó (c01fe9a:frontend/src/marco/BarraGlobal.tsx:16-19).
+           Si se porta, de dónde sale y dónde vive lo decide G2 (hneyra/normativa#52). -->
+      <span style="line-height:1.2; min-width:0">
+        <!-- El título es el texto de la V6 (BarraGlobal.tsx:226). La V6 lo pintaba
+             PEQUEÑO debajo de la entidad, y @kamayuk/shell pinta `titulo` grande y
+             `entidad` pequeña: el orden lo decide G2. -->
+        <span style="display:block; font-size:16px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Sistema de gestión tributaria municipal</span>
+        <span style="display:block; font-size:11.5px; color:var(--sobre-barra-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ entidad }}</span>
+      </span>
+    </span>
+
+    <button onClick="{{ abrirPaleta }}" data-sm-hide="1" style="display:flex; align-items:center; gap:9px; margin:9px 0; padding:0 14px; border:0; border-radius:var(--radio-sm); background:var(--barra-control); color:var(--sobre-barra-2); cursor:pointer; flex:0 0 auto" style-hover="background:var(--barra-hover)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4.3-4.3"></path></svg>
+      <span style="font-size:13px">Buscar</span>
+      <kbd style="font-family:inherit; font-size:10.5px; border:1px solid var(--barra-realce); border-radius:3px; padding:1px 5px">Ctrl K</kbd>
+    </button>
+
+    <button onClick="{{ alternarEntrega }}" aria-pressed="{{ entregaAria }}" title="Anota cada región con la pieza de shadcn que le corresponde" style="{{ entregaStyle }}">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 3.5h4v4"></path><path d="M20.5 3.5 13 11"></path><path d="M19 14v5.5H4.5V5H10"></path></svg>
+      <span data-sm-hide="1" style="font-size:13px">Entrega</span>
+    </button>
+
+    <button onClick="{{ verAvisos }}" aria-label="{{ avisosAria }}" title="{{ avisosAria }}" style="position:relative; display:grid; place-items:center; width:44px; border:0; border-left:1px solid var(--barra-realce); background:transparent; color:var(--sobre-barra); cursor:pointer; flex:0 0 auto" style-hover="background:var(--barra-hover)">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 9a6 6 0 1 0-12 0c0 5-2 6.5-2 6.5h16S18 14 18 9"></path><path d="M13.7 19.5a2 2 0 0 1-3.4 0"></path></svg>
+      <span style="position:absolute; top:9px; right:8px; min-width:17px; height:17px; padding:0 4px; border-radius:9px; background:var(--mal-borde); color:#fff; font-size:11px; font-weight:700; display:grid; place-items:center; border:1.5px solid var(--azul-oscuro)">{{ avisos }}</span>
+    </button>
+
+    <span style="position:relative; display:flex; align-items:stretch; flex:0 0 auto">
+      <button onClick="{{ abrirSesion }}" aria-expanded="{{ sesionAria }}" aria-label="Opciones de la sesión" style="{{ sesionStyle }}" style-hover="background:var(--barra-hover)">
+        <span style="display:grid; place-items:center; width:27px; height:27px; border-radius:50%; background:var(--barra-realce); font-size:11px; font-weight:700; flex:0 0 auto">HN</span>
+        <!-- La cuenta de la V6 (BarraGlobal.tsx:70-76). La real sale de la sesión. -->
+        <span data-sm-hide="1" style="line-height:1.2; text-align:left">
+          <span style="display:block; font-size:12.5px; font-weight:700; white-space:nowrap">H. Neyra Alama</span>
+          <span style="display:block; font-size:11px; color:var(--sobre-barra-2)">Normativa · parámetros</span>
+        </span>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M6 9l6 6 6-6"></path></svg>
+      </button>
+      <sc-if value="{{ sesion }}">
+        <div role="menu" data-shadcn="DropdownMenu" style="position:absolute; z-index:79; top:100%; right:0; width:min(262px,calc(100vw - 24px)); background:var(--superficie); border:1px solid var(--linea); border-radius:0 0 var(--radio) var(--radio); box-shadow:var(--sombra-2); overflow:hidden; text-align:left">
+          <sc-for list="{{ opcionesSesion }}" as="o" hint-placeholder-count="4">
+            <button onClick="{{ o.ir }}" style="{{ o.style }}" style-hover="background:var(--sup)">{{ o.label }}</button>
+          </sc-for>
+        </div>
+      </sc-if>
+    </span>
+  </div>
+
+  <!-- Paleta de comandos -->
+  <sc-if value="{{ paleta }}">
+    <div onClick="{{ cerrarTodo }}" style="position:fixed; inset:0; z-index:84; background:var(--velo-paleta)"></div>
+    <div data-shadcn="Command (cmdk)" style="position:fixed; z-index:85; top:11vh; left:50%; transform:translateX(-50%); width:min(620px,92vw); background:var(--superficie); border:1px solid var(--linea); border-radius:var(--radio); box-shadow:var(--sombra-2); overflow:hidden">
+      <div style="display:flex; align-items:center; gap:10px; padding:13px 15px; border-bottom:1px solid var(--linea)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--tinta-3)" stroke-width="1.8" stroke-linecap="round" style="flex:0 0 auto"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4.3-4.3"></path></svg>
+        <input value="{{ pq }}" onChange="{{ onPq }}" autofocus="{{ true }}" placeholder="Un módulo, un submódulo, un endpoint…" style="flex:1; border:0; background:transparent; font-size:15px; outline:none" />
+        <kbd style="font-family:inherit; font-size:10.5px; color:var(--tinta-3); border:1px solid var(--linea); border-radius:3px; padding:2px 5px">Esc</kbd>
+      </div>
+      <div style="max-height:54vh; overflow:auto">
+        <sc-for list="{{ palRes }}" as="r" hint-placeholder-count="7">
+          <button onClick="{{ r.ir }}" style="display:flex; align-items:baseline; gap:11px; width:100%; text-align:left; border:0; border-bottom:1px solid var(--linea-2); background:transparent; padding:10px 15px; cursor:pointer" style-hover="background:var(--sup)">
+            <span style="flex:1; min-width:0; font-size:13.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ r.label }}</span>
+            <span style="font-size:11.5px; color:var(--tinta-3); flex:0 0 auto">{{ r.modulo }}</span>
+          </button>
+        </sc-for>
+      </div>
+      <p style="margin:0; padding:9px 15px; background:var(--sup); font-size:11.5px; color:var(--tinta-3)">{{ palPie }}</p>
+    </div>
+  </sc-if>
+
+  <!-- Confirmación de cierre con cambios -->
+  <sc-if value="{{ porCerrar }}">
+    <div onClick="{{ confirmar.cancelar }}" style="position:fixed; inset:0; z-index:88; background:var(--velo)"></div>
+    <div role="dialog" aria-modal="true" data-shadcn="AlertDialog" style="position:fixed; z-index:89; top:50%; left:50%; transform:translate(-50%,-50%); width:min(460px,calc(100vw - 32px)); background:var(--superficie); border-radius:var(--radio); box-shadow:var(--sombra-2); overflow:hidden">
+      <div style="padding:18px 20px 14px">
+        <p style="margin:0; font-size:16px; font-weight:700; text-wrap:pretty">{{ confirmar.label }} tiene cambios sin guardar</p>
+        <p style="margin:7px 0 0; font-size:13.5px; line-height:1.55; color:var(--tinta-2); text-wrap:pretty">Si cierra la pantalla se pierden. Guárdelos primero o ciérrela descartándolos: eso no se puede deshacer.</p>
+      </div>
+      <div style="display:flex; align-items:center; gap:9px; flex-wrap:wrap; padding:13px 20px; border-top:1px solid var(--linea-2); background:var(--sup)">
+        <button onClick="{{ confirmar.cerrar }}" style="border:1px solid var(--borde-boton); border-radius:var(--radio-sm); padding:9px 15px; background:var(--superficie); font-size:13.5px; color:var(--mal-tinta); cursor:pointer">Salir y perder los cambios</button>
+        <span style="flex:1; min-width:8px"></span>
+        <button onClick="{{ confirmar.cancelar }}" style="border:1px solid var(--borde-boton); border-radius:var(--radio-sm); padding:9px 15px; background:var(--superficie); font-size:13.5px; cursor:pointer">Seguir editando</button>
+        <button onClick="{{ confirmar.guardar }}" style="border:0; border-radius:var(--radio-sm); padding:10px 18px; background:var(--azul); color:var(--sobre-azul); font-size:13.5px; font-weight:700; cursor:pointer">Guardar y cerrar</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <div style="flex:1 1 0; display:flex; align-items:stretch; min-height:0; overflow:hidden">
+
+    <!-- ══════════ ÁRBOL: 1 módulo × 4 submódulos ══════════ -->
+    <aside data-side="1" data-open="{{ sideOpen }}" data-shadcn="Sidebar + Collapsible" style="{{ sideStyle }}">
+      <div style="flex:0 0 auto; padding:10px 10px 9px; border-bottom:1px solid var(--linea-2)">
+        <input value="{{ filtro }}" onChange="{{ onFiltro }}" placeholder="Filtrar módulos y submódulos" aria-label="Filtrar módulos y submódulos" style="width:100%; box-sizing:border-box; border:1px solid var(--borde-campo); border-radius:var(--radio-sm); padding:7px 10px; background:var(--superficie); font-size:13px" />
+      </div>
+      <div style="flex:1; overflow:auto; padding:6px 7px 12px">
+        <sc-for list="{{ arbol }}" as="m" hint-placeholder-count="10">
+          <div>
+            <button onClick="{{ m.toggle }}" aria-expanded="{{ m.abiertoAria }}" style="{{ m.style }}" style-hover="background:var(--sup)">
+              <span style="{{ m.caretStyle }}">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
+              </span>
+              <span style="{{ m.iconStyle }}">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <sc-for list="{{ m.icon }}" as="p" hint-placeholder-count="4">
+                    <path d="{{ p.d }}"></path>
+                  </sc-for>
+                </svg>
+              </span>
+              <span style="flex:1; min-width:0; text-align:left; line-height:1.2">
+                <span style="display:block; font-size:13px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ m.label }}</span>
+                <sc-if value="{{ m.notaVisible }}">
+                  <span style="display:block; font-size:10.5px; color:var(--tinta-3); overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ m.nota }}</span>
+                </sc-if>
+              </span>
+            </button>
+            <sc-if value="{{ m.abierto }}">
+              <div style="display:flex; flex-direction:column; gap:1px; margin:2px 0 7px 43px; padding-left:0; border-left:1px solid var(--linea)">
+                <sc-for list="{{ m.hojas }}" as="h" hint-placeholder-count="4">
+                  <button onClick="{{ h.ir }}" aria-current="{{ h.actual }}" style="{{ h.style }}" style-hover="background:var(--sup)">
+                    <span style="{{ h.guiaStyle }}"></span>
+                    <span style="flex:1; min-width:0; text-align:left; font-size:12.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ h.label }}</span>
+                    <sc-if value="{{ h.marca }}">
+                      <span style="font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--tinta-3); flex:0 0 auto">{{ h.marca }}</span>
+                    </sc-if>
+                  </button>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+        </sc-for>
+        <sc-if value="{{ sinResultados }}">
+          <p style="margin:16px 10px; font-size:12.5px; line-height:1.5; color:var(--tinta-3); text-wrap:pretty">Ningún módulo ni submódulo coincide con «{{ filtro }}».</p>
+        </sc-if>
+      </div>
+      <p style="flex:0 0 auto; margin:0; padding:10px 12px; border-top:1px solid var(--linea-2); font-size:11px; line-height:1.5; color:var(--tinta-3); text-wrap:pretty">{{ pieArbol }}</p>
+    </aside>
+
+    <div style="flex:1; min-width:0; display:flex; flex-direction:column; overflow:hidden">
+
+      <sc-if value="{{ sinPestanas }}">
+        <div style="flex:1; display:grid; place-items:center; padding:30px">
+          <p style="margin:0; max-width:44ch; text-align:center; font-size:14px; line-height:1.6; color:var(--tinta-3); text-wrap:pretty">No hay ningún submódulo abierto. Elija uno en el árbol de la izquierda.</p>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ hayPestanas }}">
+        <div style="flex:1; overflow:auto">
+          <!-- Cabecera del submódulo, al modo de V7: ruta, título grande y
+               el juego de acciones debajo -->
+          <div style="padding:16px 18px 4px">
+            <nav data-shadcn="Breadcrumb" aria-label="Ruta" style="display:flex; align-items:center; gap:7px; font-size:12.5px; color:var(--tinta-3); margin-bottom:7px">
+              <sc-for list="{{ miga }}" as="b" hint-placeholder-count="3">
+                <span style="{{ b.style }}">{{ b.label }}</span>
+              </sc-for>
+            </nav>
+            <h1 style="margin:0; font-size:27px; font-weight:400; letter-spacing:-.01em; color:var(--tinta); text-wrap:pretty">{{ vista.titulo }}</h1>
+            <p style="margin:7px 0 0; font-size:13.5px; line-height:1.55; color:var(--tinta-2); max-width:82ch; text-wrap:pretty">{{ vista.nota }}</p>
+
+          </div>
+
+          <!-- Barra de instrucción, al modo de V7 -->
+          <div style="background:var(--sup); border-top:1px solid var(--linea); border-bottom:1px solid var(--linea)">
+            <p style="margin:0; padding:10px 18px; font-size:13.5px; line-height:1.55; color:var(--tinta-2); max-width:96ch; text-wrap:pretty"><strong>{{ vista.modulo }}:</strong> {{ vista.instruccion }}</p>
+          </div>
+          <div style="padding:16px 18px 24px; display:flex; flex-direction:column; gap:14px; max-width:1180px">
+
+            <!-- El formulario del submódulo -->
+            <sc-for list="{{ vista.bloques }}" as="b" hint-placeholder-count="2">
+              <section data-shadcn="Card + Form" style="background:var(--superficie); border:1px solid var(--azul); border-radius:var(--radio); overflow:hidden">
+                <div style="padding:11px 15px; background:var(--azul); color:var(--sobre-azul)">
+                  <h2 style="margin:0; font-size:14.5px; font-weight:700">{{ b.titulo }}</h2>
+                </div>
+                <sc-if value="{{ b.nota }}">
+                  <p style="margin:0; padding:11px 15px; border-bottom:1px solid var(--linea-2); font-size:13px; line-height:1.55; color:var(--tinta-2); max-width:80ch; text-wrap:pretty">{{ b.nota }}</p>
+                </sc-if>
+                <sc-if value="{{ b.hayCampos }}">
+                  <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(216px,1fr)); gap:14px 16px; padding:15px 15px 18px">
+                    <sc-for list="{{ b.campos }}" as="c" hint-placeholder-count="8">
+                      <label data-ancho="{{ c.ancho }}" style="display:block; min-width:0">
+                        <span style="display:flex; align-items:baseline; gap:7px; margin-bottom:5px">
+                          <span style="font-size:12.5px; font-weight:700; color:var(--tinta-2)">{{ c.label }}</span>
+                          <sc-if value="{{ c.opcional }}">
+                            <span style="font-size:11.5px; color:var(--tinta-3)">(opcional)</span>
+                          </sc-if>
+                        </span>
+                        <sc-if value="{{ c.esSel }}">
+                          <select value="{{ c.valor }}" onChange="{{ c.on }}" style="{{ c.control }}">
+                            <sc-for list="{{ c.opts }}" as="o" hint-placeholder-count="4">
+                              <option value="{{ o }}">{{ o }}</option>
+                            </sc-for>
+                          </select>
+                        </sc-if>
+                        <sc-if value="{{ c.esFecha }}">
+                          <input type="date" value="{{ c.valor }}" onChange="{{ c.on }}" style="{{ c.control }}" />
+                        </sc-if>
+                        <sc-if value="{{ c.esTexto }}">
+                          <input value="{{ c.valor }}" onChange="{{ c.on }}" placeholder="{{ c.ph }}" style="{{ c.control }}" />
+                        </sc-if>
+                        <sc-if value="{{ c.esArea }}">
+                          <textarea value="{{ c.valor }}" onChange="{{ c.on }}" rows="3" placeholder="{{ c.ph }}" style="{{ c.control }}"></textarea>
+                        </sc-if>
+                        <sc-if value="{{ c.esChk }}">
+                          <span style="display:flex; align-items:center; gap:9px; border:1px solid var(--borde-campo); border-radius:var(--radio-sm); padding:8px 10px; background:var(--superficie)">
+                            <input type="checkbox" checked="{{ c.marcado }}" onChange="{{ c.on }}" style="accent-color:var(--azul); width:16px; height:16px; flex:0 0 auto" />
+                            <span style="font-size:13px; color:var(--tinta-2)">{{ c.ph }}</span>
+                          </span>
+                        </sc-if>
+                        <sc-if value="{{ c.esRo }}">
+                          <span style="display:block; min-height:36px; line-height:19px; border:1px dashed var(--borde-campo); border-radius:var(--radio-sm); padding:8px 10px; background:var(--sup); font-size:13.5px; color:var(--tinta-2)">{{ c.valor }}</span>
+                        </sc-if>
+                        <sc-if value="{{ c.ayuda }}">
+                          <span style="display:block; font-size:11.5px; line-height:1.45; color:var(--tinta-3); margin-top:5px; text-wrap:pretty">{{ c.ayuda }}</span>
+                        </sc-if>
+                      </label>
+                    </sc-for>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ b.hayTabla }}">
+                  <div>
+                    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:11px 15px; border-top:1px solid var(--linea-2)">
+                      <p style="margin:0; flex:1; min-width:140px; font-size:13px; font-weight:700">{{ b.tabla.titulo }}</p>
+                      <span style="font-size:11.5px; color:var(--tinta-3)">{{ b.tabla.conteo }}</span>
+                      <sc-if value="{{ b.tabla.accion }}">
+                        <button onClick="{{ b.tabla.anadir }}" style="border:1px solid var(--borde-boton); border-radius:var(--radio-sm); padding:6px 12px; background:var(--superficie); font-size:12.5px; cursor:pointer" style-hover="border-color:var(--borde-hover)">{{ b.tabla.accion }}</button>
+                      </sc-if>
+                    </div>
+                    <div style="overflow-x:auto; border-top:1px solid var(--linea-2)">
+                      <table style="min-width:{{ b.tabla.min }}">
+                        <thead>
+                          <tr>
+                            <sc-for list="{{ b.tabla.cols }}" as="c" hint-placeholder-count="6">
+                              <th style="{{ c.style }}">{{ c.label }}</th>
+                            </sc-for>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <sc-for list="{{ b.tabla.filas }}" as="r" hint-placeholder-count="4">
+                            <tr style="{{ r.filaStyle }}">
+                              <sc-for list="{{ r.celdas }}" as="cl" hint-placeholder-count="6">
+                                <td style="{{ cl.style }}">
+                                  <sc-if value="{{ cl.insignia }}"><span style="{{ cl.insignia }}">{{ cl.texto }}</span></sc-if>
+                                  <sc-if value="{{ cl.plano }}">{{ cl.texto }}</sc-if>
+                                </td>
+                              </sc-for>
+                            </tr>
+                          </sc-for>
+                        </tbody>
+                      </table>
+                    </div>
+                    <sc-if value="{{ b.tabla.nota }}">
+                      <p style="margin:0; padding:10px 15px; background:var(--sup); font-size:12px; line-height:1.5; color:var(--tinta-3); text-wrap:pretty">{{ b.tabla.nota }}</p>
+                    </sc-if>
+                  </div>
+                </sc-if>
+              </section>
+            </sc-for>
+
+            <!-- Las acciones, al pie: el orden de la pantalla es llenar y
+                 luego confirmar, no al contrario -->
+            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:2px 0 0">
+              <button onClick="{{ volver }}" style="border:1px solid var(--borde-boton); border-radius:var(--radio-sm); padding:9px 18px; background:var(--superficie); font-size:13.5px; cursor:pointer; flex:0 0 auto" style-hover="border-color:var(--borde-hover)">Volver</button>
+              <p style="margin:0; flex:1; min-width:180px; font-size:12.5px; line-height:1.5; color:var(--tinta-3); text-wrap:pretty">{{ pie.aviso }}</p>
+              <sc-for list="{{ pie.acciones }}" as="a" hint-placeholder-count="2">
+                <button onClick="{{ a.ir }}" style="{{ a.style }}">{{ a.label }}</button>
+              </sc-for>
+            </div>
+
+            <!-- Entrega: sólo cuando el modo está activo -->
+            <sc-if value="{{ entrega }}">
+              <div style="display:flex; flex-direction:column; gap:14px">
+                <section style="background:var(--superficie); border:1px solid var(--acento); border-radius:var(--radio); overflow:hidden">
+                  <div style="display:flex; align-items:center; gap:10px; padding:11px 15px; background:var(--azul-suave); border-bottom:1px solid var(--acento)">
+                    <h2 style="margin:0; flex:1; font-size:14px; font-weight:700; color:var(--info-tinta)">Operaciones que respaldan esta pantalla</h2>
+                    <span style="font-size:11.5px; color:var(--info-tinta)">{{ vista.conteoOps }}</span>
+                  </div>
+                  <sc-for list="{{ vista.operaciones }}" as="o" hint-placeholder-count="4">
+                    <div style="display:flex; align-items:center; gap:11px; flex-wrap:wrap; padding:9px 15px; border-bottom:1px solid var(--linea-2)">
+                      <span style="{{ o.verboStyle }}">{{ o.verbo }}</span>
+                      <code style="flex:1; min-width:170px; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12px; color:var(--tinta); overflow-wrap:anywhere">{{ o.ruta }}</code>
+                      <span data-sm-hide="1" style="font-size:11.5px; color:var(--tinta-3); flex:0 1 auto">{{ o.nota }}</span>
+                    </div>
+                  </sc-for>
+                  <p style="margin:0; padding:10px 15px; background:var(--sup); font-size:12px; line-height:1.5; color:var(--tinta-3); text-wrap:pretty">{{ vista.notaOps }}</p>
+                </section>
+
+                <section style="background:var(--superficie); border:1px solid var(--acento); border-radius:var(--radio); overflow:hidden">
+                  <div style="padding:11px 15px; background:var(--azul-suave); border-bottom:1px solid var(--acento)">
+                    <h2 style="margin:0; font-size:14px; font-weight:700; color:var(--info-tinta)">Composición en shadcn/ui — {{ vista.titulo }}</h2>
+                  </div>
+                  <sc-for list="{{ vista.piezas }}" as="p" hint-placeholder-count="4">
+                    <div style="display:flex; align-items:flex-start; gap:12px; padding:10px 15px; border-bottom:1px solid var(--linea-2)">
+                      <code style="flex:0 0 auto; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12.5px; font-weight:700; color:var(--info-tinta); background:var(--azul-suave); border-radius:var(--radio-sm); padding:2px 8px">{{ p.pieza }}</code>
+                      <span style="flex:1; min-width:0; font-size:12.5px; line-height:1.5; color:var(--tinta-2); text-wrap:pretty">{{ p.uso }}</span>
+                    </div>
+                  </sc-for>
+                  <p style="margin:0; padding:10px 15px; background:var(--sup); font-size:12px; line-height:1.5; color:var(--tinta-3); text-wrap:pretty">Esta lista no está escrita a mano: se deriva de los bloques y los campos que la pantalla rinde, más las piezas que el formulario no delata. Las regiones del cromo llevan su propio atributo <code style="font-family:ui-monospace,Menlo,Consolas,monospace">data-shadcn</code> en el marcado.</p>
+                </section>
+
+                <section style="background:var(--superficie); border:1px solid var(--linea); border-radius:var(--radio); overflow:hidden">
+                  <div style="padding:11px 15px; border-bottom:1px solid var(--linea-2)">
+                    <h2 style="margin:0; font-size:14px; font-weight:700">Tokens a Tailwind</h2>
+                    <p style="margin:4px 0 0; font-size:12.5px; line-height:1.5; color:var(--tinta-3); text-wrap:pretty">Salen de <code style="font-family:ui-monospace,Menlo,Consolas,monospace">diseno/normativa-tokens.css</code>, copia byte a byte de la hoja de RentasV8. En Tailwind v4 entran en el bloque <code style="font-family:ui-monospace,Menlo,Consolas,monospace">@theme</code> de <code style="font-family:ui-monospace,Menlo,Consolas,monospace">@kamayuk/ui</code>; la clase de la derecha es la que usa el componente.</p>
+                  </div>
+                  <div style="overflow-x:auto">
+                    <table style="min-width:660px">
+                      <thead>
+                        <tr>
+                          <sc-for list="{{ tokens.cols }}" as="c" hint-placeholder-count="4">
+                            <th style="{{ c.style }}">{{ c.label }}</th>
+                          </sc-for>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <sc-for list="{{ tokens.filas }}" as="r" hint-placeholder-count="8">
+                          <tr style="{{ r.filaStyle }}">
+                            <td style="padding:9px 14px; border-bottom:1px solid var(--linea-2)">
+                              <span style="display:flex; align-items:center; gap:9px">
+                                <span style="{{ r.muestra }}"></span>
+                                <code style="font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12.5px">{{ r.token }}</code>
+                              </span>
+                            </td>
+                            <sc-for list="{{ r.celdas }}" as="cl" hint-placeholder-count="3">
+                              <td style="{{ cl.style }}">{{ cl.texto }}</td>
+                            </sc-for>
+                          </tr>
+                        </sc-for>
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+
+                <section style="background:var(--superficie); border:1px solid var(--linea); border-radius:var(--radio); overflow:hidden">
+                  <div style="padding:11px 15px; border-bottom:1px solid var(--linea-2)">
+                    <h2 style="margin:0; font-size:14px; font-weight:700">Cómo cae en el repositorio</h2>
+                  </div>
+                  <sc-for list="{{ reparto }}" as="r" hint-placeholder-count="5">
+                    <div style="display:flex; align-items:flex-start; gap:12px; padding:10px 15px; border-bottom:1px solid var(--linea-2)">
+                      <code style="flex:0 0 auto; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12.5px; color:var(--tinta)">{{ r.ruta }}</code>
+                      <span style="flex:1; min-width:0; font-size:12.5px; line-height:1.5; color:var(--tinta-2); text-wrap:pretty">{{ r.que }}</span>
+                    </div>
+                  </sc-for>
+                  <p style="margin:0; padding:10px 15px; background:var(--sup); font-size:12px; line-height:1.5; color:var(--tinta-3); text-wrap:pretty">El árbol de este artboard no está escrito a mano: es el módulo de <code style="font-family:ui-monospace,Menlo,Consolas,monospace">diseno/NormativaV6.dc.html</code>, con sus rótulos, sus claves y sus trazos. <code style="font-family:ui-monospace,Menlo,Consolas,monospace">src/catalogo.ts</code> lo empalmará con <code style="font-family:ui-monospace,Menlo,Consolas,monospace">GET /seguridad/modulos</code> por el campo <code style="font-family:ui-monospace,Menlo,Consolas,monospace">codigo</code> cuando el backend lo publique (hneyra/normativa#54).</p>
+                </section>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+  </div>
+
+  <sc-if value="{{ toast }}">
+    <div role="status" style="position:fixed; z-index:90; bottom:20px; left:50%; transform:translateX(-50%); padding:11px 20px; border-radius:var(--radio-sm); background:var(--tinta); color:var(--superficie); font-size:13.5px; box-shadow:var(--sombra-2); max-width:calc(100vw - 40px)">{{ toast }}</div>
+  </sc-if>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900},&quot;entidad&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Municipalidad Distrital de Catacaos&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Institución&quot;}}">
+/* ════════════════════════════════════════════════════════════════════════
+   NormativaV8 — el marco de RentasV8 con el módulo de `normativa` dentro.
+
+   DERIVADO, no dibujado (hneyra/normativa#52):
+     · la FORMA —el marco, las constantes y la gramática de PANTALLAS— es la de
+       hneyra/rentas · frontend/diseno/RentasV8.dc.html@ac379ac, sin extenderla;
+     · el CONTENIDO es el de la V6 de este repositorio en c01fe9a: el texto que
+       viaja sale de frontend/src/secciones/* y, donde ahí no está, de
+       frontend/diseno/NormativaV6.dc.html; los valores de ejemplo (el tercer
+       elemento de un campo `r`, las filas `f` y `cn`) salen SÓLO del artboard V6.
+
+   Un módulo y no trece: la pestaña ajena que justificaba los otros doce
+   (NormativaV6.dc.html:1147-1149) no existe en @kamayuk/shell.
+
+   Las operaciones son las cuatro que el backend publica en c01fe9a, cada una
+   con su controlador. Ninguna escritura: entran cuando existan
+   (hneyra/normativa#59), en un PR que lo diga.
+
+   Lo que la V6 hacía y esta gramática no dice —pasos, selección, paginación,
+   filas de contenido, tono como dato…— NO está aquí: está declarado en
+   hneyra/normativa#51. Y lo que este archivo propone y la V6 no decía —el
+   título de la barra, las instrucciones, el icono— lo decide una persona en G2.
+
+   Para portarlo: los colores salen de `normativa-tokens.css`, copia byte a byte
+   de la hoja de RentasV8; cada región lleva `data-shadcn` con la pieza que le
+   toca; y el modo «Entrega» de la barra despliega el mapa de tokens y el
+   reparto de archivos.
+   ════════════════════════════════════════════════════════════════════════ */
+
+const PROPIO = 'Normativa';
+
+/* El prefijo de todas las rutas: `Api.RAIZ` de
+   backend/kamayuk-normativa-plataforma (kamayuk/normativa/web/Api.java:13). */
+const RAIZ = '/normativa/api/v1';
+
+/* [rótulo, nota, clave, código, trazos, submódulos]
+   submódulo: [clave, rótulo, operaciones[[verbo, ruta, nota]], piezas[[pieza, uso]]]
+
+   El código `NORMATIVA` es el que propone hneyra/normativa#48, todavía sin
+   aceptar (G1): si cambia, se ajusta aquí en un PR que lo diga. Los trazos son
+   los del libro de NormativaV6.dc.html:1152; si se conservan o se elige uno de
+   `ICONOS` lo decide G2.
+
+   Todas las operaciones llevan verbo porque las cuatro salen de un @GetMapping
+   leído: ParametrosController.java:41,90 y SnapshotController.java:86,118. */
+const ARBOL = [
+  [PROPIO, 'Parámetros sellados y corpus', 'normativa', 'NORMATIVA',
+    ['M5 5.4A1.9 1.9 0 0 1 6.9 3.5H19.2v13.4H6.9A1.9 1.9 0 0 0 5 18.8z', 'M5 18.8a1.9 1.9 0 0 0 1.9 1.7H19.2v-2.9', 'M8.7 8.1h6.6', 'M8.7 11.6h4.2'],
+    [
+      ['nor-panel', 'Panel', [
+        ['GET', '/seguridad/parametros/ejercicios/{ejercicio}', 'ParametrosController'],
+        ['GET', '/seguridad/parametros', 'ParametrosController']],
+        []],
+      ['nor-ediciones', 'Ediciones', [
+        ['GET', '/seguridad/parametros', 'ParametrosController'],
+        ['GET', '/seguridad/parametros/ejercicios/{ejercicio}', 'ParametrosController'],
+        ['GET', '/conjuntos/{id}/snapshot', 'SnapshotController']],
+        []],
+      ['nor-cuadros', 'Cuadros de valuación', [
+        ['GET', '/conjuntos', 'SnapshotController'],
+        ['GET', '/conjuntos/{id}/snapshot', 'SnapshotController']],
+        []],
+      ['nor-publicacion', 'Publicación', [
+        ['GET', '/conjuntos', 'SnapshotController'],
+        ['GET', '/conjuntos/{id}/snapshot', 'SnapshotController']],
+        []]
+    ]]
+];
+
+
+/* ── Las cuatro pantallas ────────────────────────────────────────
+   Cada submódulo trae su formulario: los grupos de campos y las tablas que
+   la pantalla pide, con el texto de la V6 (c01fe9a:frontend/src/secciones/*)
+   y los ejemplos del artboard V6 (NormativaV6.dc.html:1177-1406, 1975-1986).
+
+   Formato de un campo: [etiqueta, tipo, opciones o ayuda]
+     tipo ''  texto      s  desplegable   d  fecha
+          r  sólo lectura c  casilla      a  área
+     un 1 al final del tipo hace el campo de ancho completo. */
+const PANTALLAS = {
+  /* ═══ Panel ═══ */
+  'nor-panel': [
+    ['Estado del ejercicio', 'Es lo que contesta GET /seguridad/parametros/ejercicios/{ejercicio}, la única de las cuatro operaciones que no exige el acceso «parametros». «No hay conjunto sellado» es una respuesta y llega como 200, no como 404.', [
+      ['Ejercicio', 'r', '2026'], ['¿Sellado?', 'r', 'sí'], ['Conjunto', 'r', '2'], ['Versión', 'r', '2'],
+      ['Qué se puede hacer', 'r1', 'Emitir y recalcular con este conjunto']],
+      { t: 'Versiones selladas del ejercicio', c: [['Versión', 1], ['Identificador', 1], ['Fecha de sellado', 0], ['Usuario que selló', 0], ['Estado', 0]], f: [
+        ['2', '2', '2026-09-06 15:22', 'hneyra', 'Vigente'],
+        ['1', '1', '2026-09-06 10:00', 'hneyra', 'Sellado']], i: 4,
+        n: 'Puede haber varias del mismo año y no es un error: conjunto_uq lleva la versión, y la lectura ordena por versión y toma la última. La marcada es la que rige.' }],
+    ['Con qué se selló el ejercicio', 'Medido sobre PostgreSQL real, componiendo y sellando la versión. Es de norma nacional y común a todas las municipalidades: publicarlo no es componerlo.', [
+      ['Filas del derivado del corpus', 'r', '33'], ['Ediciones de cuadro nacional', 'r', '2'],
+      ['Detalles compuestos', 'r', '35'], ['Filas del mapa sin archivo', 'r', '10']]],
+    ['Lo que este sello no incluye', 'Diez filas del mapa normativo sin archivo del corpus. Las diez son de acto propio de la municipalidad —ordenanza de arbitrios, TIM, CUIS, fraccionamiento…—, así que normativa no las publica: las pone cada municipalidad en su propio conjunto.', [],
+      { t: 'Filas sin archivo', cn: '10 filas', c: [['Fila', 0], ['Qué', 0], ['Parte de', 0]], f: [
+        ['11', 'Tasas de limpieza pública, relleno sanitario, parques y jardines y serenazgo', 'D-02b'],
+        ['12', 'Criterios de distribución del costo del servicio', 'D-02b'],
+        ['13', 'Descuento por pago anual adelantado', 'D-02b'],
+        ['14', 'Inafectaciones de arbitrios', 'D-02b'],
+        ['18', 'Anuncios y propaganda: tasas por tipo y dimensión', 'D-02b'],
+        ['19', 'Interés moratorio (TIM), que fija una ordenanza municipal', 'D-02b'],
+        ['23', 'Costas y gastos del procedimiento coactivo', 'D-02c'],
+        ['25', 'Cuadro único de infracciones y sanciones administrativas (CUIS)', 'D-02b'],
+        ['26', 'Descuentos por pronto pago de papeletas', 'D-02c'],
+        ['28', 'Interés del convenio de fraccionamiento y número máximo de cuotas', 'D-02b']] }],
+    ['Decisiones que deciden qué se puede sellar', '', [],
+      { t: 'Decisiones del registro', cn: '3 abiertas · 1 cerrada para 2026', c: [['Decisión', 0], ['Qué', 0], ['Estado', 0], ['Detalle', 0]], f: [
+        ['D-02b', 'Valores de ordenanza local con su ratificación provincial', 'Abierta', 'Ocho de las diez filas sin archivo del corpus. Bloquea sellar un ejercicio COMPLETO en una municipalidad concreta; no bloquea lo de norma nacional, que ya está.'],
+        ['D-02c', 'Lo que fija un acto propio que no es ordenanza ratificada', 'Abierta', 'El arancel de costas coactivas y el CUIS. Bloquea coactiva y sanciones.'],
+        ['D-11', 'El «% actualización» del art. 12', 'Cerrada para 2026', 'Cerrada el 2026-09-06 y SÓLO para 2026: el fundamento es un hecho —ese año se publicaron los aranceles y los precios unitarios, así que el supuesto del art. 12 no se cumple y no hay actualización que aplicar—. Sigue ABIERTA para cualquier otro ejercicio: no se hereda.'],
+        ['D-03d', 'Redondeo del importe a pagar en el cierre de caja', 'Abierta', 'Puede no ser el del cálculo (ADR-0018 fija el del cálculo). Bloquea el cierre de caja, no el sello.']], i: 2,
+        n: 'Sellar no cierra ninguna puerta: no existe «un solo conjunto sellado por ejercicio». Lo que cuesta un sello prematuro es que cada valuación guarda con qué conjuntoId se calculó, así que converger es recalcular el padrón.' }]],
+
+  /* ═══ Ediciones ═══ */
+  'nor-ediciones': [
+    ['Versiones del conjunto, y su sellado', '', [
+      ['Buscar en las ediciones', '', 'Año, «v2» o identificador'],
+      ['Estado', 's', ['Todas', 'Abiertas', 'Selladas']]],
+      { t: 'Ediciones', c: [['Ejercicio', 1], ['Versión', 1], ['Estado', 0], ['Fecha de sellado', 0], ['Usuario que selló', 0], ['Identificador', 1]], f: [
+        ['2027', '1', 'ABIERTO', '—', '—', '3'],
+        ['2026', '2', 'SELLADO', '2026-09-06 15:22', 'hneyra', '2'],
+        ['2026', '1', 'SELLADO', '2026-09-06 10:00', 'hneyra', '1']], i: 2 }],
+    ['Parámetros del conjunto', 'Lo que este conjunto contiene, tal como se compuso. Lleva la vigencia de cada fila y no el valor ya resuelto: un conjunto sellado guarda a propósito el histórico de una llave —la UIT aparece cinco veces— y quien resuelve cuál rige es el lector, contra el ejercicio del conjunto.', [
+      ['Identificador', 'r', '2'], ['Ejercicio', 'r', '2026'], ['Versión', 'r', '2'],
+      ['Estado', 'r', 'SELLADO'], ['Fecha de sellado', 'r', '2026-09-06 15:22'], ['Usuario que selló', 'r', 'hneyra']],
+      { t: 'Parámetros', c: [['Tipo', 0], ['Clave', 0], ['Valor numérico', 1], ['Valor de texto', 0], ['Vigente desde', 0], ['Vigente hasta', 0], ['Documento fuente', 0]], f: [
+        ['UIT', '—', '4600.00', '—', '2022-01-01', '2022-12-31', 'D.S. N.° 398-2021-EF'],
+        ['UIT', '—', '4950.00', '—', '2023-01-01', '2023-12-31', 'D.S. N.° 309-2022-EF'],
+        ['UIT', '—', '5150.00', '—', '2024-01-01', '2024-12-31', 'D.S. N.° 309-2023-EF'],
+        ['UIT', '—', '5350.00', '—', '2025-01-01', '2025-12-31', 'D.S. N.° 260-2024-EF'],
+        ['UIT', '—', '5500.00', '—', '2026-01-01', '2026-12-31', 'D.S. N.° 301-2025-EF'],
+        ['TRAMO_PREDIAL', '1', '0.2', 'Hasta 15 UIT; 0.2%', '2004-11-15', '—', 'TUO LTM (D.S. 156-2004-EF), art. 13'],
+        ['TRAMO_PREDIAL', '2', '0.6', 'Más de 15 UIT y hasta 60 UIT; 0.6%', '2004-11-15', '—', 'TUO LTM (D.S. 156-2004-EF), art. 13'],
+        ['TRAMO_PREDIAL', '3', '1.0', 'Más de 60 UIT; 1.0%', '2004-11-15', '—', 'TUO LTM (D.S. 156-2004-EF), art. 13'],
+        ['TRAMO_PREDIAL_LIMITE', '1', '15', 'Hasta 15 UIT', '2004-11-15', '—', 'TUO LTM (D.S. 156-2004-EF), art. 13'],
+        ['TRAMO_PREDIAL_LIMITE', '2', '60', 'Más de 15 UIT y hasta 60 UIT', '2004-11-15', '—', 'TUO LTM (D.S. 156-2004-EF), art. 13'],
+        ['DEDUCCION_PENSIONISTA', '—', '50', '50 UIT', '2004-11-15', '—', 'TUO LTM art. 19'],
+        ['DEDUCCION_ADULTO_MAYOR', '—', '50', '50 UIT', '2016-07-21', '—', 'Ley N.° 30490, Ley de la Persona Adulta Mayor'],
+        ['PREDIAL_MINIMO', '—', '0.6', '0.6% de la UIT vigente al 1 de enero del año al que corresponde el impuesto', '2004-11-15', '—', 'TUO LTM (D.S. 156-2004-EF), art. 13, último párrafo'],
+        ['PLAZO', 'PRESCRIPCION-DECLARACION_PRESENTADA', '4', 'prescribe a los cuatro (4) años; deudor que presentó la declaración respectiva', '2013-06-22', '—', 'TUO del Código Tributario (D.S. N.º 133-2013-EF)'],
+        ['PLAZO', 'PRESCRIPCION-SIN_DECLARACION', '6', 'seis (6) años para quienes no hayan presentado la declaración respectiva', '2013-06-22', '—', 'TUO del Código Tributario (D.S. N.º 133-2013-EF)'],
+        ['PLAZO', 'PRESCRIPCION-AGENTE_RETENCION', '10', 'prescriben a los diez (10) años cuando el Agente de retención o percepción', '2013-06-22', '—', 'TUO del Código Tributario (D.S. N.º 133-2013-EF)'],
+        ['PLAZO', 'REC1_CUMPLIMIENTO', '7', 'dentro del plazo de siete (7) días hábiles de notificado', '2004-01-10', '—', 'Ley N.º 26979, Ley de Procedimiento de Ejecución Coactiva'],
+        ['PLAZO', 'NOTIFICACION_VALOR-RD', '20', 'término improrrogable de veinte (20) días hábiles', '2013-06-22', '—', 'TUO del Código Tributario (D.S. N.º 133-2013-EF)'],
+        ['PLAZO', 'NOTIFICACION_VALOR-RM', '20', 'término improrrogable de veinte (20) días hábiles', '2013-06-22', '—', 'TUO del Código Tributario (D.S. N.º 133-2013-EF)'],
+        ['PLAZO', 'NOTIFICACION_VALOR-OP', '0', 'el desfase publicado es de cero (0) días hábiles', '2008-12-06', '—', 'TUO de la Ley N.º 26979'],
+        ['PLAZO', 'PRESCRIPCION_INICIO-PREDIAL', '1', 'Desde el uno (1) de enero del año siguiente; desfase de un año respecto del ejercicio', '2013-06-22', '—', 'TUO del Código Tributario (D.S. N.º 133-2013-EF)'],
+        ['PLAZO', 'PRESCRIPCION_INICIO-VEHICULAR', '1', 'Desde el uno (1) de enero del año siguiente; desfase de un año respecto del ejercicio', '2013-06-22', '—', 'TUO del Código Tributario (D.S. N.º 133-2013-EF)'],
+        ['ALCABALA_ALICUOTA', '—', '3', 'La tasa del impuesto es de 3%', '2004-11-15', '—', 'TUO LTM (D.S. N.° 156-2004-EF)'],
+        ['ALCABALA_TRAMO_INAFECTO_UIT', '—', '10', 'el tramo comprendido por las primeras 10 UIT del valor del inmueble', '2004-11-15', '—', 'TUO LTM (D.S. N.° 156-2004-EF)'],
+        ['ESPECTACULO_ALICUOTA', 'TAURINO-SUPERIOR-0.5-UIT', '10', 'Espectáculos taurinos, valor promedio ponderado de la entrada superior al 0.5% de la UIT; 10%', '2007-12-20', '—', 'TUO LTM art. 57 (Ley N.° 29168)'],
+        ['ESPECTACULO_ALICUOTA', 'TAURINO-RESTO', '5', 'Espectáculos taurinos, en los demás casos; 5%', '2007-12-20', '—', 'TUO LTM art. 57 (Ley N.° 29168)'],
+        ['ESPECTACULO_ALICUOTA', 'CARRERAS-CABALLOS', '15', 'Carreras de caballos; 15%', '2007-12-20', '—', 'TUO LTM art. 57 (Ley N.° 29168)'],
+        ['ESPECTACULO_ALICUOTA', 'CINEMATOGRAFICO', '10', 'Espectáculos cinematográficos; 10%', '2007-12-20', '—', 'TUO LTM art. 57 (Ley N.° 29168)'],
+        ['ESPECTACULO_ALICUOTA', 'MUSICA-GENERAL', '0', 'Conciertos de música en general; 0%', '2007-12-20', '—', 'TUO LTM art. 57 (Ley N.° 29168)'],
+        ['ESPECTACULO_ALICUOTA', 'FOLCLOR-TEATRO-ZARZUELA-OPERA-BALLET-CIRCO', '0', 'Espectáculos de folclor nacional, teatro, zarzuela, música clásica, ópera, opereta, ballet y circo; 0%', '2007-12-20', '—', 'TUO LTM art. 57 (Ley N.° 29168)'],
+        ['ESPECTACULO_ALICUOTA', 'OTROS', '10', 'Otros espectáculos públicos; 10%', '2007-12-20', '—', 'TUO LTM art. 57 (Ley N.° 29168)'],
+        ['FACTOR_OFICIALIZACION', '—', '0.68', 'FACTOR DE OFICIALIZACIÓN Fo = 0,68', '2026-01-01', '2026-12-31', 'Resolución Ministerial N.° 277-2025-VIVIENDA'],
+        ['PORCENTAJE_DE_ACTUALIZACION', '—', '0', 'En el ejercicio 2026 se publicaron los aranceles de terrenos y los precios unitarios oficiales de construcción; el supuesto del art. 12 no se cumple y no hay actualización que aplicar: 0', '2026-01-01', '2026-12-31', 'TUO LTM (D.S. N.° 156-2004-EF), art. 12']],
+        n: 'La clave va vacía cuando el tipo tiene un solo valor —la UIT no lleva clave; TRAMO_PREDIAL lleva tres— y «Vigente hasta» vacío no es un olvido: es una norma sin fecha de fin. Donde no hay dato va —, no una celda en blanco. Las filas llegan del snapshot del conjunto, y su huella se comprueba antes de usarlas.' }],
+    ['Abrir versión', 'Una versión nueva del ejercicio, para componerla desde cero o para corregir lo que un conjunto ya sellado no admite. La versión NO se recibe: se calcula. Quien corrige un conjunto sellado no tiene por qué saber cuántas versiones hubo antes, y dejárselo elegir es la forma de acabar con dos versiones 2.', [
+      ['Ejercicio', 's', ['', '2026', '2027', '2028']],
+      ['Versión que se asignará', 'r', 'La calcula el sistema al guardar'],
+      ['Observación', 'a1', 'Sin observación no se guarda (regla 10). Al menos 5 caracteres, y como mucho 500: es lo que admite la columna.']]],
+    ['Agregar parámetro', 'Incorpora al conjunto un parámetro YA PUBLICADO, nombrándolo por lo que es y no por el identificador que le tocó en la base. El mismo valor tiene identificadores distintos en «stg» y en «prod», así que un archivo escrito con números entra en el ambiente equivocado sin fallar: sella un juego de parámetros que no es el que dice.', [
+      ['Conjunto', 'r', '3'],
+      ['Tipo', 's', ['', 'UIT', 'TRAMO_PREDIAL', 'TRAMO_PREDIAL_LIMITE', 'DEDUCCION_PENSIONISTA', 'DEDUCCION_ADULTO_MAYOR', 'PREDIAL_MINIMO', 'PLAZO', 'ALCABALA_ALICUOTA', 'ALCABALA_TRAMO_INAFECTO_UIT', 'ESPECTACULO_ALICUOTA', 'FACTOR_OFICIALIZACION', 'PORCENTAJE_DE_ACTUALIZACION']],
+      ['Clave', '', 'La UIT no lleva clave. TRAMO_PREDIAL lleva 1, 2 o 3.'],
+      ['Vigente desde', 'd', 'Forma parte de la llave: la UIT de 2026 y la de 2027 comparten tipo y clave, y son filas distintas. Sin la fecha habría que elegir una, y elegirla en silencio es el modo de falla que ARQ-09 §3 describe.'],
+      ['Observación', 'a1', 'Sin observación no se guarda (regla 10). Al menos 5 caracteres, y como mucho 500: es lo que admite la columna.']]],
+    ['Sellar', 'A partir de aquí rige, y no se modifica: ni el conjunto ni su contenido. Lo impide un disparador de la base, no una validación de la aplicación. Es el acto administrativo del que cuelga la reproducibilidad de todo lo que se emita con él, y por eso queda con fecha y con nombre.', [
+      ['Conjunto', 'r', '3'], ['Lo que se congela', 'r', 'Ningún parámetro'],
+      ['Observación', 'a1', 'Sin observación no se guarda (regla 10). Al menos 5 caracteres, y como mucho 500: es lo que admite la columna.']]]],
+
+  /* ═══ Cuadros de valuación ═══ */
+  'nor-cuadros': [
+    ['Los tres cuadros', 'Lo que esta operación no publica, y por eso no se dibuja: el sha256 del derivado, la doble firma de ADR-0007 —quién transcribió y quién verificó— y la clave de la edición. Están en el corpus de docs/10-negocio/valores-normativos/, que no tiene endpoint. Sacarlos de la captura del artboard los publicaría desde una pantalla, sin ninguna de las dos firmas.', [
+      ['Ámbito del snapshot', 's', ['VALUACION', 'OBLIGACION']]]],
+    ['Valores unitarios de edificación', 'El anexo de valores unitarios de edificación que publica cada año el MVCS. Es una matriz de categoría por año de construcción, no sólo de categoría, y la letra que sale de aquí es lo que multiplica los metros construidos del predio.', [
+      ['Documento fuente', 'r', 'Resolución Ministerial N.º 277-2025-VIVIENDA'], ['Tabla', 'r', 'valor_unitario_edificacion'], ['Ámbito que la lleva', 'r', 'VALUACION']],
+      { t: 'Valores unitarios de edificación — ámbito VALUACION', cn: '24', c: [['Partida', 0], ['Categoría', 0], ['Desde', 1], ['Hasta', 1], ['Valor por m² (S/)', 1], ['Documento fuente', 0]], f: [
+        ['MUROS', 'A', '1990', '—', '894.27', 'R.M. 277-2025-VIVIENDA'], ['TECHOS', 'A', '1990', '—', '543.16', 'R.M. 277-2025-VIVIENDA'], ['PUERTAS', 'A', '1990', '—', '485.33', 'R.M. 277-2025-VIVIENDA'],
+        ['MUROS', 'B', '1990', '—', '576.57', 'R.M. 277-2025-VIVIENDA'], ['TECHOS', 'B', '1990', '—', '354.37', 'R.M. 277-2025-VIVIENDA'], ['PUERTAS', 'B', '1990', '—', '255.81', 'R.M. 277-2025-VIVIENDA'],
+        ['MUROS', 'C', '1990', '—', '387.43', 'R.M. 277-2025-VIVIENDA'], ['TECHOS', 'C', '1990', '—', '285.80', 'R.M. 277-2025-VIVIENDA'], ['PUERTAS', 'C', '1990', '—', '161.41', 'R.M. 277-2025-VIVIENDA'],
+        ['MUROS', 'D', '1990', '—', '374.68', 'R.M. 277-2025-VIVIENDA'], ['TECHOS', 'D', '1990', '—', '181.40', 'R.M. 277-2025-VIVIENDA'], ['PUERTAS', 'D', '1990', '—', '141.39', 'R.M. 277-2025-VIVIENDA'],
+        ['MUROS', 'E', '1990', '—', '263.77', 'R.M. 277-2025-VIVIENDA'], ['TECHOS', 'E', '1990', '—', '67.63', 'R.M. 277-2025-VIVIENDA'], ['PUERTAS', 'E', '1990', '—', '120.98', 'R.M. 277-2025-VIVIENDA'],
+        ['MUROS', 'F', '1990', '—', '198.64', 'R.M. 277-2025-VIVIENDA'], ['TECHOS', 'F', '1990', '—', '37.19', 'R.M. 277-2025-VIVIENDA'], ['PUERTAS', 'F', '1990', '—', '90.81', 'R.M. 277-2025-VIVIENDA'],
+        ['MUROS', 'G', '1990', '—', '117.05', 'R.M. 277-2025-VIVIENDA'], ['TECHOS', 'G', '1990', '—', '25.57', 'R.M. 277-2025-VIVIENDA'], ['PUERTAS', 'G', '1990', '—', '49.05', 'R.M. 277-2025-VIVIENDA'],
+        ['TECHOS', 'H', '1990', '—', '0.00', 'R.M. 277-2025-VIVIENDA'], ['PUERTAS', 'H', '1990', '—', '24.53', 'R.M. 277-2025-VIVIENDA'],
+        ['PUERTAS', 'I', '1990', '—', '0.00', 'R.M. 277-2025-VIVIENDA']],
+        n: 'La J existe sólo en el anexo de la Selva y sólo en muros; la H no tiene muros. Por eso el derivado de la Costa son 24 celdas y no 30: no es un hueco, es el cuadro.' }],
+    ['De qué región es este cuadro', 'Esta operación no lo dice. La R.M. anual publica un cuadro por región —Lima Metropolitana y Callao, Costa, Sierra y Selva— y valor_unitario_edificacion no tiene columna de región: las cuatro chocarían celda con celda en valor_unitario_uq (publicacion_id, partida, categoria, anio_construccion_desde). Así que hay una región por edición y la región viaja en la clave de la edición —la del piloto es ANEXO-I.2-COSTA—, que GET /conjuntos/{id}/snapshot no publica: sus filas traen partida, categoria, anioConstruccionDesde, anioConstruccionHasta, valorM2 y documentoFuente. Un cuadro de valores unitarios sin su región no se puede usar: la misma letra vale otra cifra por metro cuadrado en cada una de las cuatro. Mientras la clave de la edición no viaje en el snapshot, quien calcule con estas cifras tiene que comprobar contra el corpus cuál se cargó, y eso no se puede hacer desde aquí.', []],
+    ['Depreciación', 'El Anexo I del Reglamento Nacional de Tasaciones. El uso es la tabla a la que pertenece la fila, con el número que usa la propia norma: 01 vivienda, 02 tiendas y depósitos, 03 oficinas, 04 salud, industria y educación. Qué tabla le toca a un predio es criterio, y no vive aquí.', [
+      ['Documento fuente', 'r', 'Resolución Ministerial N.º 172-2016-VIVIENDA'], ['Tabla', 'r', 'depreciacion'], ['Ámbito que la lleva', 'r', 'VALUACION']],
+      { t: 'Depreciación — ámbito VALUACION', cn: '492', c: [['Uso', 0], ['Material', 0], ['Estado de conservación', 0], ['Antigüedad hasta', 1], ['Depreciación %', 1], ['Documento fuente', 0]], f: [
+        ['01', 'Concreto', 'Muy Bueno', '5', '0', 'R.M. 172-2016-VIVIENDA'],
+        ['01', 'Concreto', 'Muy Bueno', '10', '0', 'R.M. 172-2016-VIVIENDA'],
+        ['01', 'Concreto', 'Muy Bueno', '15', '3', 'R.M. 172-2016-VIVIENDA'],
+        ['01', 'Concreto', 'Muy Bueno', '30', '12', 'R.M. 172-2016-VIVIENDA'],
+        ['01', 'Concreto', 'Muy Bueno', '50', '24', 'R.M. 172-2016-VIVIENDA'],
+        ['01', 'Concreto', 'Muy Bueno', '—', '27', 'R.M. 172-2016-VIVIENDA'],
+        ['01', 'Ladrillo', 'Regular', '5', '20', 'R.M. 172-2016-VIVIENDA'],
+        ['01', 'Ladrillo', 'Regular', '10', '23', 'R.M. 172-2016-VIVIENDA'],
+        ['01', 'Ladrillo', 'Regular', '15', '26', 'R.M. 172-2016-VIVIENDA'],
+        ['02', 'Concreto', 'Bueno', '5', '5', 'R.M. 172-2016-VIVIENDA'],
+        ['02', 'Ladrillo', 'Malo', '5', '60', 'R.M. 172-2016-VIVIENDA'],
+        ['02', 'Liviano/Adobe', 'Regular', '5', '32', 'R.M. 172-2016-VIVIENDA'],
+        ['03', 'Concreto', 'Muy Bueno', '5', '0', 'R.M. 172-2016-VIVIENDA'],
+        ['04', 'Concreto', 'Muy Bueno', '15', '6', 'R.M. 172-2016-VIVIENDA']],
+        n: 'Cada tabla del Anexo I cierra con un tramo abierto, y en el JSON llega como «antiguedadHasta»: null. No es un dato que falte: es el tramo que no tiene tope, y en un padrón viejo es el que más predios cubre.' }],
+    ['Valores referenciales vehiculares', 'El anexo del MEF con el valor referencial de los vehículos. Es la única de las tres tablas que no interviene en la valuación de un predio: sirve para la base imponible del patrimonio vehicular, que es obligación y no valuación (ADR-0024).', [
+      ['Documento fuente', 'r', 'Resolución Ministerial N.° 008-2026-EF/15'], ['Tabla', 'r', 'valor_referencial_vehiculo'], ['Ámbito que la lleva', 'r', 'OBLIGACION']],
+      { t: 'Valores referenciales vehiculares — ámbito OBLIGACION', cn: '54 129', c: [['Ejercicio', 1], ['Categoría', 0], ['Marca', 0], ['Modelo', 0], ['Año de fabricación', 1], ['Valor (S/)', 1], ['Documento fuente', 0]], f: [
+        ['2026', 'A1', 'BAJAJ', 'QUTE', '2025', '18,000.00', 'R.M. 008-2026-EF/15'],
+        ['2026', 'A1', 'BAJAJ', 'QUTE', '2024', '16,200.00', 'R.M. 008-2026-EF/15'],
+        ['2026', 'A1', 'BAJAJ', 'QUTE', '2023', '14,400.00', 'R.M. 008-2026-EF/15'],
+        ['2026', 'A1', 'BYD', 'FO COMFORT', '2025', '32,440.00', 'R.M. 008-2026-EF/15'],
+        ['2026', 'A2', 'TOYOTA', 'AGYA 1.0L E AT', '2025', '30,310.00', 'R.M. 008-2026-EF/15'],
+        ['2026', 'A3', 'ALFA ROMEO', '145 16 V', '2025', '86,430.00', 'R.M. 008-2026-EF/15'],
+        ['2026', 'A3', 'ALFA ROMEO', '147 2.0 SSP 3P', '2025', '104,780.00', 'R.M. 008-2026-EF/15'],
+        ['2026', 'CAMIONES', 'AUTOCRAFT', 'EXOR', '2025', '45,850.00', 'R.M. 008-2026-EF/15'],
+        ['2026', 'CAMIONETAS', 'ASIA', 'COMBI AM825 25', '2025', '104,740.00', 'R.M. 008-2026-EF/15'],
+        ['2026', 'BUSES Y OMNIBUSES', 'AGRALE', 'MA 8.5', '2025', '135,890.00', 'R.M. 008-2026-EF/15']],
+        n: '«OTROS MODELOS» es una fila de verdad y aparece en cada categoría con un valor distinto, así que la categoría es parte de la identidad y no una etiqueta. Son siete columnas: la tabla se desplaza dentro de su marco y no arrastra la página.' }]],
+
+  /* ═══ Publicación ═══ */
+  'nor-publicacion': [
+    ['Qué conjunto se descarga', 'El ámbito no tiene valor por omisión, y eso es la mitad de la decisión: un «todo» implícito sería el snapshot más grande servido a quien no lo pidió, con otra huella y con la mitad de sus filas sin consumidor. ?ambito=valuacion en minúsculas se rechaza nombrándolo, porque aceptarlo devolvería un snapshot con otra huella que el cliente creería correcto.', [
+      ['Conjunto', 'r', '2'], ['Ejercicio · versión', 'r', '2026 · 2'],
+      ['Ámbito', 's', ['VALUACION', 'OBLIGACION']]]],
+    ['La respuesta', 'El sha256 no viene dentro del cuerpo a propósito: sería pedirle a un valor que se contenga a sí mismo. Viaja en el ETag, y lo que se guarda al descargar son estos mismos bytes, no una segunda serialización del objeto.', [
+      ['ETag', 'r1', '3a63fce3a3660cb28b9b7aa6e16818cc3b6c08e1deeb4414b7ca2172521e325a'],
+      ['Cache-Control', 'r', 'public, max-age=31536000, immutable'], ['conjuntoId', 'r', '2'],
+      ['ejercicio · version', 'r', '2026 · 2'], ['ambito', 'r', 'VALUACION'], ['filas', 'r', '549']],
+      { t: 'Qué viene y qué no', c: [['Campo', 0], ['Filas', 1], ['Por qué', 0]], f: [
+        ['parametros', '33', 'Van en los DOS ámbitos: son 33 filas, y una valuación que necesitara el «% actualización» tendría que pedir otro snapshot para una cifra.'],
+        ['valoresUnitarios', '24', 'El Anexo I.2 de la Costa, 24 celdas.'],
+        ['depreciaciones', '492', 'El Anexo I del RNT, 492 filas.'],
+        ['valoresReferenciales', '0', 'El ámbito VALUACION no los lleva: el vehicular es obligación, no valuación (ADR-0024).']],
+        n: 'La huella DEPENDE del ámbito, porque son bytes distintos. Lo que no cambia es la identidad —conjuntoId, ejercicio y versión—, y es lo que las dos corridas comparan para saber que calcularon con el mismo juego de valores.' }],
+    ['Un conjunto, dos descargas', 'Misma identidad y huellas distintas, que es lo que hace entendible que un mismo conjunto tenga dos descargas: quien necesita las dos mitades —hoy rentas, que todavía lleva catastro dentro— pide DOS snapshots del MISMO conjunto, y la identidad es lo que las dos corridas comparan.', [
+      ['Identidad', 'r1', 'conjunto 2 · ejercicio 2026 · versión 2'],
+      ['ETag en VALUACION', 'r1', '3a63fce3a3660cb28b9b7aa6e16818cc3b6c08e1deeb4414b7ca2172521e325a'],
+      ['ETag en OBLIGACION', 'r1', 'eebbf72d0b9bdefa0a2f3a1ca226268d3ebc38d3a2e3120b236d87adddd2d96b'],
+      ['Las dos huellas', 'r', 'son distintas']]],
+    ['Por qué se puede guardar para siempre', '', [
+      ['Lo sellado no cambia', 'r1', 'Un disparador de la base vuelve inmutable el conjunto y su contenido en cuanto se sella. No hay invalidación que diseñar, ni ventana de inconsistencia, ni TTL que ajustar.'],
+      ['La caché se indexa por contenido', 'r1', 'Por el conjuntoId y su huella, no por tiempo. Y por eso el recálculo no pasa por la red: parte del conjuntoId que la determinación guardó, y ese conjunto ya está en la caché.'],
+      ['El orden de las filas es total', 'r1', 'Las tres consultas de los cuadros llevan ORDER BY completo: si el orden dependiera del plan, el ETag cambiaría sin que cambiara el conjunto, y todo snapshot cacheado se leería como corrupto.']]],
+    ['Quién se lo lleva', 'Una petición por corrida, no una por predio. Una emisión de trescientos mil predios haría trescientas mil peticiones, y el día que normativa no esté arriba no habría padrón.', [],
+      { t: 'Quién consume el conjunto sellado', c: [['Quién', 0], ['Qué ámbito pide', 0], ['Cuándo', 0], ['Qué hace con él', 0]], f: [
+        ['catastro', 'VALUACION', 'Una vez por corrida de valuación', 'Dice cuánto vale un predio'],
+        ['rentas', 'OBLIGACION', 'Una vez por emisión', 'Dice cuánto se debe por él'],
+        ['rentas', 'VALUACION', 'Mientras siga llevando catastro dentro', 'Pide DOS snapshots del MISMO conjunto: la identidad es la misma']],
+        n: 'Los dos declaran su contrato y consumen dos operaciones: GET /conjuntos y GET /conjuntos/{id}/snapshot. Ninguno consume GET /seguridad/parametros y GET /seguridad/parametros/ejercicios/{ejercicio}. Es lo que convierte «publicamos un JSON» en «esto es lo que se rompe si cambia»: un campo que este sistema deje de publicar pone rojo el build de este repositorio, no el del consumidor (ADR-0030 §4).' }]]
+};
+
+/* Los cuatro submódulos llevan icono propio: NormativaV6.dc.html:1166-1171. */
+const ICO_SEC = {
+  'nor-panel': ['M4 19.5h16', 'M6.5 19.5V9', 'M11 19.5V5.5', 'M15.5 19.5v-7', 'M20 19.5v-11'],
+  'nor-ediciones': ['M12 3.6 20.4 8 12 12.4 3.6 8z', 'M3.6 12 12 16.4 20.4 12', 'M3.6 16 12 20.4 20.4 16'],
+  'nor-cuadros': ['M4 5.5h16v13H4z', 'M4 10h16', 'M9.5 10v8.5', 'M15 10v8.5'],
+  'nor-publicacion': ['M12 4.5v10', 'M8 11l4 4 4-4', 'M4.5 18.5h15']
+};
+
+/* El slug del hash para las cuatro secciones: NormativaV6.dc.html:1450-1455. */
+const SLUGS = { 'nor-panel': 'panel', 'nor-ediciones': 'ediciones', 'nor-cuadros': 'cuadros', 'nor-publicacion': 'publicacion' };
+
+/* Qué hay que hacer en cada pantalla. Es la línea de la barra de
+   instrucción: distinta de la nota del título, que dice qué es la pantalla.
+
+   La V6 NO tiene línea de instrucción, así que estas cuatro son el único
+   texto de las pantallas que no se transcribe: son PROPUESTAS para G2, cada
+   una a partir del subtítulo de c01fe9a:frontend/src/marco/Marco.tsx:70-74 o
+   del comentario del artboard V6 que dice qué pregunta contesta la pantalla. */
+const INSTRUCCIONES = {
+  'nor-panel': 'revise con qué se puede emitir el ejercicio y qué le falta: lo que falta ocupa tanto sitio como lo que hay.',
+  'nor-ediciones': 'abra una versión, agregue los parámetros por su llave y séllela. Ninguna de las tres operaciones se guarda sin observación.',
+  'nor-cuadros': 'consulte los tres cuadros nacionales (ADR-0017). Son de sólo lectura: ninguna municipalidad los edita.',
+  'nor-publicacion': 'elija el ámbito y descargue el conjunto sellado, entero: una petición por corrida, no una por predio.'
+};
+
+const TOKENS = [
+  ['--azul', '#005284', 'bg-azul / text-azul', 'Lo que se puede pulsar'],
+  ['--azul-oscuro', '#00365a', 'bg-azul-oscuro', 'La barra global'],
+  ['--azul-suave', '#e4f4fd', 'bg-azul-suave', 'Relleno detrás de un texto en azul'],
+  ['--acento', '#52bdef', 'border-acento', 'El celeste de la marca; decorativo'],
+  ['--fondo', '#f2f6f9', 'bg-fondo', 'El lienzo'],
+  ['--superficie', '#ffffff', 'bg-superficie', 'El papel de una tarjeta'],
+  ['--tinta', '#16232c', 'text-tinta', 'Texto primario'],
+  ['--tinta-3', '#5a6b78', 'text-tinta-3', 'Texto terciario y placeholder'],
+  ['--linea', '#d6dee4', 'border-linea', 'El filo por omisión'],
+  ['--ok-fondo', '#dcefe3', 'bg-ok-fondo', 'Insignia conforme'],
+  ['--atencion-fondo', '#fff4d9', 'bg-atencion-fondo', 'Insignia de atención'],
+  ['--mal-fondo', '#fbe4e0', 'bg-mal-fondo', 'Insignia de error']
+];
+
+/* Los archivos de ESTA reconstrucción (épica hneyra/normativa#47). Ninguno de la V6. */
+const REPARTO = [
+  ['src/pantallas/arbol.ts', 'El módulo y sus cuatro submódulos, transcritos de este artboard (hneyra/normativa#58).'],
+  ['src/pantallas/definiciones/*', 'Una por submódulo: Panel, Ediciones, Cuadros de valuación y Publicación. La forma de cada pantalla, sin los ejemplos (rentas#97).'],
+  ['src/catalogo.ts', 'Empalma el árbol con el catálogo de @kamayuk/shell por el campo codigo del módulo.'],
+  ['@kamayuk/shell', 'El Armazon: la barra global, el árbol y la ruta. Sidebar + Collapsible + Breadcrumb de shadcn.'],
+  ['@kamayuk/ui', 'El intérprete de las pantallas, las piezas de shadcn y la paleta en @theme de Tailwind v4.'],
+  ['@kamayuk/api', 'El cliente: el prefijo ' + RAIZ + ' y el manejo de errores.'],
+  ['@kamayuk/sesion', 'La identidad: PKCE S256, y el token nunca en almacenamiento.']
+];
+
+class Component extends DCLogic {
+  state = {
+    dest: 'nor-panel', abiertas: ['nor-panel'], desplegado: PROPIO,
+    vals: {}, sucias: {}, porCerrar: null,
+    sideOpen: true, filtro: '', entrega: false,
+    paleta: false, pq: '', sesion: false, toast: ''
+  };
+
+  componentDidMount() {
+    this.aplicar();
+    const inicial = this.destDeHash();
+    if (inicial && inicial !== this.state.dest) {
+      this.setState((s) => ({
+        dest: inicial,
+        abiertas: s.abiertas.indexOf(inicial) >= 0 ? s.abiertas : s.abiertas.concat([inicial]),
+        desplegado: (this.hoja(inicial) || {}).modulo || s.desplegado
+      }));
+    }
+    this._hash = () => {
+      const d = this.destDeHash();
+      if (!d) return;
+      const h = this.hoja(d);
+      this.setState((s) => ({
+        dest: d,
+        desplegado: h ? h.modulo : s.desplegado,
+        abiertas: s.abiertas.indexOf(d) >= 0 ? s.abiertas : s.abiertas.concat([d])
+      }));
+    };
+    window.addEventListener('hashchange', this._hash);
+    this._tecla = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        this.setState((s) => ({ paleta: !s.paleta, pq: '', sesion: false }));
+      } else if (e.key === 'Escape') {
+        this.setState({ paleta: false, sesion: false, porCerrar: null });
+      }
+    };
+    window.addEventListener('keydown', this._tecla);
+  }
+  componentDidUpdate() { this.aplicar(); }
+  componentWillUnmount() {
+    window.removeEventListener('keydown', this._tecla);
+    window.removeEventListener('hashchange', this._hash);
+    if (this._reloj) clearTimeout(this._reloj);
+  }
+
+  aplicar() {
+    if (this.state.toast && this.state.toast !== this._ultimo) {
+      this._ultimo = this.state.toast;
+      if (this._reloj) clearTimeout(this._reloj);
+      this._reloj = setTimeout(() => { this._ultimo = ''; this.setState({ toast: '' }); }, 3400);
+    }
+  }
+
+  di(m) { this.setState({ toast: m }); }
+
+  /* Índice plano clave → { módulo, nota, rótulo, trazos, ops, piezas } */
+  hoja(clave) {
+    for (const m of ARBOL) {
+      for (const h of m[5]) {
+        if (h[0] === clave) {
+          return {
+            modulo: m[0], nota: m[1], rotulo: h[1],
+            propio: m[0] === PROPIO,
+            trazos: ICO_SEC[clave] || m[4],
+            ops: h[2], piezas: h[3]
+          };
+        }
+      }
+    }
+    return null;
+  }
+
+  /* El hash lleva la sección abierta; las propias con su slug, las demás con
+     su clave. `replaceState` para no llenar el historial. */
+  marcarHash(dest) {
+    const slug = SLUGS[dest] || dest;
+    if (typeof window === 'undefined') return;
+    const url = window.location.pathname + window.location.search + '#' + slug;
+    window.history.replaceState(null, '', url);
+  }
+  destDeHash() {
+    const slug = (window.location.hash || '').slice(1);
+    if (!slug) return null;
+    const propia = Object.keys(SLUGS).find((k) => SLUGS[k] === slug);
+    if (propia) return propia;
+    return this.hoja(slug) ? slug : null;
+  }
+
+  ir(dest) {
+    this.marcarHash(dest);
+    const h = this.hoja(dest);
+    /* El árbol es la única guía que queda: tiene que desplegar el módulo del
+       destino, no el que el usuario abrió la última vez. */
+    this.setState((s) => ({
+      dest: dest, paleta: false, sesion: false,
+      desplegado: h ? h.modulo : s.desplegado,
+      abiertas: s.abiertas.indexOf(dest) >= 0 ? s.abiertas : s.abiertas.concat([dest])
+    }));
+  }
+
+  pedirCierre(dest) {
+    if (this.state.sucias[dest]) { this.setState({ porCerrar: dest }); return; }
+    this.cerrarPestana(dest);
+  }
+  cerrarPestana(dest) {
+    this.setState((s) => {
+      const i = s.abiertas.indexOf(dest);
+      if (i < 0) return {};
+      const quedan = s.abiertas.filter((x) => x !== dest);
+      let activa = s.dest;
+      let desplegado = s.desplegado;
+      if (s.dest === dest) {
+        activa = quedan.length === 0 ? null : quedan[Math.max(i - 1, 0)];
+        if (activa) {
+          this.marcarHash(activa);
+          const h = this.hoja(activa);
+          if (h) desplegado = h.modulo;
+        }
+      }
+      const sucias = Object.assign({}, s.sucias);
+      delete sucias[dest];
+      return { abiertas: quedan, dest: activa, desplegado: desplegado, sucias: sucias, porCerrar: null };
+    });
+  }
+
+  /* El tono de la insignia, sacado del TEXTO con el vocabulario de normativa:
+     SELLADO y Sellado conforme, ABIERTO en atención, Vigente en información y
+     Abierta —una decisión— en mal. Es una aproximación y lo sabe: la V6 declara
+     el tono EN LA FILA (D-02b «Abierta» va en mal y D-03d «Abierta» en
+     atención, c01fe9a:frontend/src/secciones/panel.ts:118-160), y una expresión
+     regular sobre el texto no puede decir eso. El tono como dato es el hueco 18
+     de hneyra/normativa#51. */
+  tono(t) {
+    const s = String(t).toLowerCase();
+    if (/^abierta$/.test(s)) return 'mal';
+    if (/^abierto$/.test(s)) return 'atencion';
+    if (/^vigente$/.test(s)) return 'info';
+    return 'ok';
+  }
+  insignia(tono) {
+    return 'display:inline-block; font-size:11.5px; font-weight:700; border-radius:999px; padding:3px 9px; white-space:nowrap; background:var(--' +
+      tono + '-fondo); color:var(--' + tono + '-tinta)';
+  }
+
+  /* De PANTALLAS a lo que la plantilla pinta. Un bloque es
+     [título, nota, campos[], tabla?]; un campo, [etiqueta, tipo, opciones|ayuda]. */
+  bloques(clave) {
+    const def = PANTALLAS[clave];
+    if (!def) return [];
+    const CTRL = 'width:100%; box-sizing:border-box; border:1px solid var(--borde-campo); border-radius:var(--radio-sm); padding:8px 10px; background:var(--superficie); font-size:13.5px';
+    return def.map((b, bi) => {
+      const campos = (b[2] || []).map((c, ci) => {
+        const t = String(c[1] || '');
+        const ancho = t.indexOf('1') >= 0;
+        const base = t.replace('1', '');
+        const k = clave + '|' + bi + '|' + ci;
+        const opts = Array.isArray(c[2]) ? c[2] : [];
+        const ayuda = (!Array.isArray(c[2]) && c[2]) ? c[2] : '';
+        const guardado = this.state.vals[k];
+        const valor = guardado !== undefined ? guardado
+          : (base === 's' ? (opts[0] || '')
+            : (base === 'r' ? (ayuda || '—')
+              : (base === 'c' ? false : '')));
+        return {
+          label: c[0], ancho: ancho ? '1' : '0', control: CTRL,
+          valor: valor === false ? '' : valor, marcado: valor === true,
+          opts: opts, ayuda: (base === 'c' || base === 'r') ? '' : ayuda, ph: base === 'c' ? ayuda : (ayuda || ''),
+          opcional: base === 'c' ? false : /opcional/i.test(ayuda),
+          esSel: base === 's', esFecha: base === 'd', esRo: base === 'r',
+          esChk: base === 'c', esArea: base === 'a',
+          esTexto: base === '' || base === 't',
+          on: base === 'c'
+            ? (e) => this.setState((x) => ({ vals: Object.assign({}, x.vals, { [k]: e.target.checked }), sucias: Object.assign({}, x.sucias, { [clave]: true }) }))
+            : (e) => this.setState((x) => ({ vals: Object.assign({}, x.vals, { [k]: e.target.value }), sucias: Object.assign({}, x.sucias, { [clave]: true }) }))
+        };
+      });
+      const t = b[3];
+      return {
+        titulo: b[0], nota: b[1] || '',
+        hayCampos: campos.length > 0, campos: campos,
+        hayTabla: t !== undefined,
+        tabla: t === undefined ? null : Object.assign(
+          this.tabla({ titulo: t.t, conteo: t.cn || (t.f.length + (t.f.length === 1 ? ' registro' : ' registros')), min: (t.c.length * 130) + 'px', nota: t.n || '', cols: t.c, filas: t.f, insignia: t.i }),
+          { accion: t.a || '', anadir: () => this.di('Abriría el alta de una fila de esta lista.') })
+      };
+    });
+  }
+
+  /* De los bloques de una pantalla a su composición en shadcn. Las piezas
+     derivadas salen de lo que el formulario tiene; las declaradas, del árbol,
+     y sólo las que el formulario no puede delatar. */
+  /* Concordancia de número: la frase de una pieza derivada lleva su cuenta
+     dentro, y la mayoría de las pantallas tiene exactamente un campo de
+     fecha o una marca. `n(1, 'un desplegable', 'desplegables')` da «Un
+     desplegable» y «3 desplegables», no «1 desplegables». */
+  n(c, uno, muchos) {
+    if (c !== 1) return c + ' ' + muchos;
+    return uno.charAt(0).toUpperCase() + uno.slice(1);
+  }
+
+  piezas(clave, hoja) {
+    const bl = this.bloques(clave);
+    const campos = bl.reduce((a, b) => a.concat(b.campos), []);
+    const tablas = bl.filter((b) => b.hayTabla).map((b) => b.tabla);
+    const out = [];
+    const add = (p, u) => { if (!out.some((x) => x.pieza === p)) out.push({ pieza: p, uso: u }); };
+
+    if (bl.length > 1) {
+      add('Card', 'Una por grupo de campos: ' + bl.map((b) => '«' + b.titulo + '»').join(', ') + '.');
+    } else if (bl.length === 1) {
+      add('Card', 'La pantalla es un solo grupo: «' + bl[0].titulo + '».');
+    }
+    const cuenta = (p) => campos.filter(p).length;
+    const nEsc = cuenta((c) => !c.esRo);
+    if (nEsc > 0) add('Form + zod', nEsc === 1
+      ? 'El único campo que se escribe, con su validación.'
+      : 'Los ' + nEsc + ' campos que se escriben, con su validación.');
+    const nSel = cuenta((c) => c.esSel);
+    if (nSel > 0) add('Select', this.n(nSel, 'un desplegable', 'desplegables') + ' de lista cerrada.');
+    const nFec = cuenta((c) => c.esFecha);
+    if (nFec > 0) add('Calendar + Popover', this.n(nFec, 'un campo', 'campos') + ' de fecha.');
+    const nChk = cuenta((c) => c.esChk);
+    if (nChk > 0) add('Checkbox', this.n(nChk, 'una marca', 'marcas') + ' de sí o no.');
+    if (campos.some((c) => c.esArea)) add('Textarea', 'El campo libre de observaciones.');
+    if (campos.some((c) => c.esRo)) add('Separator', 'Separa lo que se consulta de lo que se escribe.');
+    if (tablas.length > 0) {
+      add('Table', tablas.length === 1 ? 'La lista «' + tablas[0].titulo + '».' : 'Las ' + tablas.length + ' listas de la pantalla.');
+      if (tablas.some((t) => t.filas.some((r) => r.celdas.some((c) => c.insignia)))) {
+        add('Badge', 'La columna de situación, con los cuatro tonos de la insignia.');
+      }
+      if (tablas.some((t) => t.accion)) add('Button', 'La acción de la lista: ' + tablas.filter((t) => t.accion).map((t) => '«' + t.accion + '»').join(', ') + '.');
+    }
+    (hoja.piezas || []).forEach((p) => add(p[0], /[.?!»]$/.test(p[1]) ? p[1] : p[1] + '.'));
+    return out;
+  }
+
+  tabla(def) {
+    const TH = 'padding:9px 14px; text-align:left; font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--tinta-3); background:var(--sup); border-bottom:1px solid var(--linea); white-space:nowrap';
+    const TD = 'padding:10px 14px; font-size:13.5px; color:var(--tinta-2); border-bottom:1px solid var(--linea-2)';
+    return {
+      titulo: def.titulo, conteo: def.conteo, min: def.min, nota: def.nota,
+      cols: def.cols.map((c) => ({ label: c[0], style: c[1] ? TH + '; text-align:right' : TH })),
+      filas: def.filas.map((f, i) => ({
+        filaStyle: 'background:' + (i % 2 ? 'var(--sup)' : 'var(--superficie)'),
+        celdas: f.map((c, j) => {
+          if (def.insignia !== undefined && j === def.insignia) {
+            return { texto: c, insignia: this.insignia(this.tono(c)) + '; margin:-2px 0', plano: false, style: 'padding:10px 14px; border-bottom:1px solid var(--linea-2)' };
+          }
+          return {
+            texto: c, insignia: '', plano: true,
+            style: def.cols[j] && def.cols[j][1]
+              ? TD + '; text-align:right; font-variant-numeric:tabular-nums; color:var(--tinta)'
+              : (j === 0 ? TD + '; font-weight:600; color:var(--tinta); white-space:nowrap' : TD)
+          };
+        })
+      }))
+    };
+  }
+
+  renderVals() {
+    const s = this.state;
+    const f = s.filtro.trim().toLowerCase();
+    const coincide = (t) => f === '' || String(t).toLowerCase().indexOf(f) >= 0;
+
+    /* El árbol, filtrado: un módulo entra si coincide él o alguna de sus hojas. */
+    const arbolFiltrado = ARBOL.map((m) => {
+      const hojasVisibles = m[5].filter((h) => coincide(m[0]) || coincide(h[1]));
+      return { m: m, hojas: hojasVisibles };
+    }).filter((x) => x.hojas.length > 0);
+
+    const hojaActual = s.dest ? this.hoja(s.dest) : null;
+
+    /* Paleta: los destinos y sus operaciones. */
+    const pq = s.pq.trim().toLowerCase();
+    const palRes = [];
+    ARBOL.forEach((m) => m[5].forEach((h) => {
+      if (pq === '' || h[1].toLowerCase().indexOf(pq) >= 0 || m[0].toLowerCase().indexOf(pq) >= 0
+        || h[2].some((o) => o[1].toLowerCase().indexOf(pq) >= 0)) {
+        palRes.push({ label: h[1], modulo: m[0], ir: () => this.ir(h[0]) });
+      }
+    }));
+
+    const TH2 = 'padding:9px 14px; text-align:left; font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--tinta-3); background:var(--sup); border-bottom:1px solid var(--linea); white-space:nowrap';
+    const TD2 = 'padding:9px 14px; font-size:12.5px; color:var(--tinta-2); border-bottom:1px solid var(--linea-2)';
+
+    return {
+      entidad: this.props.entidad || 'Municipalidad Distrital de Catacaos',
+      /* El aviso de servicio de la V6 (c01fe9a:frontend/src/marco/Marco.tsx:58-61). */
+      avisos: '1', avisosAria: '1 aviso del sistema',
+      verAvisos: () => this.di('Esta municipalidad no tiene ningún conjunto de parámetros. Hasta que se componga y se selle uno, toda operación que calcule contestará que el ejercicio no está parametrizado, y lo dirá nombrando el año.'),
+      velo: s.sesion,
+      cerrarTodo: () => this.setState({ sesion: false, paleta: false }),
+
+      sesion: s.sesion, sesionAria: s.sesion ? 'true' : 'false',
+      abrirSesion: () => this.setState((x) => ({ sesion: !x.sesion, paleta: false })),
+      sesionStyle: 'display:flex; align-items:center; gap:10px; border:0; border-left:1px solid var(--barra-realce); padding:8px 15px; cursor:pointer; color:var(--sobre-barra); flex:0 0 auto; background:' +
+        (s.sesion ? 'var(--barra-hover)' : 'transparent'),
+      opcionesSesion: [['Mi perfil', false], ['Cambiar la contraseña', false], ['Preferencias', false], ['Cerrar sesión', true]].map((o) => ({
+        label: o[0],
+        ir: () => this.setState({ sesion: false, toast: o[1] ? 'Cerraría la sesión.' : 'Abriría ' + o[0].toLowerCase() + '.' }),
+        style: 'display:block; width:100%; text-align:left; border:0; border-bottom:1px solid var(--linea-2); background:transparent; padding:11px 15px; cursor:pointer; font-size:13.5px; color:' +
+          (o[1] ? 'var(--mal-tinta)' : 'var(--azul)')
+      })),
+
+      paleta: s.paleta, pq: s.pq,
+      abrirPaleta: () => this.setState({ paleta: true, pq: '', sesion: false }),
+      onPq: (e) => this.setState({ pq: e.target.value }),
+      palRes: palRes.slice(0, 12),
+      palPie: palRes.length + ' de ' + ARBOL.reduce((n, m) => n + m[5].length, 0) + ' destinos',
+
+      entrega: s.entrega, entregaAria: s.entrega ? 'true' : 'false',
+      alternarEntrega: () => this.setState((x) => ({
+        entrega: !x.entrega,
+        toast: x.entrega ? '' : 'Modo entrega: cada pantalla muestra su composición en shadcn y el mapa de tokens.'
+      })),
+      entregaStyle: 'display:flex; align-items:center; gap:8px; border:0; border-left:1px solid var(--barra-realce); padding:0 15px; cursor:pointer; flex:0 0 auto; color:' +
+        (s.entrega ? 'var(--azul-oscuro)' : 'var(--sobre-barra)') + '; background:' +
+        (s.entrega ? 'var(--acento)' : 'transparent'),
+
+      sideOpen: s.sideOpen ? '1' : '0',
+      alternarSide: () => this.setState((x) => ({ sideOpen: !x.sideOpen })),
+      sideStyle: 'flex:0 0 262px; width:262px; background:var(--fondo); border-right:1px solid var(--linea); display:' +
+        (s.sideOpen ? 'flex' : 'none') + '; flex-direction:column; min-height:0',
+      filtro: s.filtro,
+      onFiltro: (e) => this.setState({ filtro: e.target.value }),
+      sinResultados: arbolFiltrado.length === 0,
+      /* PROPUESTA para G2: la V6 no tenía pie en el árbol. */
+      pieArbol: 'El módulo de este sistema y sus submódulos, de src/pantallas/arbol.ts. Los demás módulos son de otros sistemas (ADR-0029).',
+
+      arbol: arbolFiltrado.map((x) => {
+        const m = x.m;
+        const abierto = s.desplegado === m[0] || f !== '';
+        return {
+          label: m[0], nota: m[1],
+          abierto: abierto, abiertoAria: abierto ? 'true' : 'false',
+          notaVisible: abierto,
+          icon: m[4].map((d) => ({ d: d })),
+          toggle: () => this.setState((y) => ({ desplegado: y.desplegado === m[0] ? null : m[0] })),
+          caretStyle: 'display:grid; place-items:center; width:15px; height:15px; flex:0 0 auto; color:var(--tinta-4); transform:rotate(' +
+            (abierto ? '90' : '0') + 'deg); transition:transform .13s ease',
+          iconStyle: 'display:grid; place-items:center; width:24px; height:24px; border-radius:var(--radio-sm); flex:0 0 auto; background:' +
+            (abierto ? 'var(--azul)' : 'var(--fondo)') + '; color:' + (abierto ? 'var(--sobre-azul)' : 'var(--tinta-3)'),
+          style: 'display:flex; align-items:center; gap:8px; width:100%; border:0; border-radius:var(--radio-sm); padding:7px 8px; cursor:pointer; background:' +
+            (abierto ? 'var(--azul-suave)' : 'transparent') + '; color:' + (abierto ? 'var(--info-tinta)' : 'var(--tinta)'),
+          hojas: x.hojas.map((h) => {
+            const on = s.dest === h[0];
+            const ya = s.abiertas.indexOf(h[0]) >= 0;
+            return {
+              label: h[1], actual: on ? 'page' : 'false',
+              marca: s.sucias[h[0]] ? 'sin guardar' : '',
+              guiaStyle: 'width:12px; height:' + (on ? '2px' : '1px') + '; flex:0 0 auto; margin-left:-1px; background:' +
+                (on ? 'var(--azul)' : 'var(--linea)'),
+              ir: () => this.ir(h[0]),
+              style: 'display:flex; align-items:center; gap:8px; width:100%; border:0; border-radius:0 var(--radio-sm) var(--radio-sm) 0; padding:7px 8px 7px 0; cursor:pointer; background:' +
+                (on ? 'var(--azul-suave)' : 'transparent') + '; color:' + (on ? 'var(--info-tinta)' : 'var(--tinta-2)') +
+                '; font-weight:' + (on ? '700' : '400')
+            };
+          })
+        };
+      }),
+
+      hayPestanas: s.abiertas.length > 0 && s.dest !== null,
+      sinPestanas: s.abiertas.length === 0 || s.dest === null,
+
+      porCerrar: s.porCerrar !== null,
+      confirmar: (() => {
+        const k = s.porCerrar;
+        const h = k ? (this.hoja(k) || { rotulo: k }) : { rotulo: '' };
+        return {
+          label: h.rotulo,
+          cerrar: () => this.cerrarPestana(k),
+          cancelar: () => this.setState({ porCerrar: null }),
+          guardar: () => { this.di('Cambios guardados en ' + h.rotulo + '.'); this.cerrarPestana(k); }
+        };
+      })(),
+      volver: () => (s.dest ? this.pedirCierre(s.dest) : null),
+      /* Una pantalla de sólo lectura no se guarda: ofrece imprimir y exportar.
+         Una con campos, sí, y avisa de lo que el acto implica. */
+      pie: (() => {
+        const editable = hojaActual ? this.bloques(s.dest).some((b) => b.campos.some((c) => !c.esRo)) : false;
+        const acciones = editable
+          ? [['Limpiar', 0], ['Guardar', 1]]
+          : [['Exportar', 0], ['Imprimir', 1]];
+        return {
+          aviso: editable
+            ? 'Nada se escribe hasta que pulse Guardar.'
+            /* PROPUESTA para G2: la V6 no tenía pie de pantalla de sólo lectura. */
+            : 'Los datos son los del conjunto que se pidió: lo sellado no cambia.',
+          acciones: acciones.map((a) => ({
+            label: a[0],
+            ir: () => {
+              if (a[0] === 'Imprimir') { window.print(); return; }
+              if (a[0] === 'Limpiar') { this.di('Vaciaría el formulario. No se puede deshacer.'); return; }
+              if (a[0] === 'Guardar') {
+                this.setState((x) => {
+                  const sucias = Object.assign({}, x.sucias);
+                  delete sucias[x.dest];
+                  return { sucias: sucias, toast: 'Guardado.' };
+                });
+                return;
+              }
+              this.di('Exportaría esta pantalla.');
+            },
+            style: a[1]
+              ? 'border:0; border-radius:var(--radio-sm); padding:10px 22px; background:var(--azul); color:var(--sobre-azul); font-size:13.5px; font-weight:700; cursor:pointer; flex:0 0 auto'
+              : 'border:1px solid var(--borde-boton); border-radius:var(--radio-sm); padding:9px 16px; background:var(--superficie); font-size:13.5px; cursor:pointer; flex:0 0 auto'
+          }))
+        };
+      })(),
+
+      miga: hojaActual
+        ? [hojaActual.modulo, hojaActual.rotulo].map((b, i, arr) => ({
+            label: i === arr.length - 1 ? b : b + '  /',
+            style: 'white-space:nowrap; color:var(--tinta-3); font-weight:' + (i === arr.length - 1 ? '700' : '400')
+          }))
+        : [],
+
+      vista: hojaActual ? {
+        titulo: hojaActual.rotulo,
+        propio: hojaActual.propio,
+        nota: hojaActual.propio
+          ? hojaActual.nota + '. Submódulo de este sistema: su pantalla vive en src/pantallas/definiciones.'
+          : hojaActual.nota + '. Submódulo de ' + hojaActual.modulo + ': su pantalla vive en el archivo de ese módulo.',
+        conteoOps: hojaActual.ops.length + (hojaActual.ops.length === 1 ? ' operación' : ' operaciones'),
+        operaciones: hojaActual.ops.map((o) => {
+          /* BASE = solo se leyó el @RequestMapping de la clase; los métodos no
+             se han verificado, así que no se les pone verbo. */
+          const base = o[0] === 'BASE';
+          const escritura = o[0] === 'POST' || o[0] === 'PUT' || o[0] === 'PATCH';
+          return {
+            verbo: o[0], ruta: RAIZ + o[1], nota: o[2],
+            verboStyle: 'display:inline-block; min-width:48px; text-align:center; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:11px; font-weight:700; border-radius:var(--radio-sm); padding:3px 7px; flex:0 0 auto; background:' +
+              (base ? 'var(--fondo)' : (escritura ? 'var(--ok-fondo)' : 'var(--info-fondo)')) + '; color:' +
+              (base ? 'var(--tinta-3)' : (escritura ? 'var(--ok-tinta)' : 'var(--info-tinta)')) +
+              (base ? '; border:1px solid var(--linea)' : '')
+          };
+        }),
+        notaOps: 'Rutas leídas del backend. Las que llevan verbo salen de un @GetMapping, @PostMapping, @PutMapping o @PatchMapping; las marcadas BASE son el @RequestMapping de la clase, cuyos métodos no se han verificado. Aquí las cuatro llevan verbo, y ninguna escribe: las escrituras entran cuando el backend las publique (hneyra/normativa#59). El prefijo es Api.RAIZ de kamayuk-normativa-plataforma.',
+        piezas: this.piezas(s.dest, hojaActual),
+        modulo: hojaActual.modulo,
+        /* Una instrucción por pantalla: lo que hay que hacer aquí, no lo que
+           la pantalla es. Eso ya lo dice la nota del título. */
+        instruccion: INSTRUCCIONES[s.dest] || (hojaActual.propio
+          ? 'complete o revise los datos de esta pantalla. Nada se guarda hasta que lo confirme.'
+          : 'consulte los datos; para operar sobre ellos, abra ' + hojaActual.modulo + '.'),
+        bloques: this.bloques(s.dest)
+      } : { titulo: '', nota: '', modulo: '', instruccion: '', operaciones: [], piezas: [], bloques: [] },
+
+      tokens: {
+        cols: [['Token', 0], ['Valor', 0], ['Clase Tailwind', 0], ['Para qué', 0]].map((c) => ({ label: c[0], style: TH2 })),
+        filas: TOKENS.map((t, i) => ({
+          token: t[0],
+          filaStyle: 'background:' + (i % 2 ? 'var(--sup)' : 'var(--superficie)'),
+          muestra: 'display:block; width:15px; height:15px; border-radius:3px; flex:0 0 auto; border:1px solid var(--linea); background:' + t[1],
+          celdas: [
+            { texto: t[1], style: TD2 + '; font-family:ui-monospace,Menlo,Consolas,monospace' },
+            { texto: t[2], style: TD2 + '; font-family:ui-monospace,Menlo,Consolas,monospace; color:var(--info-tinta)' },
+            { texto: t[3], style: TD2 }
+          ]
+        }))
+      },
+      reparto: REPARTO.map((r) => ({ ruta: r[0], que: r[1] })),
+
+      toast: s.toast
+    };
+  }
+}
+
+</script>
+</body>
+</html>
