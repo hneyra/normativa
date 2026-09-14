@@ -58,11 +58,25 @@ tasks.test {
     // Gradle NO hereda las propiedades del sistema en la JVM de las pruebas: sin esto,
     // `-Dkamayuk.contratos.regenerar=true` no llega y el contrato que este repositorio
     // publica para sus proveedores no se puede regenerar. Es la misma linea que
-    // `rentas` tiene desde #400 para las formas de la API.
-    providers
-        .systemProperty("kamayuk.contratos.regenerar")
-        .orNull
-        ?.let { systemProperty("kamayuk.contratos.regenerar", it) }
+    // `rentas` tiene desde #400 para las formas de la API, y desde #49 lleva tambien esa:
+    // `-Dkamayuk.formas.regenerar=true` regenera `formas-de-la-api.json` y
+    // `parametros-de-la-api.json`.
+    for (propiedad in listOf("kamayuk.contratos.regenerar", "kamayuk.formas.regenerar")) {
+        providers.systemProperty(propiedad).orNull?.let { systemProperty(propiedad, it) }
+    }
+
+    // LAS FORMAS Y LOS PARAMETROS DE LA API (#49). `FormasDeLaApiTest` y `ParametrosDeLaApiTest`
+    // comparan byte a byte `docs/50-api/formas-de-la-api.json` y `parametros-de-la-api.json` con
+    // lo que producen los controladores, y ninguno de los dos archivos esta en un conjunto de
+    // fuentes. Sin declararlos, editarlos a mano deja la tarea UP-TO-DATE y la edicion pasa en
+    // verde sin que la comparacion corra (#192 punto 2; es lo que `rentas` declara en su
+    // `build.gradle.kts`). `files` y no `file`: la primera regeneracion corre sin el archivo, y
+    // si falta despues la prueba falla con su propio mensaje.
+    inputs
+        .files(
+            rootProject.layout.projectDirectory.file("../docs/50-api/formas-de-la-api.json"),
+            rootProject.layout.projectDirectory.file("../docs/50-api/parametros-de-la-api.json"))
+        .withPathSensitivity(PathSensitivity.RELATIVE)
 
     // El escaner de aserciones (#724) lee `src/test` de TODOS los modulos, y esas fuentes no estan
     // en el classpath de este. Sin declararlas como entrada, editar una prueba de otro modulo
