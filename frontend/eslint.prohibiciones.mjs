@@ -14,6 +14,13 @@
  *
  * El `clave` no es decorativo: **es el nombre de su muestra**. La prueba no tiene un mapa
  * de «regla -> archivo» que alguien pueda dejar desactualizado; compone la ruta.
+ *
+ * **Es la lista PROPIA de `normativa`, y a proposito, hasta #62.** Desde `rentas`#137, el
+ * `eslint.prohibiciones.mjs` de `rentas` y el de `catastro` derivan las nueve del producto de
+ * `@kamayuk/verificaciones`. Aqui no, todavia: la lista de la libreria lleva los nombres de
+ * importe de `rentas` y no tiene `cifra-tributaria-literal`, asi que adoptarla hoy debilitaria
+ * el lint (epica #47). Lo unico que #50 le cambia es la FORMA de `salvo`, que pasa a lista para
+ * que el `eslint.config.js` calcado de `rentas` la lea por lo que es.
  */
 
 /**
@@ -26,8 +33,9 @@
  *                              por coma, que es como una regla se hace de varias formas.
  * @property {string} message   Lo que se le dice a quien la incumple. La prueba compara
  *                              contra ESTE texto, no contra una copia suya.
- * @property {string} [salvo]   Prefijo de ruta donde la prohibicion NO aplica. Una sola,
- *                              porque una excepcion que se puede repetir deja de serlo.
+ * @property {readonly string[]} [salvo]  Prefijos de ruta donde la prohibicion NO aplica.
+ *                              Una LISTA, como en `rentas` y en `@kamayuk/verificaciones`
+ *                              (#50): ver `DONDE_SE_LLAMA_A_FETCH`.
  */
 
 /**
@@ -68,6 +76,25 @@ const LETRAS_ACENTUADAS = 'áéíóúÁÉÍÓÚñÑüÜ';
  * `fetch` suelto en una pantalla no se salta una convencion: se salta las tres.
  */
 export const CLIENTE_DE_API = 'src/api/';
+
+/**
+ * Donde `fetch` es legitimo AQUI, y en ningun otro sitio. **Una lista, y desde #50.**
+ *
+ * Hasta `c01fe9a` el `salvo` de abajo era la cadena `CLIENTE_DE_API` a secas, y el
+ * `eslint.config.js` de `rentas` —que este frontend calca desde #50— lo trata como lista:
+ * `PROHIBICIONES.flatMap((p) => p.salvo ?? [])` y `(p.salvo ?? []).includes(directorio)`. Con
+ * una cadena las dos lineas funcionan **por accidente**: `'src/api/'.includes('src/api/')` es
+ * una busqueda de subcadena y no de pertenencia: `'src/api/'.includes('src/')` tambien es
+ * `true`, asi que el dia que otra prohibicion exceptuara `src/`, el bloque de ese directorio
+ * dejaria de prohibir `fetch` en `src/` entero, y en verde. Es la diferencia semantica que
+ * `rentas`#137 midio.
+ *
+ * Es uno y en la libreria son dos (`paquetes/api/` y `paquetes/sesion/`): el dia que este arbol
+ * separe la puerta de identidad del cliente, lo que cambia es este dato y no la prohibicion.
+ *
+ * @type {readonly string[]}
+ */
+export const DONDE_SE_LLAMA_A_FETCH = [CLIENTE_DE_API];
 
 /**
  * Los nombres que en ESTE sistema nombran una cifra que fija una norma.
@@ -118,7 +145,7 @@ export const PROHIBICIONES = [
     selector: "CallExpression[callee.name='fetch']",
     message:
       'Las peticiones pasan por «solicitar» de src/api: ahi viven el token, el ETag del snapshot y el formato de error (ADR-0030 §3).',
-    salvo: CLIENTE_DE_API,
+    salvo: DONDE_SE_LLAMA_A_FETCH,
   },
   {
     clave: 'importe-declarado-number',

@@ -20,6 +20,11 @@ import { describe, expect, it } from 'vitest';
  *     que ningun archivo se borre.
  *
  * Todas se caen en silencio, que es el motivo por el que se comprueban.
+ *
+ * **Desde #50 sigue a `rentas/frontend/verificaciones/andamiaje.test.ts` en `ac379ac`**, con lo
+ * que aqui es propio y dicho: `.nvmrc` y `.npmrc`, que `rentas` no tiene (su CI fija
+ * `node-version: "22"` como literal), la `base` de `vitest.config.ts` y los scripts que todavia
+ * no tienen de que colgar. `preserveSymlinks`, que `rentas` exige, entra con el `link:` en #55.
  */
 
 const AQUI = dirname(fileURLToPath(import.meta.url));
@@ -28,11 +33,55 @@ const REPOSITORIO = join(RAIZ, '..');
 
 const leer = (ruta: string) => readFileSync(ruta, 'utf8');
 
+/**
+ * Un `tsconfig` es **JSONC**, no JSON: admite comentarios (`rentas`, `andamiaje.test.ts`).
+ *
+ * `JSON.parse` a secas revienta con `Expected double-quoted property name in JSON` en cuanto
+ * alguien anade uno —`tsconfig.base.json` los gana en #55, con el motivo de `preserveSymlinks`—,
+ * que es un mensaje sobre comillas para un archivo sin ningun problema de comillas.
+ *
+ * Se recorre caracter a caracter y no con expresiones regulares, porque hay que saber si se esta
+ * DENTRO de una cadena: una ruta con `https://` dentro se comeria el resto de la linea.
+ */
+function comoJsonc(texto: string): unknown {
+  let salida = '';
+  let enCadena = false;
+  let escapado = false;
+  for (let i = 0; i < texto.length; i += 1) {
+    const c = texto[i] ?? '';
+    if (enCadena) {
+      salida += c;
+      if (escapado) escapado = false;
+      else if (c === '\\') escapado = true;
+      else if (c === '"') enCadena = false;
+      continue;
+    }
+    if (c === '"') {
+      enCadena = true;
+      salida += c;
+      continue;
+    }
+    if (c === '/' && texto[i + 1] === '/') {
+      while (i < texto.length && texto[i] !== '\n') i += 1;
+      salida += '\n';
+      continue;
+    }
+    if (c === '/' && texto[i + 1] === '*') {
+      i += 2;
+      while (i < texto.length && !(texto[i] === '*' && texto[i + 1] === '/')) i += 1;
+      i += 1;
+      salida += ' ';
+      continue;
+    }
+    salida += c;
+  }
+  return JSON.parse(salida);
+}
+
 describe('el compilador es tan estricto como el issue pide', () => {
-  const opciones = JSON.parse(leer(join(RAIZ, 'tsconfig.base.json'))).compilerOptions as Record<
-    string,
-    unknown
-  >;
+  const opciones = (comoJsonc(leer(join(RAIZ, 'tsconfig.base.json'))) as {
+    compilerOptions: Record<string, unknown>;
+  }).compilerOptions;
 
   it.each([
     ['strict', 'sin el, el resto de banderas no significan nada'],
@@ -62,6 +111,17 @@ describe('«yarn verificar» encadena las tres comprobaciones', () => {
   it('«build» produce un bundle de verdad, no un alias del typecheck', () => {
     expect(scripts['build']).toBe('vite build');
   });
+
+  it('los guiones son los de rentas que ya tienen de que colgar, y ninguno mas', () => {
+    // `rentas@ac379ac` declara trece. Los cinco que faltan aqui llaman a piezas que todavia no
+    // existen, y cada uno entra con la suya: `i18n` e `i18n:regenerar` con i18next (#60) —y con
+    // el, el `yarn i18n` de `verificar`—, `e2e` y `e2e:navegador` con el arnes de Playwright
+    // (#61), y `dev:con-plataforma` con la puerta de identidad (#57). Un guion que llama a algo
+    // que no esta sale rojo al usarlo, no al escribirlo.
+    expect(Object.keys(scripts).sort()).toEqual(
+      ['build', 'dev', 'lint', 'preview', 'test', 'test:watch', 'typecheck', 'verificar'].sort(),
+    );
+  });
 });
 
 describe('el paquete se identifica y fija con que Node se instala', () => {
@@ -79,10 +139,18 @@ describe('el paquete se identifica y fija con que Node se instala', () => {
   });
 
   it('y `.nvmrc` dice CUAL, que es de donde la toma la CI', () => {
+    // **Diferencia declarada con `rentas`** (#50): alli no hay `.nvmrc` y su CI escribe
+    // `node-version: "22"`. Aqui se conserva, porque sin el la CI y quien clona son dos numeros.
     // Dos mitades de la misma afirmacion: `engines` acota, `.nvmrc` elige. Si la CI
     // llevara el numero escrito a mano, serian dos que pueden separarse sin que nada
     // lo diga.
     expect(leer(join(RAIZ, '.nvmrc')).trim()).toMatch(/^2[2-9]\.\d+\.\d+$/);
+  });
+
+  it('y `.npmrc` hace de `engines` una guarda y no una nota', () => {
+    // La otra diferencia declarada con `rentas`, que tampoco lo tiene. Sin `engine-strict`, una
+    // version de Node fuera del rango solo AVISA al instalar, y el aviso se pierde entre otros.
+    expect(leer(join(RAIZ, '.npmrc'))).toMatch(/^engine-strict=true$/m);
   });
 });
 
@@ -96,6 +164,14 @@ describe('el bundle se sirve bajo el prefijo de su sistema', () => {
         'sistema, y bajo el `stripPrefix` de Traefik no carga ni uno. El fallo NO aparece\n' +
         'en desarrollo —alli todo cuelga de la raiz—: aparece desplegado.',
     ).toMatch(/base:\s*'\/normativa\/'/);
+  });
+
+  it('y las pruebas corren bajo la MISMA base', () => {
+    // De `vitest.config.ts` sale `import.meta.env.BASE_URL` en las pruebas. Con la base por
+    // omision —`/`— el `redirect_uri` se prueba contra un valor que no es el real, y la leccion
+    // de `c01fe9a:src/api/identidad.test.ts` deja de poder afirmarse en #57 (`rentas`#71: el
+    // defecto llego a produccion con su prueba en verde).
+    expect(leer(join(RAIZ, 'vitest.config.ts'))).toMatch(/base:\s*'\/normativa\/'/);
   });
 });
 

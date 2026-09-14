@@ -98,6 +98,27 @@ const CASOS = [
     esperado: 'verde',
   },
   {
+    // `normativa`#50. El manifiesto del frontend decide que viaja al bundle y con que versiones,
+    // y hasta entonces no estaba en `RUTAS_DE_CODIGO`: un PR que solo cambiara dependencias y
+    // cerrara un issue habria salido verde sin fila. Con la ruta fuera de la lista, esta muestra
+    // pasa a VERDE — y ese es el rojo que demuestra que la linea sirve.
+    nombre: 'cierra un issue, toca el manifiesto del frontend y NO deja fila',
+    cuerpo: 'Closes #711.\n\nEl stack de rentas.',
+    archivos: ['frontend/package.json'],
+    anadido: '',
+    esperado: 'rojo',
+    dice: ['#711', 'falta la fila'],
+  },
+  {
+    // El contraste, y es el que impide que la correccion se satisfaga declarando que todo
+    // `frontend/` cuenta: el candado y las barreras no son codigo de produccion.
+    nombre: 'toca el candado del frontend y sus barreras, y no exige fila',
+    cuerpo: 'Closes #711.',
+    archivos: ['frontend/yarn.lock', 'frontend/verificaciones/la-v6-no-esta.test.ts'],
+    anadido: '',
+    esperado: 'verde',
+  },
+  {
     nombre: 'toca backend y no declara que cierre nada',
     cuerpo: 'Un arreglo suelto, sin issue.',
     archivos: ['backend/kamayuk-normativa/src/main/java/kamayuk/normativa/Algo.java'],

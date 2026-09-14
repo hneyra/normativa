@@ -15,25 +15,24 @@
 node_modules
 
 # El `dist/` de quien construye. Si entrara, la etapa `interfaz` podria copiar un paquete viejo
-# —construido con OTRA bandera— y la imagen serviria algo que este `Dockerfile` no produjo.
+# —construido con otro arbol— y la imagen serviria algo que este `Dockerfile` no produjo.
 dist
 
 # TODOS los archivos de entorno que Vite lee, y no solo los que `.gitignore` nombra.
 #
-# Es la segunda valla del proxy de datos, y hace falta: `vite build` no carga `.env.development`,
-# pero SI carga `.env`, `.env.local`, `.env.production` y `.env.production.local`. Cualquiera de
-# ellos con `VITE_KAMAYUK_PROXY_DE_DATOS=true` dentro devolveria al paquete la UIT de cinco
-# ejercicios, los tramos con sus alicuotas y filas de los tres cuadros nacionales — publicadas por
-# el repositorio que existe para que las cifras vivan en el corpus firmado a dos manos.
+# `vite build` no carga `.env.development`, pero SI carga `.env`, `.env.local`, `.env.production`
+# y `.env.production.local`, y hornea en el paquete publicado toda variable `VITE_*` que lleven.
+# En la V6 eso era literal: una sola bandera en cualquiera de ellos devolvia al paquete la UIT de
+# cinco ejercicios y filas de los tres cuadros nacionales. La bandera salio con la V6 (#50); la
+# valla se queda, porque lo que un `.env` de quien construye lleve no lo ha revisado nadie.
 #
-# El patron cubre los cuatro de golpe, incluido el `.env.development` versionado. Es el hallazgo
-# de `caja`#47: `*.local.*` NO casa con `.env.local`, porque exige algo detras del `.local`.
+# El patron cubre todos de golpe. Es el hallazgo de `caja`#47: `*.local.*` NO casa con
+# `.env.local`, porque exige algo detras del `.local`.
 .env
 .env.*
 
-# El diseno: el artboard `NormativaV6.dc.html` y lo que lo acompana. No entra en ningun `import`
-# del paquete —lo comprueba `verificaciones/arbol-del-artboard.test.ts`— y lleva dentro las cifras
-# del corpus. Un archivo que no se usa y que lleva lo que la imagen no puede llevar no tiene por
+# El diseno: el artboard `NormativaV6.dc.html` y lo que lo acompana (#52 deriva ahi el V8). No
+# entra en ningun `import` del paquete y lleva dentro las cifras del corpus. Un archivo que no se usa y que lleva lo que la imagen no puede llevar no tiene por
 # que estar en el contexto.
 diseno
 

@@ -51,13 +51,16 @@ un backend con negocio que arrancar**: no existe ni una clase de negocio, así q
 esperando —y para descubrir hoy lo que si no se descubre el día que haya código—, y está en
 [DEV-01 §3](entorno-local.md).
 
-**Pantalla sí hay, desde [#39](https://github.com/hneyra/normativa/issues/39)**, y entra por la
-puerta de identidad: `yarn dev` sirve en `http://localhost:5173/normativa/` —con el prefijo, que
-es el `base` de `vite.config.ts`— y al arrancar rebota a Keycloak con PKCE S256. Necesita la
-plataforma levantada; sin ella el rebote no llega a ningún sitio y la pantalla lo dice en vez de
-quedarse en blanco. Las peticiones a `/normativa/api/v1` las reenvía Vite al ingreso —el puerto
-sale de `KAMAYUK_BACKEND`, con `http://localhost:8082` por omisión—, porque el backend **no
-publica ninguna cabecera CORS**: la única vía es que todo cuelgue del mismo origen.
+**Pantalla hoy no hay, y es a propósito.** La V6 —la interfaz que
+[#39](https://github.com/hneyra/normativa/issues/39) empaquetó y autenticó con PKCE S256— salió
+entera en [#50](https://github.com/hneyra/normativa/issues/50); su fuente es `c01fe9a` y se lee con
+`git show c01fe9a:frontend/<ruta>`. Lo que viene es la épica
+[#47](https://github.com/hneyra/normativa/issues/47): la interfaz de `rentas` sobre `kamayuk-lib`.
+Hasta entonces `yarn dev` sirve en `http://localhost:5173/normativa/` —con el prefijo, que es el
+`base` de `vite.config.ts`— una página en blanco. Lo que sí sigue en pie es el camino a la API: las
+peticiones a `/normativa/api/v1` las reenvía Vite al ingreso —el puerto sale de `KAMAYUK_BACKEND`,
+con `http://localhost:8082` por omisión—, porque el backend **no publica ninguna cabecera CORS**: la
+única vía es que todo cuelgue del mismo origen.
 
 ## Qué comando para qué tarea
 

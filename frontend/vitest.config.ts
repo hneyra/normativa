@@ -4,8 +4,8 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   /**
    * La MISMA base que `vite.config.ts`, y no por simetria: de aqui sale
-   * `import.meta.env.BASE_URL`, que es la raiz de la aplicacion y de donde
-   * `api/identidad.ts` compone el `redirect_uri`.
+   * `import.meta.env.BASE_URL`, que es la raiz de la aplicacion y de donde la puerta de
+   * identidad compone el `redirect_uri` (`c01fe9a:src/api/identidad.test.ts`; vuelve en #57).
    *
    * Con la base por omision —`/`— el entorno de pruebas no se parece al real **justo en lo
    * que falla**: el `redirect_uri` volveria a la raiz del SITIO en vez de a la de la

@@ -49,27 +49,6 @@ RUN yarn install --frozen-lockfile
 
 COPY . .
 
-# EL PROXY DE DATOS, APAGADO Y DICHO.
-#
-# Vite sustituye `import.meta.env.VITE_*` **al construir**, asi que con esta variable en `false`
-# la condicion de `src/arranque.ts` se pliega y el `import()` dinamico del proxy —con las siete
-# operaciones y todas las cifras del corpus capturadas del artboard— se cae del paquete. Medido
-# en esta misma rama: `dist/` sale con **1 787 522** bytes con la bandera apagada y **1 889 312**
-# con ella encendida, y la diferencia es el trozo `proxy-*.js` entero (20 221 bytes) con su mapa.
-#
-# **Y aqui esa bandera protege mas que en los otros cuatro repositorios**: lo que el trozo
-# arrastra son la UIT de cinco ejercicios, los tramos de la escala progresiva con sus alicuotas y
-# filas de los tres cuadros nacionales. Un bundle de produccion con esas cifras dentro seria este
-# repositorio —el que existe para que las cifras vivan en el corpus firmado a dos manos
-# (ADR-0007, regla 5)— publicandolas por un camino que no pasa por ninguna firma.
-#
-# Es la PRIMERA de dos vallas, y ninguna sobra. `vite build` no lee `.env.development` —solo se
-# carga en modo desarrollo—, o sea que en teoria bastaria con no hacer nada; pero «el paquete sale
-# limpio porque nadie se acordo de encenderlo» es una propiedad que se pierde el dia que alguien
-# cree un `.env.production`. Escribirlo aqui lo hace una decision y no una casualidad. La segunda
-# valla es `.dockerignore`, que deja fuera del contexto **todos** los `.env*`.
-ENV VITE_KAMAYUK_PROXY_DE_DATOS=false
-
 RUN yarn build
 
 # LOS MAPAS DE FUENTE NO SE PUBLICAN, y es una decision con dos motivos, el segundo MEDIDO AQUI.
@@ -79,12 +58,12 @@ RUN yarn build
 # ya se mide contra el— y se retiran **aqui**, que es donde importa:
 #
 #   1. Un `.map` lleva dentro **el codigo fuente entero**. Publicarlo entrega el arbol a
-#      cualquiera que abra las herramientas del navegador. Y aqui son 1 354 034 bytes frente a los
-#      297 627 del `.js`: el mapa es cuatro veces y media lo que se sirve para ejecutar.
-#   2. **Llevan las cifras del corpus, y esto se midio y no se supuso.** Con la bandera APAGADA,
-#      `5500.00` —la UIT de 2026— aparece **cero** veces en el `.js` y **si** dentro del
-#      `index-*.js.map`. O sea que sin este paso la propiedad que la bandera compra seria falsa
-#      por los mapas, con el codigo que se ejecuta perfectamente limpio.
+#      cualquiera que abra las herramientas del navegador. En la V6 eran 1 354 034 bytes frente a
+#      los 297 627 del `.js`: el mapa era cuatro veces y media lo que se sirve para ejecutar.
+#   2. **Pueden llevar las cifras del corpus, y en la V6 se midio y no se supuso.** Con el proxy
+#      de datos apagado, `5500.00` —la UIT de 2026— aparecia **cero** veces en el `.js` y **si**
+#      dentro del `index-*.js.map`. O sea que sin este paso la negativa de abajo solo miraria el
+#      codigo que se ejecuta, y la cifra se serviria igual por los mapas.
 #
 # Se quita tambien el comentario `sourceMappingURL` que quedaria apuntando a un archivo que ya no
 # esta: dejarlo daria un 404 en la consola de cada navegador que abriera las herramientas, y un
@@ -118,14 +97,17 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 # ## Lo que busca
 #
 # `vite build` no deberia emitir un solo `.ts`/`.tsx`, pero «no deberia» no es una comprobacion.
-# Y con el corpus igual: si alguna seccion importara `datos/prototipo.ts` de forma ESTATICA, las
-# cifras entrarian en el paquete aunque la bandera este apagada, porque lo que Rollup se lleva por
-# delante es lo que solo se alcanza por el `import()` dinamico.
+# Y con el corpus igual: esta interfaz no puede servir una cifra que la ley fija, porque las cifras
+# viven en el conjunto sellado y se PIDEN (regla 5, ADR-0007).
 #
-# Las cinco cadenas salen de medir los dos `dist/`: las cuatro primeras aparecen **solo** en
-# `proxy-*.js` con la bandera encendida y en ningun archivo con ella apagada; `5500.00` es la UIT
-# de 2026 y es la que demuestra por que los mapas se retiran — con la bandera apagada esta en el
-# `.map` y no en el `.js`.
+# ## Por que se queda aunque la V6 salio (#50)
+#
+# Las cinco cadenas salen de medir los `dist/` de la V6 (`c01fe9a`): las cuatro primeras aparecian
+# solo en el trozo `proxy-*.js` con su proxy de datos encendido, y `5500.00` es la UIT de 2026 —la
+# que demostro por que los mapas se retiran—. El proxy salio con la V6, pero la leccion no era del proxy: era que
+# **una cifra del corpus no viaja en lo que se sirve**, venga de donde venga. Mientras la interfaz
+# nueva no tenga su guarda `sin-cifras-inventadas` (#58), esta negativa es lo unico que lo impide,
+# y `verificaciones/imagen-y-despliegue.test.ts` comprueba que sigue buscando las cinco.
 RUN set -eu; \
     servido=/usr/share/nginx/html; \
     if find "$servido" \( -name '*.ts' -o -name '*.tsx' \) | grep -q .; then \
