@@ -12,8 +12,12 @@ import { defineConfig } from 'vite';
  * no cargaria ni uno. El fallo NO aparece en desarrollo, donde todo cuelga de la raiz:
  * aparece desplegado, que es el peor sitio donde descubrir una linea de configuracion.
  *
- * Y de esa misma `base` sale el `redirect_uri` de `api/identidad.ts`, que es lo que hace que
+ * Y de esa misma `base` sale el `redirect_uri` de la puerta de identidad —la escrita a mano
+ * salio con la V6; la nueva llega de `@kamayuk/sesion` en #57—, que es lo que hace que
  * `vitest.config.ts` tenga que declararla tambien.
+ *
+ * Desde #50 es el `vite.config.ts` de `rentas@ac379ac` con el nombre de este sistema y **sin**
+ * Tailwind ni `resolucion.ts`: los dos llegan con el `link:` a `kamayuk-lib`, en #55.
  */
 
 /**
@@ -26,8 +30,9 @@ import { defineConfig } from 'vite';
 const BACKEND = process.env.KAMAYUK_BACKEND ?? 'http://localhost:8082';
 
 /**
- * La raiz de la API de este sistema. Es el mismo `PREFIJO` de `api/cliente.ts` y la misma
- * `RAIZ` de `api/proxy.ts`, y que lo sea lo comprueba `proxy.test.ts`.
+ * La raiz de la API de este sistema: `Api.RAIZ` en el backend. Hasta `c01fe9a` la repetian
+ * `api/cliente.ts` y `api/proxy.ts`, y lo comprobaba `proxy.test.ts`; los tres salieron con la V6
+ * y el cliente que la vuelva a nombrar llega en #57.
  */
 const RAIZ_DE_LA_API = '/normativa/api/v1';
 
@@ -49,9 +54,9 @@ export default defineConfig({
    *
    * Sin `server.proxy`, `/normativa/api/v1/...` lo atiende el propio servidor de Vite, que para
    * cualquier ruta desconocida devuelve el `index.html` de la aplicacion con un **200**. La
-   * pantalla pide JSON y recibe HTML con un codigo de exito: no un error, una pagina. Es el
-   * tercero de los tres motivos que `datos/servidas.ts` llevaba escritos para no encender
-   * ninguna ruta, y el unico que se cierra desde este archivo.
+   * pantalla pide JSON y recibe HTML con un codigo de exito: no un error, una pagina. Era el
+   * tercero de los tres motivos que `c01fe9a:frontend/src/datos/servidas.ts` llevaba escritos
+   * para no encender ninguna ruta, y el unico que se cierra desde este archivo.
    *
    * `rewrite` no hace falta y por eso no esta: Traefik enruta por `PathPrefix(/normativa/api/v1)`,
    * o sea que la ruta que sale de aqui es exactamente la que el backend espera. Reescribirla

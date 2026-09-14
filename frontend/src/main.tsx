@@ -1,30 +1,21 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
-import { Aplicacion } from './aplicacion.tsx';
-import { arrancar } from './arranque.ts';
-
-// **El unico `.css` que se importa en todo el arbol**, y lo comprueba
-// `verificaciones/tokens-del-artboard.test.ts`. Si cada componente trajera su hoja, el
-// orden de la cascada lo decidiria el orden en que Vite resuelve los modulos, que cambia
-// con un `import` movido de sitio: el mismo codigo se veria distinto segun por donde se
-// entrara. Lo que hay detras de esta linea —los cinco archivos de tokens y los
-// componentes, en orden— lo encadena `estilos/estilos.css`.
-import './estilos/estilos.css';
-
+/**
+ * **Una raiz vacia, y a proposito** (#50).
+ *
+ * La V6 salio entera y la interfaz nueva se monta sobre el `Armazon` de `@kamayuk/shell`
+ * (#55) con las cuatro hojas de #58. Hasta entonces esto monta React sobre `#raiz` y no dibuja
+ * nada: lo justo para que `yarn build` produzca un `dist/` de verdad —con `index.html`, el
+ * guion de las senias y un paquete que arranca— y la imagen tenga algo que servir.
+ *
+ * Que falte `#raiz` es un error y no un silencio: `createRoot(null)` revienta igual, pero con un
+ * mensaje de React que no dice que archivo hay que mirar.
+ */
 const raiz = document.getElementById('raiz');
+
 if (raiz === null) {
-  // Revienta al principio y con su nombre. Un `raiz!` dejaria la pagina en blanco sin una
-  // sola linea en la consola, que es el fallo mas caro de diagnosticar que hay.
-  throw new Error('Falta el elemento #raiz en index.html: la aplicacion no tiene donde montarse.');
+  throw new Error('index.html no tiene un elemento #raiz donde montar la interfaz');
 }
 
-// El montaje va DENTRO de `arrancar`, no despues: con el proxy de datos encendido, una pantalla
-// no debe poder pedir datos antes de que haya quien conteste. Ver `arranque.ts`.
-void arrancar(() => {
-  createRoot(raiz).render(
-    <StrictMode>
-      <Aplicacion />
-    </StrictMode>,
-  );
-});
+createRoot(raiz).render(<StrictMode />);

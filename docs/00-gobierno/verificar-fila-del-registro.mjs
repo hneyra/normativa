@@ -96,6 +96,16 @@ export const RUTAS_DE_CODIGO = [
   /^backend\/[^/]+\/src\/main\//,
   /^infrastructure\/src\//,
   /^frontend\/src\//,
+  // El manifiesto del frontend es codigo de produccion aunque no sea `src/`: decide QUE VIAJA AL
+  // BUNDLE y con que versiones. Desde `normativa`#50 declara el stack de `rentas` version a
+  // version, y es el sitio donde `normativa`#55 y #62 enchufaran los seis `link:` a `kamayuk-lib`.
+  // Sin esta linea, un PR que solo cambie dependencias y cierre un issue pasaria en VERDE sin
+  // dejar su fila, porque no toca `frontend/src/`. `rentas` la tiene desde su #74 y `catastro`
+  // desde su #115, por el mismo motivo.
+  //
+  // Se acota al archivo, no al directorio: `frontend/` entero incluye pruebas, configuracion y el
+  // candado, y una guarda que grita en cada PR se acaba apagando.
+  /^frontend\/package\.json$/,
 ];
 
 /**

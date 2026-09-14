@@ -21,3 +21,9 @@ backend/.gradle/
 # Secretos: nunca, y `.gitleaks.toml` vigila que no se cuelen
 *.local.*
 .env
+
+# Los worktrees y el estado local de los agentes. No se rastrean, y ademas NO compilan ahi: el
+# backend busca `../../infrastructure` y el frontend buscara `../../kamayuk-lib` (`link:`), rutas
+# relativas que desde `normativa/.claude/worktrees/<rama>/` no llegan a los clones hermanos. Un
+# worktree por issue va en `…/.relevo/<issue>/normativa`, al lado de sus hermanos (epica #47).
+.claude/

@@ -22,7 +22,7 @@
 # y con OTRO contexto, y por eso `archivo` y `contexto` pasan a la matriz en vez de quedarse fijos
 # en el paso: un `.dockerignore` solo cuenta desde la raiz de SU contexto, asi que construir
 # `frontend/Dockerfile` con el contexto en la raiz se llevaria dentro `node_modules`, los `.env`
-# —y con ellos la bandera que devuelve las cifras del corpus al paquete— y el artboard entero.
+# —y con ellos cualquier `VITE_*` que Vite hornee en el paquete— y el artboard entero.
 #
 # **No se llama `kamayuk-normativa-web`**: ese nombre ya es el del `Deployment` y el `Service` del
 # BACKEND con el perfil `web` de Spring (`infrastructure/src/descriptor.ts`,

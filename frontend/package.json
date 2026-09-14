@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "version": "0.1.0",
-  "description": "normativa — interfaz web. F-1: el andamiaje, sus reglas y su CI; ninguna pantalla todavia.",
+  "description": "normativa — interfaz web. La V6 salio (#50): queda la cadena de herramientas de rentas y ninguna pantalla todavia.",
   "engines": {
     "node": ">=22"
   },
@@ -18,11 +18,27 @@
     "verificar": "yarn lint && yarn typecheck && yarn test"
   },
   "dependencies": {
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "@hookform/resolvers": "^5.2.0",
+    "@tanstack/react-query": "^5.102.8",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "cmdk": "^1.1.1",
+    "i18next": "^26.4.2",
+    "radix-ui": "^1.6.7",
+    "react": "19.3.0",
+    "react-day-picker": "^10.0.1",
+    "react-dom": "19.3.0",
+    "react-hook-form": "^7.88.0",
+    "react-i18next": "^17.0.13",
+    "react-router-dom": "^7.18.3",
+    "sonner": "^2.0.8",
+    "tailwind-merge": "^3.6.0",
+    "zod": "^4.6.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.0",
+    "@playwright/test": "^1.63.0",
+    "@tailwindcss/vite": "^4.3.3",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.9.0",
     "@testing-library/react": "^16.3.0",
@@ -35,7 +51,9 @@
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-react-hooks": "^5.2.0",
     "globals": "^16.0.0",
+    "i18next-cli": "^1.73.2",
     "jsdom": "^26.1.0",
+    "tailwindcss": "^4.3.3",
     "typescript": "~5.9.0",
     "typescript-eslint": "^8.46.0",
     "vite": "^7.1.0",

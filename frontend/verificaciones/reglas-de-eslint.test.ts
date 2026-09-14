@@ -2,9 +2,14 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ESLint } from 'eslint';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 
-import { CLIENTE_DE_API, PROHIBICIONES, REGLAS_EXIGIDAS } from '../eslint.prohibiciones.mjs';
+import {
+  CLIENTE_DE_API,
+  DONDE_SE_LLAMA_A_FETCH,
+  PROHIBICIONES,
+  REGLAS_EXIGIDAS,
+} from '../eslint.prohibiciones.mjs';
 
 /**
  * Las reglas de `eslint.config.js` muerden.
@@ -29,6 +34,19 @@ import { CLIENTE_DE_API, PROHIBICIONES, REGLAS_EXIGIDAS } from '../eslint.prohib
  * Las muestras estan en `ignores` de la configuracion para que `yarn lint` no las senale;
  * aqui se lintan como TEXTO, con una ruta sintetica dentro de `src/`, que es donde la
  * regla tiene que aplicar de verdad.
+ *
+ * <h2>Desde #50, el de `rentas@ac379ac` mas lo propio</h2>
+ *
+ * La forma es la de `rentas`: el arranque en frio en `beforeAll` y la excepcion de `fetch` como
+ * LISTA (`DONDE_SE_LLAMA_A_FETCH`). Lo que `rentas` no tiene y aqui se queda, cada cosa por lo
+ * suyo: los casos de `cifra-tributaria-literal`, que es la decima prohibicion y solo existe en
+ * este repositorio; la cifra escrita de `REGLAS_EXIGIDAS`, porque aqui esa lista sigue siendo
+ * propia hasta #62 y en `rentas` la sujeta la libreria; y los ejemplos de «codigo correcto», que
+ * en `rentas` declaran `alicuotaPredial = '0.006'` —aqui eso es justo lo prohibido—.
+ *
+ * Salio el bloque «AC8 — las dos barreras de `Importe`»: afirmaba que el tipo de `Importe`
+ * cubria el `createElement` que ESLint no ve, y ese tipo salio con `src/ds/`. Vuelve con la
+ * barrera de tipos de `@kamayuk/ui` (#55).
  */
 
 const AQUI = dirname(fileURLToPath(import.meta.url));
@@ -36,6 +54,24 @@ const RAIZ = join(AQUI, '..');
 const MUESTRAS = join(AQUI, 'muestras');
 
 const eslint = new ESLint({ cwd: RAIZ });
+
+/**
+ * ESLint se arranca AQUI, y no dentro del primer caso (`rentas`#36).
+ *
+ * Medido alli: el arranque en frio costaba 3,64 s y sus hermanas de 0,02 a 0,51, o sea que el
+ * primer caso pagaba el `import` de `eslint`, de `typescript-eslint` y de `typescript` entero
+ * para todos los demas, dentro de SU presupuesto de tiempo. Con un `30_000` escrito a mano —el
+ * que este archivo llevaba hasta `c01fe9a`— aun asi reventaba: en una de doce corridas tardo
+ * 49,80 s y salio «Test timed out in 30000ms», un rojo que habla de la maquina y no de la regla.
+ *
+ * Aqui el coste deja de estar dentro de una prueba que no lo mide, y si algun dia el arranque se
+ * atasca, el rojo sale de este gancho y dice que fue el arranque.
+ */
+beforeAll(async () => {
+  await eslint.lintText('export const listo = 1;\n', {
+    filePath: join(RAIZ, 'src/pantallas/calentamiento.ts'),
+  });
+}, 60_000);
 
 /**
  * Ruta sintetica: la muestra se juzga como si viviera en una pantalla de la aplicacion.
@@ -88,11 +124,9 @@ describe('cada prohibicion tiene su muestra, y ESLint la senala', () => {
         `Se esperaba el mensaje del config:\n  ${message}\n` +
         `Se obtuvo:\n${mensajes.length === 0 ? '  (ninguno)' : mensajes.map((m) => `  · ${m}`).join('\n')}`,
     ).toContain(message);
-    // 30 s y no los 5 de Vitest: el PRIMER caso paga el arranque en frio de ESLint y del
-    // analizador de TypeScript, y ese coste crece con los archivos del proyecto, no con lo
-    // que la prueba comprueba. Un tiempo agotado ahi no dice «la regla no muerde»: dice
-    // «la maquina iba cargada», y es el rojo mas caro que hay, porque no se reproduce.
-  }, 30_000);
+    // Sin tiempo propio: el arranque en frio lo paga `beforeAll`, asi que los casos caben en
+    // los 5 s de Vitest (`rentas`#36).
+  });
 });
 
 describe('la lista de prohibiciones y la de muestras no se separan', () => {
@@ -140,22 +174,51 @@ describe('la lista de prohibiciones y la de muestras no se separan', () => {
   });
 });
 
-describe('la excepcion del cliente de API es exactamente una', () => {
+describe('la excepcion del cliente de API es exactamente una, y en ESTE arbol', () => {
   const conExcepcion = PROHIBICIONES.filter((p) => p.salvo !== undefined);
 
-  it('solo el cliente de API esta exceptuado de algo', () => {
-    expect(new Set(conExcepcion.map((p) => p.salvo))).toEqual(new Set([CLIENTE_DE_API]));
+  it('solo `fetch` esta exceptuado, y solo en el sitio declarado', () => {
+    // Se comprueba la LISTA ENTERA, no su tamano: anadir un prefijo exige decir cual.
+    expect(conExcepcion.map((p) => p.clave)).toEqual(['fetch-fuera-del-cliente']);
+    expect(new Set(conExcepcion.flatMap((p) => p.salvo ?? []))).toEqual(
+      new Set(DONDE_SE_LLAMA_A_FETCH),
+    );
+    expect(DONDE_SE_LLAMA_A_FETCH).toEqual([CLIENTE_DE_API]);
   });
 
-  it.each(conExcepcion.map((p) => ({ ...p })))(
-    '«$clave» no se senala dentro de $salvo',
-    async ({ clave, message, salvo }) => {
-      const archivo = archivoDeLaMuestra(clave);
-      const mensajes = await mensajesDe(archivo as string, join(RAIZ, salvo as string, 'x.ts'));
+  it('y cada `salvo` es una LISTA, no una cadena que funciona por accidente', () => {
+    // **Las tres lineas de arriba no lo ven, y se midio (#50).** Con `salvo: CLIENTE_DE_API`
+    // —la cadena de `c01fe9a`—, `flatMap` no aplana una cadena: la devuelve entera como
+    // elemento, el conjunto sale `{'src/api/'}` y la comparacion pasa en VERDE. Y el
+    // `eslint.config.js` tambien «funciona» —`yarn lint` sale limpio—, porque
+    // `'src/api/'.includes('src/api/')` es una busqueda de subcadena. Lo que si sale rojo es el
+    // `it.each` de abajo, pero por un motivo que despista: `[...'src/api/']` son OCHO letras, y
+    // pregunta si `fetch` se exceptua «dentro de 's'», «de 'r'»… Y `tsc`, por el `@typedef`. Esta
+    // prueba es la que dice lo que pasa.
+    const noListas = conExcepcion
+      .filter((p) => !Array.isArray(p.salvo))
+      .map((p) => `${p.clave}: ${JSON.stringify(p.salvo)}`);
+    expect(
+      noListas,
+      'Un `salvo` que no es lista hace que `eslint.config.js` compare por SUBCADENA: el dia que\n' +
+        'otra prohibicion exceptue `src/`, `fetch` deja de estar prohibido en `src/` entero.',
+    ).toEqual([]);
+  });
 
-      expect(mensajes).not.toContain(message);
-    },
-  );
+  it.each(
+    conExcepcion.flatMap((p) =>
+      [...(p.salvo ?? [])].map((directorio: string) => ({
+        clave: p.clave,
+        message: p.message,
+        directorio,
+      })),
+    ),
+  )('«$clave» no se senala dentro de $directorio', async ({ clave, message, directorio }) => {
+    const archivo = archivoDeLaMuestra(clave);
+    const mensajes = await mensajesDe(archivo as string, join(RAIZ, directorio, 'x.ts'));
+
+    expect(mensajes).not.toContain(message);
+  });
 
   it('pero fuera de el, si', async () => {
     const mensajes = await mensajesDe(
@@ -235,61 +298,6 @@ describe('la regla propia de «normativa»: ninguna cifra literal', () => {
     `;
 
     expect(await mensajesDelTexto(correcto, enUnaPantalla('conjunto.ts'))).toEqual([]);
-  });
-});
-
-describe('AC8 — las dos barreras de «Importe» no son la misma, y se demuestra', () => {
-  /**
-   * `Importe` esta protegido dos veces: por el TIPO —`fechaCalculo` es obligatoria, y
-   * `verificaciones/tipos/barreras-de-tipos.tsx` lo comprueba con `@ts-expect-error`— y por
-   * la prohibicion `importe-sin-fecha` de ESLint.
-   *
-   * **Que hagan falta las dos no es una opinion: cada una ve un caso que la otra no.** Los
-   * dos casos estan aqui abajo, escritos como codigo y medidos. Sin esto, la doble barrera
-   * seria una afirmacion de un comentario, y el primero que la encontrara redundante
-   * borraria una de las dos.
-   */
-
-  it('ESLint ve el «spread» que el tipo no puede ver', async () => {
-    // `props` viene de un `any` —un `JSON.parse`, una respuesta sin tipar—, asi que el
-    // compilador no tiene con que comprobar si trae `fechaCalculo`: para `tsc` esto es
-    // valido. ESLint lo senala igual, porque su selector mira el JSX y no el tipo.
-    const conSpread = `
-      function Importe(_props: { valor: string; fechaCalculo: string }) {
-        return null;
-      }
-
-      export function FilaDelCuadro({ props }: { props: Record<string, string> }) {
-        return <Importe {...props} />;
-      }
-    `;
-
-    expect(
-      (await mensajesDelTexto(conSpread, enUnaPantalla('spread.tsx'))).join('\n'),
-      'Un `<Importe {...props} />` no declara `fechaCalculo` donde se pueda leer, asi que\n' +
-        'tiene que caer. Es el caso que el TIPO no cubre cuando el objeto viene de un `any`.',
-    ).toMatch(/Un importe se muestra con la fecha/);
-  });
-
-  it('y NO ve el «createElement», que es lo que cubre el tipo', async () => {
-    // La otra mitad, y es la que justifica que el tipo exista: `createElement` no produce
-    // un `JSXOpeningElement`, asi que la prohibicion no lo mira. Quien lo caza es
-    // `barreras-de-tipos.tsx`, con su `@ts-expect-error` sobre esta misma forma.
-    const sinJsx = `
-      import { createElement } from 'react';
-
-      function Importe(_props: { valor: string; fechaCalculo: string }) {
-        return null;
-      }
-
-      export const fila = createElement(Importe, { valor: '894.27' });
-    `;
-
-    expect(
-      (await mensajesDelTexto(sinJsx, enUnaPantalla('sin-jsx.tsx'))).join('\n'),
-      'Si ESLint tambien cazara esto, la barrera de tipo seria redundante y el AC8 estaria\n' +
-        'pidiendo dos cosas para lo mismo. No la caza, y por eso hacen falta las dos.',
-    ).not.toMatch(/Un importe se muestra con la fecha/);
   });
 });
 

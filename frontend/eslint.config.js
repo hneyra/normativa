@@ -17,6 +17,10 @@ import { PROHIBICIONES } from './eslint.prohibiciones.mjs';
  * Las prohibiciones NO estan aqui: estan en `eslint.prohibiciones.mjs`, porque las lee
  * tambien `verificaciones/reglas-de-eslint.test.ts`, que exige de cada una su muestra que
  * la viola. **Una regla que no puede fallar no protege nada.**
+ *
+ * Desde #50 este archivo es el de `rentas@ac379ac` con el nombre de este sistema. Lo que NO
+ * se calca es de donde salen las prohibiciones: aqui siguen siendo las diez propias de
+ * `normativa` hasta #62, y su cabecera dice por que.
  */
 
 /** Las prohibiciones que valen en todo el arbol. */
@@ -27,8 +31,13 @@ const EN_TODAS_PARTES = PROHIBICIONES.map(({ selector, message }) => ({ selector
  *
  * Se derivan de los `salvo` en vez de escribirse: una excepcion escrita a mano se olvida
  * de la prohibicion que se anadio ayer, y la deja apagada en un directorio entero.
+ *
+ * **Cada `salvo` es una LISTA de prefijos desde #50**, como en `rentas` (`rentas`#137) y en
+ * `@kamayuk/verificaciones`: este bloque es el de `rentas@ac379ac`. Con la cadena que
+ * `normativa` tenia hasta `c01fe9a`, `includes` buscaba una SUBCADENA y no un elemento; cuales
+ * son los prefijos de aqui lo dice `DONDE_SE_LLAMA_A_FETCH`, en `eslint.prohibiciones.mjs`.
  */
-const EXCEPCIONES = [...new Set(PROHIBICIONES.map((p) => p.salvo).filter((s) => s !== undefined))];
+const EXCEPCIONES = [...new Set(PROHIBICIONES.flatMap((p) => p.salvo ?? []))];
 
 /** @type {import('eslint').Linter.Config[]} */
 const bloquesDeExcepcion = EXCEPCIONES.map((directorio) => ({
@@ -36,10 +45,9 @@ const bloquesDeExcepcion = EXCEPCIONES.map((directorio) => ({
   rules: {
     'no-restricted-syntax': [
       'error',
-      ...PROHIBICIONES.filter((p) => p.salvo !== directorio).map(({ selector, message }) => ({
-        selector,
-        message,
-      })),
+      ...PROHIBICIONES.filter((p) => !(p.salvo ?? []).includes(directorio)).map(
+        ({ selector, message }) => ({ selector, message }),
+      ),
     ],
   },
 }));

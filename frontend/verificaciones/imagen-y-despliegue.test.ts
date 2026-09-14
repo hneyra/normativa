@@ -13,9 +13,9 @@ import { describe, expect, it } from 'vitest';
  * un despliegue que arranca:
  *
  *   · Un `USER` no numerico deja el pod en `CreateContainerConfigError`, y solo al desplegar.
- *   · Un `.dockerignore` sin los `.env` **hornea lo que lleven dentro en el paquete publicado**,
- *     y aqui lo que un `.env` puede encender son la UIT de cinco ejercicios, los tramos con sus
- *     alicuotas y filas de los tres cuadros nacionales.
+ *   · Un `.dockerignore` sin los `.env` **hornea lo que lleven dentro en el paquete publicado**.
+ *   · Una negativa del `Dockerfile` que deja de buscar una cifra del corpus deja publicar una
+ *     imagen que la sirve. La V6 salio (#50); esa leccion no era de la V6 y se queda.
  *   · Las cabeceras de seguridad escritas a nivel `server` se apagan en cada `location` que
  *     declare una cabecera propia, porque `add_header` no se hereda. La pagina sigue saliendo.
  *   · Las dos prioridades del ingreso al reves hacen que la API la conteste el nginx, con un
@@ -27,21 +27,43 @@ import { describe, expect, it } from 'vitest';
  * Que la imagen levante y sirva. Eso es `docker build` + `docker run` + pedirle una pagina, y
  * esta suite corre sin demonio de Docker. Las mediciones estan en el PR de #39 y en la fila del
  * registro; aqui se sujeta que los archivos que las producen no se deshagan.
+ *
+ * <h2>Lo que cambio con #50</h2>
+ *
+ * Salio el `describe` del proxy de datos —su bandera ya no existe—, la negativa de las cinco
+ * cadenas se quedo con su nombre de verdad, salio la mitad del cliente OIDC que leia
+ * `src/api/configuracion.ts` (la del descriptor se queda; la otra vuelve en #57), y **ningun
+ * archivo se lee en el cuerpo del modulo**.
  */
 
 const AQUI = dirname(fileURLToPath(import.meta.url));
 const FRONTEND = join(AQUI, '..');
 const REPOSITORIO = join(FRONTEND, '..');
 
-const leer = (ruta: string) => readFileSync(ruta, 'utf8');
+/**
+ * Lee un archivo del repositorio **dentro de la prueba que lo necesita**, y si no esta, lo dice.
+ *
+ * Hasta `c01fe9a` los siete se leian en el cuerpo del modulo. Con uno movido de sitio —medido en
+ * #50 moviendo `despliegue/compose.yaml`— el `ENOENT` reventaba la RECOLECCION: el archivo entero
+ * salia como «Failed Suites» sin una sola prueba, y el rojo hablaba de `readFileSync` y no de que
+ * contrato se habia quedado sin comprobar. Asi, sale roja cada prueba que lo necesita, nombrandolo.
+ */
+function leer(relativa: string): string {
+  const ruta = join(REPOSITORIO, relativa);
+  expect(
+    existsSync(ruta),
+    `falta «${relativa}»: esta prueba compara contra ese archivo y sin el no afirma nada`,
+  ).toBe(true);
+  return readFileSync(ruta, 'utf8');
+}
 
-const DOCKERFILE = leer(join(FRONTEND, 'Dockerfile'));
-const NGINX = leer(join(FRONTEND, 'nginx.conf'));
-const DOCKERIGNORE = leer(join(FRONTEND, '.dockerignore'));
-const COMPOSE = leer(join(REPOSITORIO, 'despliegue', 'compose.yaml'));
-const DESCRIPTOR = leer(join(REPOSITORIO, 'infrastructure', 'src', 'descriptor.ts'));
-const PUBLICAR = leer(join(REPOSITORIO, '.github', 'workflows', 'publicar-imagenes.yml'));
-const INDEX = leer(join(FRONTEND, 'index.html'));
+const DOCKERFILE = () => leer('frontend/Dockerfile');
+const NGINX = () => leer('frontend/nginx.conf');
+const DOCKERIGNORE = () => leer('frontend/.dockerignore');
+const COMPOSE = () => leer('despliegue/compose.yaml');
+const DESCRIPTOR = () => leer('infrastructure/src/descriptor.ts');
+const PUBLICAR = () => leer('.github/workflows/publicar-imagenes.yml');
+const INDEX = () => leer('frontend/index.html');
 
 /** Las lineas de una configuracion, sin comentarios: `#` a final de linea no es una directiva. */
 const sinComentarios = (texto: string) =>
@@ -66,7 +88,7 @@ describe('la imagen existe, y quien la publica sabe de donde sale', () => {
    */
   it('la matriz declara las TRES imagenes, cada una con su contexto y su archivo', () => {
     const entradas = [
-      ...PUBLICAR.matchAll(/- destino: (\S+)\n\s+imagen: (\S+)\n\s+archivo: (\S+)\n\s+contexto: (\S+)/g),
+      ...PUBLICAR().matchAll(/- destino: (\S+)\n\s+imagen: (\S+)\n\s+archivo: (\S+)\n\s+contexto: (\S+)/g),
     ].map((m) => ({ destino: m[1], imagen: m[2], archivo: m[3], contexto: m[4] }));
 
     expect(entradas).toEqual([
@@ -76,8 +98,8 @@ describe('la imagen existe, y quien la publica sabe de donde sale', () => {
     ]);
 
     // Y el paso las TOMA de la matriz. Con `context: .` fijo, la matriz seria decorativa.
-    expect(PUBLICAR).toContain('context: ${{ matrix.contexto }}');
-    expect(PUBLICAR).toContain('file: ${{ matrix.archivo }}');
+    expect(PUBLICAR()).toContain('context: ${{ matrix.contexto }}');
+    expect(PUBLICAR()).toContain('file: ${{ matrix.archivo }}');
   });
 
   /**
@@ -88,14 +110,14 @@ describe('la imagen existe, y quien la publica sabe de donde sale', () => {
    * verde solo dice que el `push` no devolvio error.
    */
   it('el registro se pregunta por las mismas tres que se publican', () => {
-    const publicadas = [...PUBLICAR.matchAll(/imagen: (\S+)/g)].map((m) => m[1]);
-    const preguntadas = PUBLICAR.match(/for imagen in ([^;]+); do/)?.[1]?.trim().split(/\s+/) ?? [];
+    const publicadas = [...PUBLICAR().matchAll(/imagen: (\S+)/g)].map((m) => m[1]);
+    const preguntadas = PUBLICAR().match(/for imagen in ([^;]+); do/)?.[1]?.trim().split(/\s+/) ?? [];
     expect(preguntadas.sort()).toEqual([...publicadas].sort());
   });
 
   /** El objetivo que la matriz publica tiene que ser una etapa que el Dockerfile define. */
   it('la etapa «interfaz» existe en el Dockerfile', () => {
-    const etapas = [...DOCKERFILE.matchAll(/^FROM .+ AS (\S+)/gm)].map((m) => m[1]);
+    const etapas = [...DOCKERFILE().matchAll(/^FROM .+ AS (\S+)/gm)].map((m) => m[1]);
     expect(etapas).toContain('interfaz');
   });
 
@@ -111,8 +133,8 @@ describe('la imagen existe, y quien la publica sabe de donde sale', () => {
     // Sin los comentarios de los dos archivos: la prosa de los dos EXPLICA que ese nombre no se
     // usa, y para explicarlo lo escribe. Una guarda que se dispara con el texto que la justifica
     // es una guarda que alguien acaba apagando borrando el comentario en vez del defecto.
-    expect(sinComentarios(PUBLICAR)).not.toContain('kamayuk-normativa-web');
-    expect(sinComentarios(COMPOSE)).not.toContain('kamayuk-normativa-web');
+    expect(sinComentarios(PUBLICAR())).not.toContain('kamayuk-normativa-web');
+    expect(sinComentarios(COMPOSE())).not.toContain('kamayuk-normativa-web');
   });
 });
 
@@ -122,7 +144,7 @@ describe('la imagen no lleva dentro nada que no deba', () => {
    * arrancar el contenedor con un `CreateContainerConfigError`, y eso solo aparece al desplegar.
    */
   it('el USER es numerico', () => {
-    const usuarios = [...DOCKERFILE.matchAll(/^USER\s+(\S+)/gm)].map((m) => m[1]);
+    const usuarios = [...DOCKERFILE().matchAll(/^USER\s+(\S+)/gm)].map((m) => m[1]);
     expect(usuarios, 'sin USER, nginx corre como root').not.toHaveLength(0);
     for (const u of usuarios) {
       expect(u, `«USER ${u}» no es numerico: runAsNonRoot no lo puede comprobar`).toMatch(/^\d+$/);
@@ -130,23 +152,22 @@ describe('la imagen no lleva dentro nada que no deba', () => {
   });
 
   it('declara su HEALTHCHECK, y pide un archivo por su nombre', () => {
-    expect(DOCKERFILE).toMatch(/^HEALTHCHECK /m);
+    expect(DOCKERFILE()).toMatch(/^HEALTHCHECK /m);
     // `/` cae al `index.html` por el `try_files` pase lo que pase, asi que no distingue «nginx
     // levantado» de «nginx levantado sobre el dist que se copio».
-    expect(DOCKERFILE).toContain('/index.html');
+    expect(DOCKERFILE()).toContain('/index.html');
   });
 
   /**
    * **Todos** los archivos de entorno que Vite lee, y no solo los que `.gitignore` nombra.
    *
-   * Es la segunda valla del proxy de datos. `vite build` no carga `.env.development`, pero SI
-   * carga `.env`, `.env.local`, `.env.production` y `.env.production.local`: cualquiera con
-   * `VITE_KAMAYUK_PROXY_DE_DATOS=true` dentro devolveria al paquete la UIT de cinco ejercicios,
-   * los tramos con sus alicuotas y filas de los tres cuadros nacionales. Es el hallazgo de
-   * `caja`#47: `*.local.*` NO casa con `.env.local`, porque exige algo detras del `.local`.
+   * `vite build` no carga `.env.development`, pero SI carga `.env`, `.env.local`,
+   * `.env.production` y `.env.production.local`, y hornea en el paquete toda `VITE_*` que lleven.
+   * En la V6 una sola bandera en cualquiera de ellos devolvia al paquete cifras del corpus. Es el
+   * hallazgo de `caja`#47: `*.local.*` NO casa con `.env.local`, porque exige algo detras.
    */
   it('el .dockerignore deja fuera node_modules y TODOS los archivos de entorno de Vite', () => {
-    const reglas = sinComentarios(DOCKERIGNORE)
+    const reglas = sinComentarios(DOCKERIGNORE())
       .split('\n')
       .map((l) => l.trim())
       .filter((l) => l !== '');
@@ -172,12 +193,12 @@ describe('la imagen no lleva dentro nada que no deba', () => {
   /**
    * Y el artboard, que lleva dentro las cifras del corpus.
    *
-   * `diseno/NormativaV6.dc.html` no entra en ningun `import` del paquete —lo comprueba
-   * `arbol-del-artboard.test.ts`— asi que en el contexto no hace mas que aumentar la huella de la
-   * capa con un archivo que lleva justo lo que esta imagen no puede llevar.
+   * `diseno/NormativaV6.dc.html` no entra en ningun `import` del paquete, asi que en el contexto
+   * no hace mas que aumentar la huella de la capa con un archivo que lleva justo lo que esta
+   * imagen no puede llevar.
    */
   it('el .dockerignore deja fuera el artboard', () => {
-    const reglas = sinComentarios(DOCKERIGNORE)
+    const reglas = sinComentarios(DOCKERIGNORE())
       .split('\n')
       .map((l) => l.trim());
     expect(reglas).toContain('diseno');
@@ -185,34 +206,36 @@ describe('la imagen no lleva dentro nada que no deba', () => {
 
   /** Que no quede fuente dentro del `dist/`, comprobado por la propia imagen al construirse. */
   it('la imagen comprueba que su dist no lleva codigo fuente', () => {
-    expect(DOCKERFILE).toMatch(/-name '\*\.ts'/);
-    expect(DOCKERFILE).toMatch(/-name '\*\.tsx'/);
+    expect(DOCKERFILE()).toMatch(/-name '\*\.ts'/);
+    expect(DOCKERFILE()).toMatch(/-name '\*\.tsx'/);
   });
 });
 
-describe('el proxy de datos NO viaja en la imagen (AC9)', () => {
-  it('se construye con la bandera apagada, escrito y no supuesto', () => {
-    expect(DOCKERFILE).toMatch(/ENV VITE_KAMAYUK_PROXY_DE_DATOS=false/);
-    // Y antes del build, o no serviria de nada.
-    expect(DOCKERFILE.indexOf('VITE_KAMAYUK_PROXY_DE_DATOS=false')).toBeLessThan(
-      DOCKERFILE.indexOf('RUN yarn build'),
-    );
-  });
-
+describe('lo servido no lleva una cifra del corpus', () => {
   /**
    * Las cinco cadenas, comprobadas **dentro** de la construccion de la imagen.
    *
    * Medirlo fuera tambien vale, y esta en el PR; tenerlo aqui es lo que hace que una imagen con
    * cifras del corpus **no se pueda publicar**: el `docker build` sale en rojo.
    *
-   * Las cuatro primeras salen de medir los dos `dist/`: aparecen solo en `proxy-*.js` con la
-   * bandera encendida y en ningun archivo con ella apagada. `5500.00` es la UIT de 2026, y es la
-   * que demuestra por que los mapas se retiran.
+   * Salen de medir los `dist/` de la V6 (`c01fe9a`): las cuatro primeras aparecian solo en su
+   * `proxy-*.js`, y `5500.00` es la UIT de 2026, la que demostro por que los mapas se retiran. El
+   * proxy salio con la V6; la leccion —ninguna cifra del corpus en lo servido— no, y renace como
+   * `sin-cifras-inventadas` en #58. Hasta entonces, esto es lo que la sujeta.
    */
-  it('la imagen se niega a construirse si el dist lleva una cifra del corpus', () => {
+  it('la imagen se niega a construirse si lo servido lleva una cifra del corpus', () => {
+    // Se leen las cadenas del BUCLE, sin comentarios, y no del archivo entero. Hasta `c01fe9a`
+    // bastaba con que el `Dockerfile` CONTUVIERA cada cadena, y la prosa que explica la negativa
+    // nombra `5500.00` dos veces: medido en #50, quitar `'5500.00'` del bucle dejaba esta prueba
+    // en VERDE (27 de 27) con la imagen dispuesta a servir la UIT de 2026.
+    const bucle = sinComentarios(DOCKERFILE()).match(/for cadena in ([^;]*); do/)?.[1] ?? '';
+    const buscadas = [...bucle.matchAll(/'([^']*)'/g)].map((m) => m[1]);
+    expect(bucle, 'el Dockerfile ya no tiene el bucle `for cadena in …; do` de la negativa').not.toBe('');
     for (const cadena of ['AGYA 1.0L E AT', 'FO COMFORT', 'AUTOCRAFT', 'Carreras de caballos', '5500.00']) {
-      expect(DOCKERFILE, `la comprobacion del dist no busca «${cadena}»`).toContain(cadena);
+      expect(buscadas, `la negativa del Dockerfile no busca «${cadena}»`).toContain(cadena);
     }
+    // Y que el bucle de verdad corte la construccion: un `echo` sin `exit 1` avisaria y publicaria.
+    expect(sinComentarios(DOCKERFILE())).toMatch(/grep -rqF "\$cadena" "\$servido"; then[^]*?exit 1/);
   });
 
   /**
@@ -220,18 +243,18 @@ describe('el proxy de datos NO viaja en la imagen (AC9)', () => {
    *
    * `vite.config.ts` declara `build.sourcemap: true`, asi que `dist/` sale con un `.map` por
    * trozo — y esta medido que ahi dentro SI aparece `5500.00`, la UIT de 2026, aunque en el `.js`
-   * sea cero. Sin retirarlos, la propiedad que la bandera compra seria falsa por los mapas, con
-   * el codigo que se ejecuta perfectamente limpio. Y ademas un `.map` lleva el fuente entero.
+   * sea cero (medido en la V6). Sin retirarlos, la negativa de arriba se cumpliria sobre el codigo
+   * que se ejecuta y la cifra saldria por los mapas. Y ademas un `.map` lleva el fuente entero.
    */
   it('los mapas de fuente se retiran antes de servir', () => {
-    expect(DOCKERFILE).toMatch(/find dist -name '\*\.map' -delete/);
+    expect(DOCKERFILE()).toMatch(/find dist -name '\*\.map' -delete/);
   });
 });
 
 describe('lo que nginx sirve, y con que cabeceras', () => {
-  /** Los bloques `location` de la configuracion, con su cuerpo. */
-  const bloques = (() => {
-    const texto = sinComentarios(NGINX);
+  /** Los bloques `location` de la configuracion, con su cuerpo. Se llama DENTRO de cada prueba. */
+  const bloquesDe = () => {
+    const texto = sinComentarios(NGINX());
     const salida: { cabecera: string; cuerpo: string }[] = [];
     const patron = /location\s+([^{]+)\{/g;
     let m: RegExpExecArray | null;
@@ -246,11 +269,12 @@ describe('lo que nginx sirve, y con que cabeceras', () => {
       salida.push({ cabecera: m[1]!.trim(), cuerpo: texto.slice(patron.lastIndex, i - 1) });
     }
     return salida;
-  })();
+  };
 
   const LAS_TRES = ['X-Content-Type-Options', 'X-Frame-Options', 'Referrer-Policy'];
 
   it('el analizador encuentra los bloques de verdad', () => {
+    const bloques = bloquesDe();
     // Si esto se rompe, todas las de abajo pasarian en verde sobre una lista vacia.
     expect(bloques.length).toBeGreaterThanOrEqual(4);
     expect(bloques.map((b) => b.cabecera)).toContain('/assets/');
@@ -263,6 +287,7 @@ describe('lo que nginx sirve, y con que cabeceras', () => {
    * igual.
    */
   it('CADA location declara las tres cabeceras de seguridad, con «always»', () => {
+    const bloques = bloquesDe();
     for (const bloque of bloques) {
       for (const cabecera of LAS_TRES) {
         const linea = new RegExp(`add_header\\s+${cabecera}\\s+[^;]+always\\s*;`);
@@ -282,7 +307,7 @@ describe('lo que nginx sirve, y con que cabeceras', () => {
   it('ninguna cabecera de seguridad se declara sin «always»', () => {
     for (const cabecera of LAS_TRES) {
       const sinAlways = new RegExp(`add_header\\s+${cabecera}\\s+[^;]*;`, 'g');
-      for (const encontrada of sinComentarios(NGINX).match(sinAlways) ?? []) {
+      for (const encontrada of sinComentarios(NGINX()).match(sinAlways) ?? []) {
         expect(encontrada, 'sin «always» la cabecera no sale en los errores').toContain('always');
       }
     }
@@ -300,6 +325,7 @@ describe('lo que nginx sirve, y con que cabeceras', () => {
    * «uniformara» el archivo poniendoselo a todas devolveria el defecto en silencio.
    */
   it('el cache de un ano NO se aplica a los errores', () => {
+    const bloques = bloquesDe();
     const activos = bloques.find((b) => b.cabecera === '/assets/');
     const linea = activos?.cuerpo.match(/add_header\s+Cache-Control[^;]+;/)?.[0] ?? '';
     expect(linea).toContain('immutable');
@@ -312,6 +338,7 @@ describe('lo que nginx sirve, y con que cabeceras', () => {
    * exito. En `/assets/` no se admite ese repliegue: un activo que falta da 404.
    */
   it('un activo que falta da 404 y no el index.html', () => {
+    const bloques = bloquesDe();
     const activos = bloques.find((b) => b.cabecera === '/assets/');
     expect(activos?.cuerpo).toMatch(/try_files\s+\$uri\s+=404\s*;/);
     expect(activos?.cuerpo).not.toContain('index.html');
@@ -325,6 +352,7 @@ describe('lo que nginx sirve, y con que cabeceras', () => {
    * bloque esa averia entraria por `location /` y saldria como el 200 de arriba.
    */
   it('una ruta con el prefijo puesto da 404 nombrando la causa', () => {
+    const bloques = bloquesDe();
     const guarda = bloques.find((b) => b.cabecera === '/normativa/');
     expect(
       guarda,
@@ -348,7 +376,7 @@ describe('lo que nginx sirve, y con que cabeceras', () => {
    */
   it('no hay ni un reenvio en toda la configuracion', () => {
     const directiva = ['proxy', 'pass'].join('_');
-    expect(NGINX.split(directiva).length - 1).toBe(0);
+    expect(NGINX().split(directiva).length - 1).toBe(0);
   });
 
   /**
@@ -358,14 +386,15 @@ describe('lo que nginx sirve, y con que cabeceras', () => {
    * anterior mandaria al usuario al emisor OIDC del ambiente que fuera.
    */
   it('configuracion.js se sirve con «no-store», y el index lo carga antes que el paquete', () => {
+    const bloques = bloquesDe();
     const senias = bloques.find((b) => b.cabecera === '= /configuracion.js');
     expect(senias?.cuerpo).toContain('no-store');
 
     // Guion CLASICO y no modulo, y ANTES del paquete: un `type="module"` se difiere hasta
     // despues del analisis del documento, asi que llegaria tarde — cuando la puerta de identidad
     // ya hubiera leido las senias.
-    expect(INDEX).toContain('<script src="/configuracion.js"></script>');
-    expect(INDEX.indexOf('/configuracion.js')).toBeLessThan(INDEX.indexOf('/src/main.tsx'));
+    expect(INDEX()).toContain('<script src="/configuracion.js"></script>');
+    expect(INDEX().indexOf('/configuracion.js')).toBeLessThan(INDEX().indexOf('/src/main.tsx'));
   });
 });
 
@@ -378,14 +407,16 @@ describe('el compose y el descriptor dicen lo mismo (ADR-0011)', () => {
    * explicarlo la escribe—. O sea que las guardas se dispararian con la prosa que las justifica,
    * que es la forma mas segura de que alguien acabe borrando el comentario en vez del defecto.
    */
-  const SIN_PROSA = sinComentarios(COMPOSE);
+  const sinProsa = () => sinComentarios(COMPOSE());
 
   /** Las etiquetas de Traefik del compose, como pares. */
-  const etiquetas = Object.fromEntries(
-    [...SIN_PROSA.matchAll(/^\s+- (traefik\.[^=]+)=(.+)$/gm)].map((m) => [m[1]!, m[2]!]),
-  );
+  const etiquetasDe = (sinProsaDelCompose: string): Record<string, string> =>
+    Object.fromEntries(
+      [...sinProsaDelCompose.matchAll(/^\s+- (traefik\.[^=]+)=(.+)$/gm)].map((m) => [m[1]!, m[2]!]),
+    );
 
   it('el compose declara el servicio de la interfaz, con la imagen y la etapa del Dockerfile', () => {
+    const SIN_PROSA = sinProsa();
     expect(SIN_PROSA).toMatch(/^ {2}normativa-interfaz:$/m);
     expect(SIN_PROSA).toContain('image: kamayuk-normativa-interfaz:compose');
     expect(SIN_PROSA).toContain('context: ../frontend');
@@ -400,6 +431,7 @@ describe('el compose y el descriptor dicen lo mismo (ADR-0011)', () => {
    * levantar la base, el migrador y la implantacion para servir unos archivos que no los usan.
    */
   it('la interfaz no declara depends_on', () => {
+    const SIN_PROSA = sinProsa();
     const servicio = SIN_PROSA.slice(SIN_PROSA.indexOf('  normativa-interfaz:'));
     expect(servicio).not.toContain('depends_on');
   });
@@ -411,6 +443,7 @@ describe('el compose y el descriptor dicen lo mismo (ADR-0011)', () => {
    * `caja`#39 midio.
    */
   it('el puerto se pide por una variable con el sufijo del sistema', () => {
+    const SIN_PROSA = sinProsa();
     const puertos = [...SIN_PROSA.matchAll(/\$\{(KAMAYUK_PUERTO_[A-Z_]+)/g)].map((m) => m[1]);
     expect(puertos).toContain('KAMAYUK_PUERTO_INTERFAZ_NORMATIVA');
     expect(puertos, 'ese nombre ya es el de la interfaz del monolito').not.toContain(
@@ -426,6 +459,8 @@ describe('el compose y el descriptor dicen lo mismo (ADR-0011)', () => {
    * con un 200 y el `index.html` dentro.
    */
   it('las dos reglas de Traefik llevan prioridad, y la de la API es la mayor', () => {
+    const SIN_PROSA = sinProsa();
+    const etiquetas = etiquetasDe(SIN_PROSA);
     expect(etiquetas['traefik.http.routers.normativa.rule']).toBe(
       'PathPrefix(`/normativa/api/v1`)',
     );
@@ -449,6 +484,8 @@ describe('el compose y el descriptor dicen lo mismo (ADR-0011)', () => {
    * contestando 404 a todo.
    */
   it('el stripprefix va solo en el enrutador de la interfaz', () => {
+    const SIN_PROSA = sinProsa();
+    const etiquetas = etiquetasDe(SIN_PROSA);
     expect(etiquetas['traefik.http.routers.normativa-interfaz.middlewares']).toBe(
       'normativa-quitar-prefijo',
     );
@@ -466,23 +503,21 @@ describe('el compose y el descriptor dicen lo mismo (ADR-0011)', () => {
    * de aquel; lo que se busca son las cuatro decisiones que tendrian que moverse a la vez.
    */
   it('el descriptor declara el mismo reparto que el compose', () => {
-    expect(DESCRIPTOR).toContain('PathPrefix(\\`/${SISTEMA}/api/v1\\`)');
-    expect(DESCRIPTOR).toContain('stripPrefix: { prefixes: [`/${SISTEMA}`] }');
-    expect(DESCRIPTOR).toContain('imagenes: [SISTEMA, MIGRADOR, INTERFAZ]');
+    expect(DESCRIPTOR()).toContain('PathPrefix(\\`/${SISTEMA}/api/v1\\`)');
+    expect(DESCRIPTOR()).toContain('stripPrefix: { prefixes: [`/${SISTEMA}`] }');
+    expect(DESCRIPTOR()).toContain('imagenes: [SISTEMA, MIGRADOR, INTERFAZ]');
   });
 
   /**
-   * Y el cliente OIDC que las senias del ambiente declaran es el que la interfaz usa por omision.
+   * El cliente OIDC que las senias del ambiente declaran.
    *
-   * Son dos sitios: `infrastructure/src/descriptor.ts` lo pone en el `ConfigMap` que se monta
-   * sobre `configuracion.js`, y `src/api/configuracion.ts` lo trae como tercer escalon para
-   * `yarn dev` y para las pruebas. Si se separaran, `yarn dev` entraria por un cliente y el
-   * despliegue por otro — y el sintoma del segundo es «Invalid parameter: redirect_uri» en una
-   * maquina donde nadie puede reproducirlo.
+   * Hasta `c01fe9a` esta prueba lo comparaba tambien con el escalon por omision de
+   * `src/api/configuracion.ts`, que salio con la V6. La mitad del descriptor se queda —es lo que
+   * `infrastructure` pone en el `ConfigMap`— y la otra vuelve en #57, con la puerta de identidad:
+   * si se separaran, `yarn dev` entraria por un cliente y el despliegue por otro, y el sintoma
+   * es «Invalid parameter: redirect_uri» en una maquina donde nadie puede reproducirlo.
    */
-  it('el cliente OIDC es el mismo en el descriptor y en el escalon por omision', () => {
-    const CONFIGURACION = leer(join(FRONTEND, 'src', 'api', 'configuracion.ts'));
-    expect(DESCRIPTOR).toContain('const CLIENTE_OIDC_DE_LA_INTERFAZ = "kamayuk-backoffice"');
-    expect(CONFIGURACION).toContain("oidcCliente: 'kamayuk-backoffice'");
+  it('el descriptor sigue declarando el cliente OIDC de la interfaz', () => {
+    expect(DESCRIPTOR()).toContain('const CLIENTE_OIDC_DE_LA_INTERFAZ = "kamayuk-backoffice"');
   });
 });
