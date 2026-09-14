@@ -1,8 +1,8 @@
 # Decisiones de arquitectura (ADR)
 
-Las decisiones de los **valores normativos**: que se sella, cuando, con que doble firma y con que redondeo.
+Las decisiones de los **valores normativos**: que se sella, cuando, con que doble firma, con que redondeo y por que camino se compone y se sella.
 
-Las cuatro son de aqui porque aqui vive el dato: `catastro` y `rentas` **consumen** un conjunto sellado, no deciden como se sella.
+Las cinco son de aqui porque aqui vive el dato: `catastro` y `rentas` **consumen** un conjunto sellado, no deciden como se sella.
 
 Un ADR registra una decision con su contexto y sus consecuencias. **No se editan una vez
 aceptados**: si una decision cambia, se escribe otro ADR que declare obsoleto al anterior. El
@@ -15,7 +15,12 @@ historial de por que se hizo algo vale mas que la coherencia del documento.
 | [0007](ADR-0007-parametros-versionados.md) | Parámetros tributarios versionados y sellados por ejercicio | Aceptado |
 | [0017](ADR-0017-tablas-de-valuacion-nacionales.md) | Las tres tablas de valuación son nacionales | Aceptado |
 | [0018](ADR-0018-el-redondeo-decidido.md) | El redondeo, decidido: escala ratificada, `HALF_UP`, y ningún SRTM que imitar | Aceptado |
-| [0025](ADR-0025-normativa-servicio-y-libreria.md) | La normativa es un servicio de datos y una libreria de reglas, y no está en el camino caliente | Propuesto |
+| [0025](ADR-0025-normativa-servicio-y-libreria.md) | La normativa es un servicio de datos y una libreria de reglas, y no está en el camino caliente | Aceptado ¹ |
+| [0043](ADR-0043-componer-y-sellar-por-http.md) | Componer y sellar un conjunto por HTTP: el módulo `NORMATIVA`, las rutas y la idempotencia | Propuesto |
+
+¹ **El archivo esta Aceptado desde el 2026-09-04** (`ADR-0025-normativa-servicio-y-libreria.md:5` y `:12`: «Aceptado el
+2026-09-04 por la direccion del proyecto, al contestar D-22»), y esta fila siguio diciendo «Propuesto»
+hasta el 2026-09-14. Lo que se corrigio fue el indice, que se habia quedado atras; el ADR no se toco.
 
 ## Los que enlaza, y no copia
 
@@ -57,6 +62,11 @@ u **Obsoleto**, siempre con esa letra.
 
 ## La numeracion NO se reinicia
 
-El ADR nuevo de este repositorio es el **0033**, no el 0001. Los treinta y dos existen y estan
-repartidos; empezar de nuevo daria dos `ADR-0001` distintos en el mismo producto, y el dia que
-alguien cite «ADR-0004» habria que preguntar de cual habla.
+El ultimo ADR nuevo de este repositorio es el **0043**, no el 0001, y el siguiente sera el que siga al
+mas alto **de los seis repositorios**, no de este. Los anteriores existen y estan repartidos; empezar
+de nuevo daria dos `ADR-0001` distintos en el mismo producto, y el dia que alguien cite «ADR-0004»
+habria que preguntar de cual habla.
+
+**El numero se mide al abrir el PR, no al abrir el issue**: cuando se abrio el issue del 0043, el 0042
+no estaba en ningun disco y ya lo habia reclamado `caja`#75. Se busca en los seis clones (`ls */docs/30-arquitectura/adr/`) y en GitHub
+(`gh search code --owner hneyra "ADR-00NN"` y `gh search issues --owner hneyra "ADR-00NN"`).
