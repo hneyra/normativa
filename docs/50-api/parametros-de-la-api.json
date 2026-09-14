@@ -1,0 +1,33 @@
+{
+  "_": "ARCHIVO GENERADO — no editar a mano. Lo produce ParametrosDeLaApiTest de la FIRMA de cada controlador; se regenera con -Dkamayuk.formas.regenerar=true. Dice que hace falta para PEDIR cada operacion: «obligatorios» sale de @RequestParam required=true sin defaultValue; «algunoDeEstos» son grupos de los que hay que mandar al menos uno; «condicionales» son los que solo hacen falta segun el cuerpo de la peticion; «opcionales» es el resto, y «enElCuerpo» son los que el controlador exige en el cuerpo JSON y NO en la URL. Las operaciones paginadas llevan ademas «ordenarPorAdmitidos», leido del OrdenSeguro del repositorio que las sirve —otro campo contesta 422 ORDEN_NO_ADMITIDO—, y «tamanoMaximo», el tope de Paginacion (#49).",
+  "GET /conjuntos": {
+    "obligatorios": ["ejercicio"],
+    "algunoDeEstos": [],
+    "condicionales": [],
+    "opcionales": [],
+    "enElCuerpo": []
+  },
+  "GET /conjuntos/{id}/snapshot": {
+    "obligatorios": ["ambito"],
+    "algunoDeEstos": [],
+    "condicionales": [],
+    "opcionales": [],
+    "enElCuerpo": []
+  },
+  "GET /seguridad/parametros": {
+    "obligatorios": [],
+    "algunoDeEstos": [],
+    "condicionales": [],
+    "opcionales": ["direccion", "ordenarPor", "pagina", "tamano"],
+    "enElCuerpo": [],
+    "ordenarPorAdmitidos": ["ejercicio", "estado", "id", "version"],
+    "tamanoMaximo": 500
+  },
+  "GET /seguridad/parametros/ejercicios/{ejercicio}": {
+    "obligatorios": [],
+    "algunoDeEstos": [],
+    "condicionales": [],
+    "opcionales": [],
+    "enElCuerpo": []
+  }
+}

@@ -1,0 +1,80 @@
+{
+  "_": "ARCHIVO GENERADO — no editar a mano. Lo produce FormasDeLaApiTest del tipo de retorno de cada controlador —o, si serializa a mano, del tipo que declara RespuestasEscritasAMano—; se regenera con -Dkamayuk.formas.regenerar=true. Es la forma del JSON que devuelve cada operacion —nombres de campo y anidamiento, con los tipos reducidos a hojas—, y la lee la interfaz para comprobar que lo que pinta es lo que el backend publica (#49, epica #47).",
+  "GET /conjuntos": {
+    "conjuntoId": "entero",
+    "ejercicio": "entero",
+    "version": "entero"
+  },
+  "GET /conjuntos/{id}/snapshot": {
+    "conjuntoId": "entero",
+    "ejercicio": "entero",
+    "version": "entero",
+    "ambito": "texto",
+    "filas": "entero",
+    "parametros": [
+      {
+        "tipo": "texto",
+        "clave": "texto",
+        "valorNumerico": "texto",
+        "valorTexto": "texto",
+        "vigenciaDesde": "texto",
+        "vigenciaHasta": "texto",
+        "documentoFuente": "texto"
+      }
+    ],
+    "valoresUnitarios": [
+      {
+        "partida": "texto",
+        "categoria": "texto",
+        "anioConstruccionDesde": "entero",
+        "anioConstruccionHasta": "entero",
+        "valorM2": "texto",
+        "documentoFuente": "texto"
+      }
+    ],
+    "depreciaciones": [
+      {
+        "uso": "texto",
+        "material": "texto",
+        "estadoConservacion": "texto",
+        "antiguedadHasta": "entero",
+        "porcentaje": "texto",
+        "documentoFuente": "texto"
+      }
+    ],
+    "valoresReferenciales": [
+      {
+        "ejercicio": "entero",
+        "categoria": "texto",
+        "marca": "texto",
+        "modelo": "texto",
+        "anioFabricacion": "entero",
+        "valor": "texto",
+        "documentoFuente": "texto"
+      }
+    ]
+  },
+  "GET /seguridad/parametros": {
+    "contenido": [
+      {
+        "id": "entero",
+        "ejercicio": "entero",
+        "version": "entero",
+        "estado": "texto",
+        "fechaSellado": "instante",
+        "usuarioSellado": "texto"
+      }
+    ],
+    "pagina": "entero",
+    "tamano": "entero",
+    "totalElementos": "entero",
+    "totalPaginas": "entero",
+    "hayMas": "booleano"
+  },
+  "GET /seguridad/parametros/ejercicios/{ejercicio}": {
+    "ejercicio": "entero",
+    "sellado": "booleano",
+    "conjuntoId": "entero",
+    "version": "entero"
+  }
+}

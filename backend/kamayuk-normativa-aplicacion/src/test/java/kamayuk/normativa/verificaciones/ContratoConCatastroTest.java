@@ -37,9 +37,7 @@ class ContratoConCatastroTest extends ContratoConElConsumidorTestBase {
 
     @Override
     protected Map<String, Class<?>> respuestasSerializadasAMano() {
-        return Map.of(
-                "GET /conjuntos/{id}/snapshot",
-                kamayuk.normativa.parametros.infraestructura.web.SnapshotController.SnapshotResource
-                        .class);
+        // Una sola declaracion para las tres pruebas que la leen (#49).
+        return RespuestasEscritasAMano.DE_ESTE_BACKEND;
     }
 }
