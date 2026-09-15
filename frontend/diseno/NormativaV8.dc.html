@@ -37,15 +37,15 @@
       <button onClick="{{ alternarSide }}" aria-label="Mostrar u ocultar el menú" style="display:grid; place-items:center; width:32px; height:32px; border:0; border-radius:var(--radio-sm); background:var(--barra-control); color:var(--sobre-barra); cursor:pointer; flex:0 0 auto" style-hover="background:var(--barra-hover)">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"></path></svg>
       </button>
-      <!-- El escudo NO se dibuja: el archivo no está en este repositorio y la V6
-           tampoco lo portó (c01fe9a:frontend/src/marco/BarraGlobal.tsx:16-19).
-           Si se porta, de dónde sale y dónde vive lo decide G2 (hneyra/normativa#52). -->
+      <!-- El escudo NO se dibuja, y no es un hueco: G2 decidió no portarlo
+           (hneyra/normativa#52, 2026-09-15). La V6 tampoco lo portó
+           (c01fe9a:frontend/src/marco/BarraGlobal.tsx:16-19). -->
       <span style="line-height:1.2; min-width:0">
-        <!-- El título es el texto de la V6 (BarraGlobal.tsx:226). La V6 lo pintaba
-             PEQUEÑO debajo de la entidad, y @kamayuk/shell pinta `titulo` grande y
-             `entidad` pequeña: el orden lo decide G2. -->
-        <span style="display:block; font-size:16px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Sistema de gestión tributaria municipal</span>
-        <span style="display:block; font-size:11.5px; color:var(--sobre-barra-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ entidad }}</span>
+        <!-- Título grande y entidad pequeña, como pinta @kamayuk/shell. Los dos
+             salen de BARRA: el título es el decidido en G2 y la entidad es un
+             MARCADOR de dato de sesión, no un literal. -->
+        <span style="display:block; font-size:16px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ barra.titulo }}</span>
+        <span title="{{ barra.notaEntidad }}" style="display:block; font-size:11.5px; color:var(--sobre-barra-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ barra.entidad }}</span>
       </span>
     </span>
 
@@ -67,11 +67,11 @@
 
     <span style="position:relative; display:flex; align-items:stretch; flex:0 0 auto">
       <button onClick="{{ abrirSesion }}" aria-expanded="{{ sesionAria }}" aria-label="Opciones de la sesión" style="{{ sesionStyle }}" style-hover="background:var(--barra-hover)">
-        <span style="display:grid; place-items:center; width:27px; height:27px; border-radius:50%; background:var(--barra-realce); font-size:11px; font-weight:700; flex:0 0 auto">HN</span>
-        <!-- La cuenta de la V6 (BarraGlobal.tsx:70-76). La real sale de la sesión. -->
-        <span data-sm-hide="1" style="line-height:1.2; text-align:left">
-          <span style="display:block; font-size:12.5px; font-weight:700; white-space:nowrap">H. Neyra Alama</span>
-          <span style="display:block; font-size:11px; color:var(--sobre-barra-2)">Normativa · parámetros</span>
+        <span style="display:grid; place-items:center; width:27px; height:27px; border-radius:50%; background:var(--barra-realce); font-size:11px; font-weight:700; flex:0 0 auto">{{ barra.cuenta.iniciales }}</span>
+        <!-- La cuenta es la de la sesión (G2): tres MARCADORES, no la cuenta de la V6. -->
+        <span data-sm-hide="1" title="{{ barra.notaCuenta }}" style="line-height:1.2; text-align:left">
+          <span style="display:block; font-size:12.5px; font-weight:700; white-space:nowrap">{{ barra.cuenta.nombre }}</span>
+          <span style="display:block; font-size:11px; color:var(--sobre-barra-2)">{{ barra.cuenta.nota }}</span>
         </span>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="flex:0 0 auto"><path d="M6 9l6 6 6-6"></path></svg>
       </button>
@@ -139,7 +139,7 @@
               </span>
               <span style="{{ m.iconStyle }}">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                  <sc-for list="{{ m.icon }}" as="p" hint-placeholder-count="4">
+                  <sc-for list="{{ m.icon }}" as="p" hint-placeholder-count="5">
                     <path d="{{ p.d }}"></path>
                   </sc-for>
                 </svg>
@@ -377,7 +377,7 @@
                       <span style="flex:1; min-width:0; font-size:12.5px; line-height:1.5; color:var(--tinta-2); text-wrap:pretty">{{ r.que }}</span>
                     </div>
                   </sc-for>
-                  <p style="margin:0; padding:10px 15px; background:var(--sup); font-size:12px; line-height:1.5; color:var(--tinta-3); text-wrap:pretty">El árbol de este artboard no está escrito a mano: es el módulo de <code style="font-family:ui-monospace,Menlo,Consolas,monospace">diseno/NormativaV6.dc.html</code>, con sus rótulos, sus claves y sus trazos. <code style="font-family:ui-monospace,Menlo,Consolas,monospace">src/catalogo.ts</code> lo empalmará con <code style="font-family:ui-monospace,Menlo,Consolas,monospace">GET /seguridad/modulos</code> por el campo <code style="font-family:ui-monospace,Menlo,Consolas,monospace">codigo</code> cuando el backend lo publique (hneyra/normativa#54).</p>
+                  <p style="margin:0; padding:10px 15px; background:var(--sup); font-size:12px; line-height:1.5; color:var(--tinta-3); text-wrap:pretty">El árbol de este artboard no está escrito a mano: es el módulo de <code style="font-family:ui-monospace,Menlo,Consolas,monospace">diseno/NormativaV6.dc.html</code>, con sus rótulos y sus claves, y el icono <code style="font-family:ui-monospace,Menlo,Consolas,monospace">balanza</code> de <code style="font-family:ui-monospace,Menlo,Consolas,monospace">ICONOS</code> que eligió G2. <code style="font-family:ui-monospace,Menlo,Consolas,monospace">src/catalogo.ts</code> lo empalmará con <code style="font-family:ui-monospace,Menlo,Consolas,monospace">GET /seguridad/modulos</code> por el campo <code style="font-family:ui-monospace,Menlo,Consolas,monospace">codigo</code> cuando el backend lo publique (hneyra/normativa#54).</p>
                 </section>
               </div>
             </sc-if>
@@ -393,7 +393,7 @@
 </div>
 
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900},&quot;entidad&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Municipalidad Distrital de Catacaos&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Institución&quot;}}">
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:900}}">
 /* ════════════════════════════════════════════════════════════════════════
    NormativaV8 — el marco de RentasV8 con el módulo de `normativa` dentro.
 
@@ -414,8 +414,10 @@
 
    Lo que la V6 hacía y esta gramática no dice —pasos, selección, paginación,
    filas de contenido, tono como dato…— NO está aquí: está declarado en
-   hneyra/normativa#51. Y lo que este archivo propone y la V6 no decía —el
-   título de la barra, las instrucciones, el icono— lo decide una persona en G2.
+   frontend/diseno/HUECOS.md (hneyra/normativa#51, y N1–N12 conciliados en
+   hneyra/normativa#76). Lo que este archivo proponía y la V6 no decía —la
+   barra, las instrucciones, el icono, los títulos y las columnas— lo decidió
+   el dueño en G2 el 2026-09-15 (hneyra/normativa#52) y está aplicado aquí.
 
    Para portarlo: los colores salen de `normativa-tokens.css`, copia byte a byte
    de la hoja de RentasV8; cada región lleva `data-shadcn` con la pieza que le
@@ -429,19 +431,62 @@ const PROPIO = 'Normativa';
    backend/kamayuk-normativa-plataforma (kamayuk/normativa/web/Api.java:13). */
 const RAIZ = '/normativa/api/v1';
 
+/* La barra global, decidida en G2 (hneyra/normativa#52, 2026-09-15).
+
+   · titulo: el nombre del sistema. Viaja a src/ como texto: es la `titulo`
+     de la configuración del Armazon de @kamayuk/shell.
+   · entidad y cuenta: MARCADORES de dato de sesión, entre llaves. No son un
+     literal y no lo van a ser: la entidad es el nombre de la municipalidad
+     de la sesión resuelto por su UBIGEO —GET /seguridad/sesion/municipalidad,
+     que sirve hneyra/normativa#54— y la cuenta es la de la sesión
+     —GET /seguridad/sesion—. Cargarlas de verdad es de #57 y #64.
+   · notaEntidad y notaCuenta: la nota del marcador, para quien mire el
+     artboard. No viajan.
+
+   Lo vigila lo-que-viaja-no-lleva-cifras: los cuatro huecos de sesión tienen
+   que ser marcadores, y nada de lo que viaja puede nombrar una municipalidad
+   ni una cuenta. */
+const BARRA = {
+  titulo: 'Sistema de Gestión de Rentas y Tributos Municipales',
+  entidad: '{municipalidad de la sesión}',
+  notaEntidad: 'Marcador de dato de sesión: el nombre de la municipalidad de la sesión, resuelto por su UBIGEO (GET /seguridad/sesion/municipalidad, hneyra/normativa#54). Nunca un literal.',
+  cuenta: { iniciales: '{··}', nombre: '{cuenta de la sesión}', nota: '{usuario}' },
+  notaCuenta: 'Marcadores de dato de sesión: el nombre, las iniciales y el usuario de la cuenta que entró (GET /seguridad/sesion, hneyra/normativa#54). Nunca un literal.'
+};
+
+/* El tono de una insignia, como dato y no como expresión regular.
+
+   · porTexto: el texto de la celda, en minúsculas y entero, y su tono.
+   · porFila: la excepción que el texto no puede decir, por la primera celda
+     de la fila. D-02b y D-03d dicen los dos «Abierta», y la V6 los pinta
+     distinto porque el tono va EN LA FILA
+     (c01fe9a:frontend/src/secciones/panel.ts:118-160): D-03d no bloquea el
+     sello, bloquea el cierre de caja. G2 lo devolvió a «atención».
+   · resto: lo que no nombra ninguna de las dos.
+
+   La gramática de PANTALLAS no tiene dónde decir el tono de una fila: es el
+   hueco H18 de HUECOS.md. Esto lo pinta en el artboard; en src/ lo trae
+   H18, no una copia de esta tabla. */
+const TONOS = {
+  porTexto: [['abierta', 'mal'], ['abierto', 'atencion'], ['vigente', 'info']],
+  porFila: [['D-03d', 'atencion']],
+  resto: 'ok'
+};
+
 /* [rótulo, nota, clave, código, trazos, submódulos]
    submódulo: [clave, rótulo, operaciones[[verbo, ruta, nota]], piezas[[pieza, uso]]]
 
    El código `NORMATIVA` es el que propone hneyra/normativa#48, todavía sin
    aceptar (G1): si cambia, se ajusta aquí en un PR que lo diga. Los trazos son
-   los del libro de NormativaV6.dc.html:1152; si se conservan o se elige uno de
-   `ICONOS` lo decide G2.
+   EXACTAMENTE los de `ICONOS.balanza` en kamayuk-lib origin/main
+   (c6f6361:paquetes/ui/iconos.ts:64-70): G2 eligió `balanza`, así que el libro
+   de la V6 sale y hneyra/kamayuk-lib#59 se cierra como no planeado.
 
    Todas las operaciones llevan verbo porque las cuatro salen de un @GetMapping
    leído: ParametrosController.java:41,90 y SnapshotController.java:86,118. */
 const ARBOL = [
   [PROPIO, 'Parámetros sellados y corpus', 'normativa', 'NORMATIVA',
-    ['M5 5.4A1.9 1.9 0 0 1 6.9 3.5H19.2v13.4H6.9A1.9 1.9 0 0 0 5 18.8z', 'M5 18.8a1.9 1.9 0 0 0 1.9 1.7H19.2v-2.9', 'M8.7 8.1h6.6', 'M8.7 11.6h4.2'],
+    ['M12 4.4v3.2', 'M5 8.6h14', 'M5 8.6 2.8 14.4h4.4z', 'M19 8.6 16.8 14.4h4.4z', 'M8.4 20h7.2'],
     [
       ['nor-panel', 'Panel', [
         ['GET', '/seguridad/parametros/ejercicios/{ejercicio}', 'ParametrosController'],
@@ -665,9 +710,10 @@ const SLUGS = { 'nor-panel': 'panel', 'nor-ediciones': 'ediciones', 'nor-cuadros
    instrucción: distinta de la nota del título, que dice qué es la pantalla.
 
    La V6 NO tiene línea de instrucción, así que estas cuatro son el único
-   texto de las pantallas que no se transcribe: son PROPUESTAS para G2, cada
-   una a partir del subtítulo de c01fe9a:frontend/src/marco/Marco.tsx:70-74 o
-   del comentario del artboard V6 que dice qué pregunta contesta la pantalla. */
+   texto de las pantallas que no se transcribe: se escribieron a partir del
+   subtítulo de c01fe9a:frontend/src/marco/Marco.tsx:70-74 o del comentario
+   del artboard V6 que dice qué pregunta contesta la pantalla, y G2 las
+   ACEPTÓ tal cual (hneyra/normativa#52). */
 const INSTRUCCIONES = {
   'nor-panel': 'revise con qué se puede emitir el ejercicio y qué le falta: lo que falta ocupa tanto sitio como lo que hay.',
   'nor-ediciones': 'abra una versión, agregue los parámetros por su llave y séllela. Ninguna de las tres operaciones se guarda sin observación.',
@@ -827,19 +873,16 @@ class Component extends DCLogic {
     });
   }
 
-  /* El tono de la insignia, sacado del TEXTO con el vocabulario de normativa:
-     SELLADO y Sellado conforme, ABIERTO en atención, Vigente en información y
-     Abierta —una decisión— en mal. Es una aproximación y lo sabe: la V6 declara
-     el tono EN LA FILA (D-02b «Abierta» va en mal y D-03d «Abierta» en
-     atención, c01fe9a:frontend/src/secciones/panel.ts:118-160), y una expresión
-     regular sobre el texto no puede decir eso. El tono como dato es el hueco 18
-     de hneyra/normativa#51. */
-  tono(t) {
+  /* El tono de la insignia, leído de TONOS: primero la fila —D-03d en
+     atención—, después el texto entero en minúsculas —Abierta en mal, ABIERTO
+     en atención, Vigente en información— y lo demás conforme. */
+  tono(t, fila) {
+    const primera = fila ? String(fila[0]) : '';
+    const deFila = TONOS.porFila.find((r) => r[0] === primera);
+    if (deFila) return deFila[1];
     const s = String(t).toLowerCase();
-    if (/^abierta$/.test(s)) return 'mal';
-    if (/^abierto$/.test(s)) return 'atencion';
-    if (/^vigente$/.test(s)) return 'info';
-    return 'ok';
+    const deTexto = TONOS.porTexto.find((r) => r[0] === s);
+    return deTexto ? deTexto[1] : TONOS.resto;
   }
   insignia(tono) {
     return 'display:inline-block; font-size:11.5px; font-weight:700; border-radius:999px; padding:3px 9px; white-space:nowrap; background:var(--' +
@@ -948,7 +991,7 @@ class Component extends DCLogic {
         filaStyle: 'background:' + (i % 2 ? 'var(--sup)' : 'var(--superficie)'),
         celdas: f.map((c, j) => {
           if (def.insignia !== undefined && j === def.insignia) {
-            return { texto: c, insignia: this.insignia(this.tono(c)) + '; margin:-2px 0', plano: false, style: 'padding:10px 14px; border-bottom:1px solid var(--linea-2)' };
+            return { texto: c, insignia: this.insignia(this.tono(c, f)) + '; margin:-2px 0', plano: false, style: 'padding:10px 14px; border-bottom:1px solid var(--linea-2)' };
           }
           return {
             texto: c, insignia: '', plano: true,
@@ -988,7 +1031,7 @@ class Component extends DCLogic {
     const TD2 = 'padding:9px 14px; font-size:12.5px; color:var(--tinta-2); border-bottom:1px solid var(--linea-2)';
 
     return {
-      entidad: this.props.entidad || 'Municipalidad Distrital de Catacaos',
+      barra: BARRA,
       /* El aviso de servicio de la V6 (c01fe9a:frontend/src/marco/Marco.tsx:58-61). */
       avisos: '1', avisosAria: '1 aviso del sistema',
       verAvisos: () => this.di('Esta municipalidad no tiene ningún conjunto de parámetros. Hasta que se componga y se selle uno, toda operación que calcule contestará que el ejercicio no está parametrizado, y lo dirá nombrando el año.'),
@@ -1028,7 +1071,7 @@ class Component extends DCLogic {
       filtro: s.filtro,
       onFiltro: (e) => this.setState({ filtro: e.target.value }),
       sinResultados: arbolFiltrado.length === 0,
-      /* PROPUESTA para G2: la V6 no tenía pie en el árbol. */
+      /* La V6 no tenía pie en el árbol: propuesto en #52 y aceptado en G2. */
       pieArbol: 'El módulo de este sistema y sus submódulos, de src/pantallas/arbol.ts. Los demás módulos son de otros sistemas (ADR-0029).',
 
       arbol: arbolFiltrado.map((x) => {
@@ -1088,7 +1131,9 @@ class Component extends DCLogic {
         return {
           aviso: editable
             ? 'Nada se escribe hasta que pulse Guardar.'
-            /* PROPUESTA para G2: la V6 no tenía pie de pantalla de sólo lectura. */
+            /* La V6 no tenía pie de pantalla de sólo lectura: propuesto en #52 y
+               aceptado en G2. Que Cuadros y Publicación salgan editables por su
+               selector y ofrezcan Limpiar/Guardar es N11, fundido en H14a. */
             : 'Los datos son los del conjunto que se pidió: lo sellado no cambia.',
           acciones: acciones.map((a) => ({
             label: a[0],

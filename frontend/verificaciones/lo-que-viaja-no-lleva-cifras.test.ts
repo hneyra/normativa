@@ -1,16 +1,27 @@
 // @vitest-environment node
 //
 // Lee el artboard V8 y el Dockerfile, y compara texto. No es un DOM lo que necesita.
+//
+// El nombre del archivo dice cifras y desde hneyra/normativa#76 vigila tambien los literales de
+// sesion: es la guarda de LO QUE VIAJA, y renombrarla perderia su historia en el registro.
 
 import { describe, expect, it } from 'vitest';
 
 import {
   FORMAS_DE_CIFRA,
+  LITERALES_DE_SESION,
+  MARCADOR_DE_SESION,
   artboardDeclarado,
   cadenasQueBuscaElDockerfile,
   type Artboard,
 } from './artboards.ts';
-import { artboardV8, ejemplosDe, loQueViaja, type CadenaDelArtboard } from './artboard-v8.ts';
+import {
+  artboardV8,
+  ejemplosDe,
+  huecosDeSesion,
+  loQueViaja,
+  type CadenaDelArtboard,
+} from './artboard-v8.ts';
 
 /**
  * **Ninguna cifra del corpus en lo que el artboard V8 manda a `src/`** (hneyra/normativa#52, AC 3).
@@ -36,6 +47,17 @@ import { artboardV8, ejemplosDe, loQueViaja, type CadenaDelArtboard } from './ar
  * opcion legitima de un desplegable (`ediciones.ts:134` de la V6) y no una cifra del corpus. Que el
  * ejercicio no se escriba como literal en `src/` es otra leccion, con otro dueño (hneyra/normativa#63,
  * #66 y #68).
+ *
+ * <h2>Y ningun literal de municipalidad ni de cuenta (hneyra/normativa#76)</h2>
+ *
+ * G2 decidio que la entidad de la barra es la municipalidad **de la sesion**, resuelta por su UBIGEO,
+ * y la cuenta la **de la sesion**. Es la misma propiedad que la de las cifras con otro sujeto: un
+ * dato que se PIDE no se escribe. «Municipalidad Distrital de Catacaos» escrita en la barra la
+ * veria cualquier municipalidad que no fuera Catacaos, y ninguna prueba sobre los valores lo notaria:
+ * `rentas` la tuvo en su marco hasta su I-1 (`rentas@ac379ac:frontend/src/datos/servidas.ts:20-21`).
+ * Asi que aqui se exigen dos cosas: los cuatro sitios de la barra que rellena la sesion son
+ * marcadores (`{…}`), y nada de lo que viaja —la barra, las notas, las instrucciones— nombra una
+ * municipalidad ni una cuenta.
  */
 
 /** El artboard que se comprueba. Se busca dentro de cada `it`. */
@@ -120,6 +142,51 @@ describe('lo que el artboard V8 manda a src/ no lleva cifras del corpus', () => 
         `${enUnaLinea(hallazgos)}\n\n` +
         '  Un ejemplo que se escribe tambien en el texto deja de ser ejemplo: viaja a src/ y se\n' +
         '  lee como real. En un sistema de parametros eso es publicar una cifra sin firmas.',
+    ).toEqual([]);
+  });
+
+  it('EL CENTINELA de la sesion: la barra trae sus cuatro huecos de sesion y hay formas que buscar', () => {
+    // Sin esto, una barra sin `cuenta` o una lista de formas vacia dejarian las dos de abajo en
+    // verde sin mirar nada.
+    const artboard = v8();
+    expect(huecosDeSesion(artboard).map((h) => h.donde)).toEqual([
+      'barra · entidad',
+      'barra · cuenta · iniciales',
+      'barra · cuenta · nombre',
+      'barra · cuenta · nota',
+    ]);
+    expect(
+      loQueViaja(artboard).filter((c) => c.donde.startsWith('barra · ')).length,
+      'la barra no viaja: la busqueda de literales no la miraria',
+    ).toBe(5);
+    expect(LITERALES_DE_SESION.length).toBeGreaterThan(0);
+  });
+
+  it('la entidad y la cuenta de la barra son marcadores de dato de sesion, no un literal', () => {
+    const noSonMarcador = huecosDeSesion(v8())
+      .filter(({ texto }) => !MARCADOR_DE_SESION.test(texto))
+      .map(({ donde, texto }) => `  ${donde}: «${texto}»`);
+    expect(
+      noSonMarcador,
+      'La barra del artboard V8 escribe un dato de sesion como literal:\n' +
+        `${enUnaLinea(noSonMarcador)}\n\n` +
+        '  G2 (hneyra/normativa#52): la entidad es la municipalidad DE LA SESION, resuelta por su\n' +
+        '  UBIGEO, y la cuenta es la DE LA SESION. En el artboard va un marcador entre llaves.',
+    ).toEqual([]);
+  });
+
+  it('y ninguna cadena que viaja nombra una municipalidad ni una cuenta', () => {
+    const hallazgos = loQueViaja(v8()).flatMap(({ donde, texto }) =>
+      LITERALES_DE_SESION.filter(([forma]) => forma.test(texto)).map(
+        ([, que]) => `  ${donde}: ${que} en «${texto}»`,
+      ),
+    );
+    expect(
+      hallazgos,
+      'El texto que el artboard V8 manda a src/ lleva un literal de sesion:\n' +
+        `${enUnaLinea(hallazgos)}\n\n` +
+        '  La municipalidad y la cuenta se PIDEN a la sesion (hneyra/normativa#54, #57 y #64).\n' +
+        '  Escritas, las ve igual cualquier municipalidad y cualquier cuenta.',
     ).toEqual([]);
   });
 });

@@ -79,8 +79,8 @@ export const ARTBOARDS: readonly Artboard[] = [
   },
   {
     archivo: 'diseno/NormativaV8.dc.html',
-    que: 'El artboard NUEVO: un modulo, cuatro submodulos y cuatro pantallas con la gramatica de RentasV8. Es contra el que se reconstruye la interfaz (hneyra/normativa#58).',
-    deDonde: 'derivado de RentasV8@ac379ac + NormativaV6@c01fe9a en hneyra/normativa#52',
+    que: 'El artboard NUEVO: un modulo, cuatro submodulos y cuatro pantallas con la gramatica de RentasV8, con las decisiones de G2 aplicadas (hneyra/normativa#76). Es contra el que se reconstruye la interfaz (hneyra/normativa#58).',
+    deDonde: 'derivado de RentasV8@ac379ac + NormativaV6@c01fe9a en hneyra/normativa#52, con G2 aplicada en hneyra/normativa#76',
     cuentas: {
       modulos: 1,
       hojas: 4,
@@ -114,6 +114,56 @@ export const ARTBOARDS: readonly Artboard[] = [
  * no es una cadena con forma de cifra, pero lleva una.
  */
 export const FORMAS_DE_CIFRA: readonly RegExp[] = [/^\d+\.\d{2}$/, /^\d{1,3}(?:,\d{3})+\.\d{2}$/];
+
+/**
+ * **Lo que el dueño decidió en G2** (hneyra/normativa#52, 2026-09-15; aplicado en hneyra/normativa#76),
+ * como dato: lo que `el-artboard-dice-lo-que-cuenta` exige al artboard.
+ *
+ * - `titulo`: «Sistema de Gestión de Rentas y Tributos Municipales», o «SGRTM» si no cabia. Cabe:
+ *   medido en #76 con Chromium sobre la barra del propio artboard, a su `$preview` de 1440 px la
+ *   barra queda en una fila y el titulo entero; no se parte hasta 1094 px ni se trunca por encima de
+ *   554 px. Si un dia se cambia por «SGRTM», se cambia aqui y el PR dice la medida nueva.
+ * - `trazosDelModulo`: **exactamente** `ICONOS.balanza` de `@kamayuk/ui`, leidos de
+ *   `kamayuk-lib@c6f6361:paquetes/ui/iconos.ts:64-70` (`origin/main` al escribirlo). Van copiados y
+ *   no importados porque `@kamayuk/ui` no esta enlazado todavia (`link:` de hneyra/normativa#55); la
+ *   comparacion contra el paquete entra en hneyra/normativa#58, como la de la paleta.
+ */
+export const DECIDIDO_EN_G2 = {
+  titulo: 'Sistema de Gestión de Rentas y Tributos Municipales',
+  trazosDelModulo: [
+    'M12 4.4v3.2',
+    'M5 8.6h14',
+    'M5 8.6 2.8 14.4h4.4z',
+    'M19 8.6 16.8 14.4h4.4z',
+    'M8.4 20h7.2',
+  ],
+} as const;
+
+/**
+ * **La forma de un marcador de dato de sesion**: el texto entero entre llaves, `{cuenta de la sesión}`.
+ *
+ * G2 decidio que la entidad de la barra es la municipalidad **de la sesion**, resuelta por su UBIGEO,
+ * y la cuenta la **de la sesion**. En el artboard eso se escribe como marcador, y un marcador no se
+ * confunde con un nombre: lleva llaves, que ningun nombre de municipalidad ni de persona lleva.
+ */
+export const MARCADOR_DE_SESION = /^\{[^{}]+\}$/;
+
+/**
+ * **Lo que delata un literal de municipalidad o de cuenta** en un texto que viaja a `src/`, con el
+ * motivo que dice el rojo.
+ *
+ * La primera es la forma de CUALQUIER nombre de municipalidad —«Municipalidad Distrital de …»,
+ * «Provincial», «Metropolitana»—, no solo el de Catacaos: la leccion es que la entidad no se escribe,
+ * y una lista de nombres dejaria pasar el siguiente. Las demas son los literales que ya estuvieron
+ * escritos en una barra: el de la V6 (`c01fe9a:frontend/src/marco/BarraGlobal.tsx:70-76`) y el de
+ * `RentasV8.dc.html@ac379ac:67`.
+ */
+export const LITERALES_DE_SESION: readonly (readonly [forma: RegExp, que: string])[] = [
+  [/\bMunicipalidad\s+(?:Distrital|Provincial|Metropolitana)\b/iu, 'el nombre de una municipalidad'],
+  [/Catacaos/iu, 'la municipalidad que la V6 y RentasV8 escribian en la barra'],
+  [/Neyra Alama/iu, 'la cuenta que la V6 escribia en la barra'],
+  [/Cárdenas Vega/iu, 'la cuenta que RentasV8 escribia en la barra'],
+];
 
 /** El artboard declarado cuyo archivo acaba en `sufijo`. Lanza si no esta en la lista. */
 export function artboardDeclarado(sufijo: string): Artboard {
