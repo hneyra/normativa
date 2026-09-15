@@ -229,12 +229,35 @@ export type BloqueDelArtboard =
   | readonly [string, string, readonly CampoDelArtboard[]]
   | readonly [string, string, readonly CampoDelArtboard[], TablaDelArtboard];
 
+/**
+ * `const BARRA`: la barra global que G2 decidio (hneyra/normativa#76).
+ *
+ * `titulo` viaja a `src/` como texto; `entidad` y los tres de `cuenta` son marcadores de dato de
+ * sesion; las dos notas son del artboard y no viajan.
+ */
+export interface BarraDelArtboard {
+  readonly titulo: string;
+  readonly entidad: string;
+  readonly notaEntidad: string;
+  readonly cuenta: { readonly iniciales: string; readonly nombre: string; readonly nota: string };
+  readonly notaCuenta: string;
+}
+
+/** `const TONOS`: el tono de una insignia, por la primera celda de su fila o por su texto. */
+export interface TonosDelArtboard {
+  readonly porTexto: readonly (readonly [texto: string, tono: string])[];
+  readonly porFila: readonly (readonly [primeraCelda: string, tono: string])[];
+  readonly resto: string;
+}
+
 /** Las constantes que las guardas leen. */
 export interface ArtboardV8 {
   /** El texto entero, para las guardas que buscan cadenas en el archivo. */
   readonly html: string;
   readonly propio: string;
   readonly raiz: string;
+  readonly barra: BarraDelArtboard;
+  readonly tonos: TonosDelArtboard;
   readonly arbol: readonly ModuloDelArtboard[];
   readonly pantallas: Readonly<Record<string, readonly BloqueDelArtboard[]>>;
   readonly instrucciones: Readonly<Record<string, string>>;
@@ -270,6 +293,8 @@ export function artboardV8(artboard: Artboard): ArtboardV8 {
     html,
     propio: String(propio),
     raiz: String(constanteDelArtboard(html, 'RAIZ')),
+    barra: constanteDelArtboard(html, 'BARRA') as unknown as BarraDelArtboard,
+    tonos: constanteDelArtboard(html, 'TONOS') as unknown as TonosDelArtboard,
     arbol: constanteDelArtboard(html, 'ARBOL', { PROPIO: propio }) as readonly ModuloDelArtboard[],
     pantallas: constanteDelArtboard(html, 'PANTALLAS') as Readonly<
       Record<string, readonly BloqueDelArtboard[]>
@@ -315,15 +340,23 @@ const coordenada = (hoja: string, indice: number, bloque: BloqueDelArtboard): st
  * un desplegable, la ayuda de un campo que se escribe y el texto de una casilla, y de cada tabla
  * su titulo, sus columnas, su nota y su accion.
  *
+ * **Y la barra global** (hneyra/normativa#76), que no es de `tipos.ts` sino de la configuracion del
+ * `Armazon` de `@kamayuk/shell`: su titulo viaja como texto, y la entidad y la cuenta viajan como el
+ * hueco que la sesion rellena. Van aqui para que un literal que se cuele en cualquiera de las cinco
+ * lo vea la misma guarda que ve una cifra en una nota. Las notas de los marcadores no viajan.
+ *
  * **No** viajan —desde `rentas`#97— el valor de un campo de solo lectura, las filas `f` ni el
  * conteo `cn`: son ejemplo, y los devuelve {@link ejemplosDe}.
  */
 export function loQueViaja(artboard: Artboard): readonly CadenaDelArtboard[] {
-  const { arbol, pantallas, instrucciones } = artboardV8(artboard);
+  const { arbol, pantallas, instrucciones, barra } = artboardV8(artboard);
   const salida: CadenaDelArtboard[] = [];
   const anotar = (donde: string, texto: string): void => {
     if (texto !== '') salida.push({ donde, texto });
   };
+
+  anotar('barra · titulo', barra.titulo);
+  for (const { donde, texto } of huecosDeSesion(artboard)) anotar(donde, texto);
 
   for (const modulo of arbol) {
     anotar(`arbol · modulo «${modulo[2]}» · rotulo`, modulo[0]);
@@ -361,6 +394,41 @@ export function loQueViaja(artboard: Artboard): readonly CadenaDelArtboard[] {
     });
   }
   return salida;
+}
+
+/**
+ * **Los cuatro sitios de la barra que rellena la sesion**: la entidad y el nombre, las iniciales y la
+ * nota de la cuenta. Tienen que ser marcadores (G2), y los devuelve con su coordenada.
+ */
+export function huecosDeSesion(artboard: Artboard): readonly CadenaDelArtboard[] {
+  const { entidad, cuenta } = artboardV8(artboard).barra;
+  return [
+    { donde: 'barra · entidad', texto: String(entidad) },
+    { donde: 'barra · cuenta · iniciales', texto: String(cuenta.iniciales) },
+    { donde: 'barra · cuenta · nombre', texto: String(cuenta.nombre) },
+    { donde: 'barra · cuenta · nota', texto: String(cuenta.nota) },
+  ];
+}
+
+/**
+ * **El tono con que el artboard pinta una insignia**, leido de su `const TONOS` con la misma regla que
+ * su `tono(t, fila)`: primero la primera celda de la fila, despues el texto entero en minusculas, y si
+ * no, `resto`.
+ *
+ * Es la unica logica del artboard que se repite aqui, y es a proposito una tabla de busqueda y no una
+ * expresion regular: lo que el artboard y esta funcion comparten es el DATO, y la regla que lo recorre
+ * cabe en tres lineas que se leen de un vistazo en los dos sitios.
+ */
+export function tonoDeLaInsignia(
+  artboard: Artboard,
+  texto: string,
+  fila: readonly string[],
+): string {
+  const { porFila, porTexto, resto } = artboardV8(artboard).tonos;
+  const deFila = porFila.find(([primera]) => primera === fila[0]);
+  if (deFila !== undefined) return deFila[1];
+  const deTexto = porTexto.find(([valor]) => valor === texto.toLowerCase());
+  return deTexto === undefined ? resto : deTexto[1];
 }
 
 /**

@@ -4,7 +4,12 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { artboardDeclarado, type Artboard, type CuentasDelArtboardV8 } from './artboards.ts';
+import {
+  DECIDIDO_EN_G2,
+  artboardDeclarado,
+  type Artboard,
+  type CuentasDelArtboardV8,
+} from './artboards.ts';
 import {
   artboardV8,
   bloquesDelArtboard,
@@ -31,6 +36,14 @@ import {
  * sigue pintando. Se busca literal, frase a frase, y cada una se comprobo presente en
  * `RentasV8.dc.html@ac379ac` al escribir esta lista: una frase que el original no tuviera seria
  * una busqueda que no puede fallar.
+ *
+ * <h2>Y lo que decidio G2 (hneyra/normativa#76)</h2>
+ *
+ * El titulo de la barra y el icono del modulo eran propuestas en #52 y hoy son decisiones. Una
+ * decision que el artboard puede perder sin que nada lo diga no esta tomada: se compara contra
+ * `DECIDIDO_EN_G2`, que dice de donde sale cada cosa. Los marcadores de sesion los vigila
+ * `lo-que-viaja-no-lleva-cifras`, que es la guarda de lo que viaja; el tono de D-03d,
+ * `los-ejemplos-son-los-de-la-v6`, que es la que compara con la V6.
  */
 
 /** El artboard que se comprueba. Se busca dentro de cada `it`: si no esta declarado, rojo alli. */
@@ -152,6 +165,25 @@ describe('el artboard V8 dice lo que artboards.ts cuenta de el', () => {
     expect(propio).toBe('Normativa');
     expect(raiz).toBe('/normativa/api/v1');
     expect(arbol.map((m) => m[0])).toEqual(['Normativa']);
+  });
+
+  it('la barra lleva el titulo que decidio G2', () => {
+    expect(
+      artboardV8(v8()).barra.titulo,
+      'El titulo de la barra no es el decidido en G2 (hneyra/normativa#52). Si se cambia por\n' +
+        '  «SGRTM» porque dejo de caber, se cambia DECIDIDO_EN_G2 con la medida nueva.',
+    ).toBe(DECIDIDO_EN_G2.titulo);
+  });
+
+  it('y el modulo se dibuja con los trazos de ICONOS.balanza, exactamente', () => {
+    const { arbol } = artboardV8(v8());
+    expect(arbol.length, 'el arbol no trae modulos').toBeGreaterThan(0);
+    expect(
+      arbol.map((m) => m[4]),
+      'Los trazos del modulo no son los de `ICONOS.balanza` (G2). El catalogo de `rentas`\n' +
+        '  (`rentas@ac379ac:frontend/src/catalogo.ts:51-56`) busca el icono por sus trazos exactos y\n' +
+        '  lanza si no esta en ICONOS: un trazo que no es el de la libreria no se puede portar.',
+    ).toEqual([DECIDIDO_EN_G2.trazosDelModulo]);
   });
 
   it('EL CENTINELA de la lista: el archivo se leyo y hay frases de rentas que buscar', () => {

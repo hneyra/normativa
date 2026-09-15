@@ -5,6 +5,11 @@
 > Cada cita lleva un fragmento literal de su línea y **lo comprueba** `node frontend/diseno/comprobar-huecos.mjs`:
 > si una línea se mueve o se copió mal, sale en rojo nombrando la entrada. No corre en CI (el
 > `checkout` superficial no trae `c01fe9a`): se corre en local.
+>
+> **Conciliado el 2026-09-15** con los doce huecos que [hneyra/normativa#52](https://github.com/hneyra/normativa/issues/52)
+> encontró al derivar `NormativaV8.dc.html` (N1–N12, [comentario en #51](https://github.com/hneyra/normativa/issues/51#issuecomment-5660090605)),
+> en [hneyra/normativa#76](https://github.com/hneyra/normativa/issues/76): diez se funden en la entrada que ya
+> los decía y dos son entradas nuevas. La tabla está en [N1–N12, conciliados](#n1n12-conciliados).
 
 Es la entrada de [`kamayuk-lib`#61](https://github.com/hneyra/kamayuk-lib/issues/61) —lo genérico que
 `normativa` necesita y [`kamayuk-lib`#44](https://github.com/hneyra/kamayuk-lib/issues/44) no cubre— y de
@@ -53,8 +58,9 @@ opciones fijas. **Es un hueco** todo lo demás.
   - **El punto de extensión de KL#44**, en la hoja que lo implementa, para lo propio.
   - La hoja (normativa#65 a #68), o **no renace**, con el motivo.
 
-Los números de hueco 1 a 35 son los de la tabla de hneyra/normativa#51; del 36 en adelante son los que
-aparecieron al recorrer las cuatro hojas.
+Los números de hueco 1 a 35 son los de la tabla de hneyra/normativa#51; del 36 al 48 son los que
+aparecieron al recorrer las cuatro hojas, y H49 y H50 son los dos de N1–N12 que no tenían entrada. Una entrada que
+absorbió un N lo dice en el índice y en un párrafo **N… (#52)** con su cita.
 
 ## Índice
 
@@ -66,7 +72,9 @@ aparecieron al recorrer las cuatro hojas.
 | [H04a](#h04a--pasos-en-pestanas) | Pasos en pestañas, y cuáles se ofrecen | ediciones | genérico | KL#44 (reparto: #67) |
 | [H04b](#h04b--los-tres-actos-de-la-edicion) | Abrir, agregar y sellar como flujo | ediciones | propio | extensión, normativa#68 |
 | [H05a](#h05a--acto-con-observacion-y-cuerpo-compuesto) | El acto con observación y el cuerpo compuesto de sus campos | ediciones | genérico | KL#44 (reparto: #66) |
-| [H05b](#h05b--obligatorio-u-opcional-por-campo) | Obligatorio u opcional por campo, con su mensaje | ediciones | genérico | KL#61 |
+| [H05b](#h05b--obligatorio-u-opcional-por-campo) | Obligatorio u opcional por campo, con su mensaje (y N3, N4) | ediciones | genérico | KL#61 |
+| [H49](#h49--ayuda-en-un-desplegable) | Ayuda en un desplegable (N2) | ediciones | genérico | KL#44 (reparto: #65) |
+| [H50](#h50--ayuda-en-un-campo-de-solo-lectura) | Ayuda en un campo de sólo lectura (N1) | ediciones | genérico | KL#61 |
 | [H06](#h06--compuerta-con-un-motivo) | La compuerta con UN motivo, dicho en tres sitios | ediciones | genérico | KL#44 (reparto: #66) |
 | [H07](#h07--errores-tras-el-primer-intento) | Errores sólo tras el primer intento | ediciones | genérico | KL#61 |
 | [H08](#h08--impedido-con-aria-disabled) | `aria-disabled` con motivo, nunca `disabled` | ediciones, publicacion | genérico | KL#44 (reparto: #66) |
@@ -76,7 +84,7 @@ aparecieron al recorrer las cuatro hojas.
 | [H12](#h12--error-total-y-error-parcial) | Error total frente a error parcial | ediciones | genérico | KL#44 |
 | [H13a](#h13a--parametro-global-del-marco) | Un parámetro global del marco que gobierna las lecturas | las cuatro | genérico | KL#44 (reparto: #67) |
 | [H13b](#h13b--opciones-propias-escritas-en-src) | Ejercicios y tipos de parámetro escritos en `src/` | ediciones | propio | extensión, normativa#68 |
-| [H14a](#h14a--selector-que-gobierna-una-lectura) | Un selector local que gobierna una lectura | cuadros, publicacion | genérico | KL#44 (reparto: #67) |
+| [H14a](#h14a--selector-que-gobierna-una-lectura) | Un selector local que gobierna una lectura, y no hace la hoja editable (N11) | cuadros, publicacion | genérico | KL#44 (reparto: #67) |
 | [H14b](#h14b--los-dos-ambitos) | Los dos ámbitos del snapshot | cuadros, publicacion | propio | extensión, normativa#66 |
 | [H15](#h15--lecturas-encadenadas) | Lecturas encadenadas | ediciones, cuadros, publicacion | genérico | normativa#66 |
 | [H16](#h16--texto-que-depende-del-dato) | Texto que depende del dato | panel, ediciones, publicacion | genérico | KL#44 |
@@ -87,7 +95,7 @@ aparecieron al recorrer las cuatro hojas.
 | [H21](#h21--tablas-grandes) | Tablas de decenas de miles de filas | cuadros | genérico | KL#61 |
 | [H22a](#h22a--celda-nula-con-palabra-y-nota) | Celda nula con su palabra y su nota | ediciones, cuadros, publicacion | genérico | KL#61 |
 | [H22b](#h22b--tramo-abierto) | «Sin tope» y «Más de N años» | cuadros | propio | extensión, normativa#66 |
-| [H23](#h23--cabecera-con-campo-y-dominio) | Cabecera con el campo JSON y su dominio | cuadros, publicacion | genérico | KL#61 |
+| [H23](#h23--cabecera-con-campo-y-dominio) | Cabecera o etiqueta con el campo JSON y su dominio (N5) | cuadros, publicacion | genérico | KL#61 |
 | [H24](#h24--que-significa-un-cuadro-vacio) | Qué significa un cuadro vacío: cuatro estados | cuadros | propio | extensión, normativa#66 |
 | [H25](#h25--dominio-comprobado-sobre-lo-llegado) | El dominio comprobado sobre lo llegado | cuadros | propio | extensión, normativa#66 |
 | [H26](#h26--vacio-con-su-salida) | El vacío con su acción dentro | las cuatro | genérico | KL#61 |
@@ -107,12 +115,12 @@ aparecieron al recorrer las cuatro hojas.
 | [H36](#h36--estados-de-una-lectura) | Cada lectura espera en su sitio | panel, ediciones, cuadros | genérico | KL#44 |
 | [H37](#h37--aviso-efimero-tras-un-acto) | Aviso efímero tras un acto | ediciones, publicacion | genérico | KL#61 |
 | [H38](#h38--la-hoja-se-marca-sucia-al-teclear) | La hoja se marca sucia al teclear | ediciones | genérico | KL#61 |
-| [H39](#h39--pie-de-operaciones) | El pie que dice qué operaciones sirven la hoja | panel, publicacion | genérico | KL#44 |
-| [H40](#h40--nota-al-pie-del-bloque) | Nota al pie de un bloque | las cuatro | genérico | KL#44 |
-| [H41](#h41--aviso-fijo-con-titulo) | Aviso fijo con título, dentro de la hoja | ediciones, cuadros | genérico | KL#44 |
-| [H42](#h42--insignias-fijas-en-la-cabecera) | Insignias y ruta en la cabecera de un bloque | cuadros, publicacion | genérico | KL#61 |
-| [H43](#h43--texto-con-marcas) | Texto con marcas (`code`, `strong`) | panel, cuadros, publicacion | genérico | KL#61 |
-| [H44](#h44--documento-fuente-de-las-filas) | El documento fuente, sacado de las filas | cuadros | propio | extensión, normativa#66 |
+| [H39](#h39--pie-de-operaciones) | El pie que dice qué operaciones sirven la hoja, y el pie de pantalla (N9) | panel, publicacion | genérico | KL#44 |
+| [H40](#h40--nota-al-pie-del-bloque) | Nota al pie de un bloque, y más de una nota (N12) | las cuatro | genérico | KL#44 |
+| [H41](#h41--aviso-fijo-con-titulo) | Aviso fijo con título y varios párrafos, dentro de la hoja (N7) | ediciones, cuadros | genérico | KL#44 |
+| [H42](#h42--insignias-fijas-en-la-cabecera) | Insignias y ruta en la cabecera de un bloque (N10) | cuadros, publicacion | genérico | KL#61 |
+| [H43](#h43--texto-con-marcas) | Texto con marcas (`code`, `strong`) (N6) | panel, cuadros, publicacion | genérico | KL#61 |
+| [H44](#h44--documento-fuente-de-las-filas) | El documento fuente, sacado de las filas, y la tabla y el ámbito constantes (N8) | cuadros | propio | extensión, normativa#66 |
 | [H45](#h45--bloque-de-una-sola-pestana) | Nota, pie y bloque de una sola pestaña | cuadros | genérico | KL#44 (reparto: #67) |
 | [H46](#h46--accion-en-cada-fila) | Una acción en cada fila | panel | genérico | KL#44 (reparto: #65) |
 | [H47](#h47--cuantas-trae-cada-lista-y-por-que) | Cuántas filas trae cada lista y por qué | publicacion | propio | extensión, normativa#67 |
@@ -389,6 +397,11 @@ y `atencion` en un cuadro que su ámbito lleva (`:203`). El mismo texto, dos ton
 `rentas@ac379ac:frontend/diseno/RentasV8.dc.html:1267-1268` saca el tono de una expresión regular con vocabulario de
 `rentas`, y con ella «SELLADO» y «ABIERTO» salen los dos `ok`.
 
+**En el artboard V8 (#76).** D-02b y D-03d dicen las dos «Abierta» y la V6 las pinta en `mal` y en `atencion`. El
+artboard de #52 lo sacaba del texto y pintaba D-03d en `mal`; G2 lo devolvió a `atencion`, y el artboard lo dice con
+`TONOS.porFila`, una excepción por la primera celda de la fila que la gramática de `PANTALLAS` no tiene. Es el
+síntoma de esta entrada, no su arreglo: en `src/` lo trae el tono como dato, no una copia de esa tabla.
+
 ### H34 · `filas-de-contenido-que-viajan`
 
 **Hojas** `nor-panel`, `nor-publicacion` · **genérico** · **Renace en** KL#61
@@ -429,6 +442,11 @@ consumen los contratos y cuáles nadie.
 {"tipo":"pie","lee":["GET /recursos/{id}"],"falta":"Ningún conteo por registro lo publica operación alguna."}
 ```
 
+**N9 (#52).** El artboard V8 no tiene pie de **pantalla**: lo que va debajo de las acciones es el aviso del armazón, no
+texto de la hoja. El del Panel —«Lo que no está aquí no está en ninguna respuesta»— se queda fuera
+(`c01fe9a:frontend/src/secciones/Panel.tsx:327` `` Lo que no está aquí no está en ninguna respuesta ``). Es el mismo
+pie de arriba dicho de toda la hoja, y por eso se funde aquí.
+
 ### H40 · `nota-al-pie-del-bloque`
 
 **Hojas** las cuatro · **genérico** · **Renace en** KL#44 (`nota-al-pie-del-bloque`)
@@ -443,6 +461,13 @@ Lo que hay que saber para leer la tabla o las cifras de arriba va debajo, fuera 
 ```json
 {"titulo":"Contenido","nota":"","campos":[],"tabla":{"titulo":"Filas","columnas":[]},"pie":"«Hasta» vacío no es un olvido: es un tramo sin fin."}
 ```
+
+**N12 (#52).** Y un bloque de la V6 lleva **más de una** nota. La cabecera de cada cuadro tiene la suya
+(`c01fe9a:frontend/src/secciones/Cuadros.tsx:100` `` <p className="kn-seccion__nota">{cuadro.nota}</p> ``), debajo
+la prosa «Es nacional y no de esta municipalidad…» (`c01fe9a:frontend/src/secciones/Cuadros.tsx:108` `` Es nacional y no de esta municipalidad ``)
+y junto al selector la nota del ámbito (`c01fe9a:frontend/src/secciones/Cuadros.tsx:241` `` <span className="kn-seccion__ambito-nota"> ``).
+El bloque V8 tiene una sola `nota` y el artboard V8 se queda con la primera: la segunda es este pie, y la del selector
+va con el selector (H14a).
 
 ### H41 · `aviso-fijo-con-titulo`
 
@@ -459,6 +484,12 @@ lleva»— o un párrafo que ocupa el sitio de la tabla cuando el conjunto está
 ```json
 {"tipo":"aviso","tono":"atencion","titulo":"De qué grupo es este cuadro","texto":["Esta operación no lo dice.","Sin el grupo no se puede usar."]}
 ```
+
+**N7 (#52).** Los dos párrafos son dos a propósito —qué no dice la operación, y por qué sin eso el cuadro no se
+puede usar—, y la nota de un bloque V8 es una cadena: el artboard V8 los une en uno
+(`c01fe9a:frontend/src/secciones/Cuadros.tsx:320` `` <strong>Esta operación no lo dice.</strong> `` y
+`c01fe9a:frontend/src/secciones/Cuadros.tsx:330` `` Un cuadro de valores unitarios sin su región no se puede usar ``).
+Por eso `texto` es una lista en la forma de arriba.
 
 ### H43 · `texto-con-marcas`
 
@@ -479,6 +510,10 @@ La prosa lleva nombres de restricción, de columna o de ruta en `<code>` y lo qu
 **Por qué es un hueco.** `nota` e `instruccion` son cadenas planas, y con el texto como dato (i18next, clave en
 castellano) una marca dentro de la frase no puede ser JSX suelto.
 
+**N6 (#52).** Al derivar el artboard V8 cada `<code>` y cada `<strong>` de una nota se aplanó a texto (su regla R3):
+`conjunto_uq`, `?ambito=valuacion` o `ETag` se leen allí como palabras sueltas
+(`c01fe9a:frontend/src/secciones/Publicacion.tsx:277` `` El <code>sha256</code> no viene dentro del cuerpo ``).
+
 ### H42 · `insignias-fijas-en-la-cabecera`
 
 **Hojas** `nor-cuadros`, `nor-publicacion` · **genérico** · **Renace en** KL#61
@@ -497,6 +532,10 @@ que se pidió, a la derecha.
 
 **Por qué KL#61.** La cabecera con insignias de `catastro` es la del detalle de un maestro-detalle (KL#67); aquí es
 la de un bloque cualquiera, y `dato-con-insignia` (KL#65) pinta un dato, no una marca fija.
+
+**N10 (#52).** El artboard V8 las pierde todas —«Sólo lectura», «Nacional (ADR-0017)», «200» y el «404» de la
+respuesta que no llega (`c01fe9a:frontend/src/secciones/Publicacion.tsx:444` `` <Insignia tono="atencion">404</Insignia> ``)—:
+un bloque V8 es título, nota, campos y tabla, y ninguno de los cuatro lleva una marca.
 
 ## Campos y actos
 
@@ -578,6 +617,52 @@ marcador y su ayuda, y su mensaje cuando falta.
 **Por qué KL#61.** El marcador es `marcador` de KL#65. `acto-con-observacion` (KL#66) nace apagado con «Falta
 rellenar: …», pero ni #65 ni #66 dicen cómo se declara un campo **opcional** ni su mensaje: #66 sólo fija como dato
 los límites de la observación. Si #66 lo trae, se usa y KL#61 no lo repite.
+
+**N3 y N4 (#52).** Al derivar el artboard V8 salieron las dos mitades de esta entrada. **N3**: el marcador distinto de
+la ayuda no cabe, porque el intérprete pinta la ayuda como marcador —«Por qué se abre esta versión»
+(`c01fe9a:frontend/src/secciones/ediciones.ts:201` `` observacionDe('observacionAbrir', 'Por qué se abre esta versión'), ``)
+y «Vacía si el tipo tiene un solo valor» (`c01fe9a:frontend/src/secciones/ediciones.ts:230` `` ph: 'Vacía si el tipo tiene un solo valor', ``)
+se pierden—; eso es `marcador` de KL#65. **N4**: «Clave» es opcional (`c01fe9a:frontend/src/secciones/ediciones.ts:229` `` opcional: true, ``)
+y su ayuda no dice «opcional» (`c01fe9a:frontend/src/secciones/ediciones.ts:231` `` ayuda: 'La UIT no lleva clave. ``), y el
+artboard deduce lo opcional de `/opcional/i` sobre la ayuda: en el V8 «Clave» no lleva «(opcional)». Es exactamente el
+`opcional` como dato que esta entrada pide a KL#61.
+
+### H49 · `ayuda-en-un-desplegable`
+
+**Hoja** `nor-ediciones` · **genérico** · **Renace en** KL#44 (reparto: #65, `ayuda-en-una-lista`) · **N2** de #52
+
+«Ejercicio», en «Abrir versión», es un desplegable **con su ayuda debajo**: el rango, y por qué salirse de él es un
+422 que nombra el rango y no «ese ejercicio no está sellado». En la gramática V8 el tercer elemento de un campo `s`
+son sus opciones, y la ayuda no tiene sitio: el artboard V8 la pierde.
+
+- `c01fe9a:frontend/src/secciones/ediciones.ts:189` `` tipo: 'sel', ``
+- `c01fe9a:frontend/src/secciones/ediciones.ts:190` `` opciones: EJERCICIOS, ``
+- `c01fe9a:frontend/src/secciones/ediciones.ts:192` `` 'Entre 1990 y 2100. Fuera de rango lo rechaza el constructor del ejercicio ``
+- `c01fe9a:frontend/src/secciones/Ediciones.tsx:506` `` ayuda={campo.ayuda} ``
+
+```json
+{"etiqueta":"Periodo","tipo":"s","opciones":["A","B"],"ayuda":"Fuera de los admitidos lo rechaza el servidor nombrando el rango."}
+```
+
+**Por qué KL#44.** Es `ayuda-en-una-lista` de `catastro`, que KL#65 sube tal cual.
+
+### H50 · `ayuda-en-un-campo-de-solo-lectura`
+
+**Hoja** `nor-ediciones` · **genérico** · **Renace en** KL#61 (nuevo: no está entre sus H1-H13, y `ayuda-en-una-lista` de KL#65 es sólo de desplegables) · **N1** de #52
+
+«Estado», «Usuario que selló» y «Versión que se asignará» son de sólo lectura **y llevan ayuda**: qué dos valores
+hay y en qué dirección se pasa, por qué el sello queda con nombre, quién calcula la versión. En la gramática V8 el
+tercer elemento de un campo `r` es su valor de ejemplo, que desde `rentas`#97 no viaja: la ayuda no tiene sitio, y en
+el artboard V8 «Versión que se asignará» lleva como valor una frase que es su ayuda.
+
+- `c01fe9a:frontend/src/secciones/ediciones.ts:160` `` ayuda: 'ABIERTO o SELLADO. Son dos y el paso entre ellos va en una sola dirección.', ``
+- `c01fe9a:frontend/src/secciones/ediciones.ts:165` `` etiqueta: 'Usuario que selló', ``
+- `c01fe9a:frontend/src/secciones/ediciones.ts:168` `` 'El acto administrativo del que cuelga la reproducibilidad del ejercicio queda con ' + ``
+- `c01fe9a:frontend/src/secciones/ediciones.ts:199` `` ayuda: 'La última del ejercicio más uno. La calcula el servidor.', ``
+
+```json
+{"etiqueta":"Estado","tipo":"r","ayuda":"Uno de dos, y el paso entre ellos va en una sola dirección."}
+```
 
 ### H06 · `compuerta-con-un-motivo`
 
@@ -876,6 +961,12 @@ PUERTAS`, `A … J`).
 {"columnas":[{"rotulo":"Partida","campo":"partida","dominio":"A · B · C","alineadoDerecha":false},{"rotulo":"Valor","campo":"valor","alineadoDerecha":true}]}
 ```
 
+**N5 (#52).** Lo mismo en la etiqueta de un campo, no sólo en la cabecera de una columna: «Conjunto `conjuntoId`»
+(`c01fe9a:frontend/src/secciones/Publicacion.tsx:176` `` Conjunto <code>conjuntoId</code> ``), «Ámbito `ambito`»
+(`c01fe9a:frontend/src/secciones/Publicacion.tsx:192` `` Ámbito <code>ambito</code> ``) y «Ámbito del snapshot `ambito`»
+(`c01fe9a:frontend/src/secciones/Cuadros.tsx:222` `` Ámbito del snapshot <code>ambito</code> ``). La etiqueta de un
+campo V8 es una cadena, y el artboard V8 deja sólo el rótulo. La forma es la misma: `{"etiqueta":"Conjunto","campo":"conjuntoId"}`.
+
 ### H24 · `que-significa-un-cuadro-vacio`
 
 **Hoja** `nor-cuadros` · **propio** · **Renace en** el punto de extensión de KL#44, en normativa#66
@@ -944,6 +1035,13 @@ avisa de que el cuadro mezcla dos ediciones.
 {"pieza":"fuenteDelCuadro","clave":"normativa.fuente-del-cuadro"}
 ```
 
+**N8 (#52).** En la misma ficha, «Tabla» y «Ámbito que la lleva» no son datos servidos sino **constantes del cuadro**
+(`c01fe9a:frontend/src/secciones/Cuadros.tsx:278` `` <dt>Tabla</dt> ``, `c01fe9a:frontend/src/secciones/Cuadros.tsx:280` `` <code>{cuadro.tabla}</code> ``,
+`c01fe9a:frontend/src/secciones/Cuadros.tsx:284` `` <dt>Ámbito que la lleva</dt> `` y `c01fe9a:frontend/src/secciones/Cuadros.tsx:285` `` <dd>{cuadro.ambito}</dd> ``).
+En la gramática V8 el valor de un campo `r` es un ejemplo y no viaja (`rentas`#97), así que en `src/` quedarían «—».
+Lo pone la misma pieza que saca el documento fuente —o la hoja, en `DatosDeLaPantalla.valores` (H10)—, y como nombra
+una tabla y un ámbito es propio: no hay nada que pedirle a la librería.
+
 ### H46 · `accion-en-cada-fila`
 
 **Hoja** `nor-panel` · **genérico** · **Renace en** KL#44 (reparto: #65, `acciones-por-fila`; el destino, `navegar-a-otra-hoja` de #66)
@@ -995,6 +1093,12 @@ Dos botones exclusivos con `aria-pressed` eligen un parámetro de la lectura; ca
 
 **Observación.** El texto dice que el ámbito «no tiene valor por omisión» (`c01fe9a:frontend/src/secciones/Cuadros.tsx:243` `` omisión y no se lee en minúsculas ``):
 lo dice del backend. La pantalla empieza en `VALUACION`, marcado.
+
+**N11 (#52).** Y el selector **no hace editable la hoja**. En la gramática V8 sólo cabe como campo `s`, y
+`seEscribe(tipo)` cuenta como escrito todo lo que no es `r` (`kamayuk-lib@c6f6361:paquetes/ui/shadcn/campos.ts:53`):
+Cuadros y Publicación, que son de sólo lectura, salen en el artboard V8 con «Limpiar» y «Guardar» al pie en vez de
+«Exportar» e «Imprimir». La V6 lo dice al revés (`c01fe9a:frontend/src/secciones/Cuadros.tsx:111` `` aquí no hay ningún ``
+control que guarde nada). Declarado como parámetro de la lectura y no como campo, deja de contar, y por eso se funde aquí.
 
 ### H14b · `los-dos-ambitos`
 
@@ -1187,6 +1291,38 @@ motivo de que venga llena o vacía en ese ámbito.
 {"pieza":"queVieneYQueNo","clave":"normativa.que-viene-y-que-no"}
 ```
 
+## N1–N12, conciliados
+
+Los doce que [hneyra/normativa#52](https://github.com/hneyra/normativa/issues/52) encontró al derivar
+`NormativaV8.dc.html` y que la tabla de #51 no recogía ([comentario en #51](https://github.com/hneyra/normativa/issues/51#issuecomment-5660090605),
+detalle en el cuerpo de #73). Conciliados en [hneyra/normativa#76](https://github.com/hneyra/normativa/issues/76):
+**diez se funden** en la entrada que ya decía lo mismo —con su párrafo **N… (#52)** y su cita dentro— y **dos son
+entradas nuevas**. La clase y el destino son los de la entrada en la que quedan.
+
+| N | Hueco (#51) | Cita en `c01fe9a` | Clase | Queda en | Renace en |
+|---|---|---|---|---|---|
+| N1 | Ayuda en un campo de sólo lectura | `c01fe9a:frontend/src/secciones/ediciones.ts:199` `` ayuda: 'La última del ejercicio más uno. `` | genérico | **H50**, nueva | KL#61 |
+| N2 | Ayuda en un desplegable | `c01fe9a:frontend/src/secciones/ediciones.ts:192` `` 'Entre 1990 y 2100. `` | genérico | **H49**, nueva | KL#44 (reparto: #65, `ayuda-en-una-lista`) |
+| N3 | Un marcador distinto de la ayuda | `c01fe9a:frontend/src/secciones/ediciones.ts:230` `` ph: 'Vacía si el tipo tiene un solo valor', `` | genérico | se funde en H05b | KL#61 (el `marcador`, KL#65) |
+| N4 | Un campo opcional cuya ayuda no dice «opcional» | `c01fe9a:frontend/src/secciones/ediciones.ts:229` `` opcional: true, `` | genérico | se funde en H05b | KL#61 |
+| N5 | El nombre del campo JSON junto a la etiqueta | `c01fe9a:frontend/src/secciones/Publicacion.tsx:176` `` Conjunto <code>conjuntoId</code> `` | genérico | se funde en H23 | KL#61 |
+| N6 | Código en línea dentro de una nota | `c01fe9a:frontend/src/secciones/Publicacion.tsx:277` `` El <code>sha256</code> no viene `` | genérico | se funde en H43 | KL#61 |
+| N7 | Dos párrafos en una nota | `c01fe9a:frontend/src/secciones/Cuadros.tsx:330` `` Un cuadro de valores unitarios sin su región `` | genérico | se funde en H41 | KL#44 (`aviso`) |
+| N8 | Un valor constante en un campo de sólo lectura no viaja | `c01fe9a:frontend/src/secciones/Cuadros.tsx:284` `` <dt>Ámbito que la lleva</dt> `` | propio | se funde en H44 | el punto de extensión de KL#44, en normativa#66 |
+| N9 | Pie de pantalla | `c01fe9a:frontend/src/secciones/Panel.tsx:327` `` Lo que no está aquí no está en ninguna respuesta `` | genérico | se funde en H39 | KL#44 (`pie-de-operaciones`) |
+| N10 | Insignias en la cabecera de un bloque | `c01fe9a:frontend/src/secciones/Cuadros.tsx:102` `` <Insignia tono="info">Sólo lectura</Insignia> `` | genérico | se funde en H42 | KL#61 |
+| N11 | Una hoja de sólo lectura con un selector se lee como editable | `c01fe9a:frontend/src/secciones/Cuadros.tsx:111` `` aquí no hay ningún `` | genérico | se funde en H14a | KL#44 (reparto: #67) |
+| N12 | Una sola nota por bloque | `c01fe9a:frontend/src/secciones/Cuadros.tsx:108` `` Es nacional y no de esta municipalidad `` | genérico | se funde en H40 | KL#44 (`nota-al-pie-del-bloque`) |
+
+**Por qué N8 es propio y N1 no.** N1 le serviría a cualquier sistema con una ficha de sólo lectura. N8 no pide nada
+a la librería: el valor cabe en `DatosDeLaPantalla.valores` (H10), y lo que falta es que alguien lo ponga, y ese valor
+nombra una tabla y un ámbito de `normativa`.
+
+**Lo que G2 decidió y no es un hueco.** El escudo no se porta, el título es «Sistema de Gestión de Rentas y Tributos
+Municipales» y el icono del módulo es `balanza` de `ICONOS`: están en el artboard y no piden nada al intérprete. La
+entidad y la cuenta son marcadores de sesión (hneyra/normativa#54, #57 y #64). El tono de D-03d, en cambio, **sí** es
+un hueco y ya tenía entrada: es H18, y el artboard lo pinta con una excepción por fila que la gramática no tiene.
+
 ## Lo que la V6 aprendió y dónde renace
 
 Las guardas de la V6 salen con ella en hneyra/normativa#50; **lo que cada una midió** tiene dónde renacer. Las diez
@@ -1217,7 +1353,7 @@ primeras son las de la épica; las demás salieron de recorrer los huecos.
 
 ## Cifras
 
-Contadas sobre las **57 entradas** de arriba: **42 genéricas** y **15 propias**.
+Contadas sobre las **59 entradas** de arriba —las 57 de #51 y H49 y H50 de N1–N12—: **44 genéricas** y **15 propias**.
 
 - **Hojas que se expresan enteras con la gramática que sube en `kamayuk-lib`#27, sin lo de #44: 0 de 4.**
 - **Hojas que necesitan algo genérico: 4 de 4.**
@@ -1228,15 +1364,17 @@ Por hoja, sin contar H10 (que cabe):
 | Hoja | Genéricos | de ellos, KL#44 y su reparto | KL#61 | KL#57 | en la hoja | Propios |
 |---|---|---|---|---|---|---|
 | `nor-panel` | 12 | 9 (H11, H13a, H16, H18, H27, H36, H39, H40, H46) | 3 (H26, H34, H43) | 0 | 0 | 2 (H17, H19) |
-| `nor-ediciones` | 25 | 13 (H03, H04a, H05a, H06, H08, H12, H13a, H16, H18, H35a, H36, H40, H41) | 10 (H01, H02, H05b, H07, H22a, H26, H35b, H37, H38, H48) | 1 (H09) | 1 (H15) | 3 (H04b, H13b, H19) |
+| `nor-ediciones` | 27 | 14 (H03, H04a, H05a, H06, H08, H12, H13a, H16, H18, H35a, H36, H40, H41, H49) | 11 (H01, H02, H05b, H07, H22a, H26, H35b, H37, H38, H48, H50) | 1 (H09) | 1 (H15) | 3 (H04b, H13b, H19) |
 | `nor-cuadros` | 15 | 7 (H13a, H14a, H20, H36, H40, H41, H45) | 6 (H21, H22a, H23, H26, H42, H43) | 1 (H32a) | 1 (H15) | 7 (H14b, H22b, H24, H25, H32b, H33, H44) |
 | `nor-publicacion` | 19 | 7 (H08, H13a, H14a, H16, H18, H27, H40) | 8 (H22a, H23, H26, H30a, H34, H37, H42, H43) | 2 (H28, H32a) | 2 (H15, H29b) | 7 (H14b, H29a, H30b, H31, H32b, H33, H47) |
 
 **Con todo lo que #44 cubre** (#44, #65, #66 y #67) **siguen sin caber las cuatro**: a cada una le queda al menos un
-hueco de KL#61. Los genéricos que #44 no cubre son **16 para KL#61** y **3 para KL#57**; de los de KL#61, los que
+hueco de KL#61. Los genéricos que #44 no cubre son **17 para KL#61** y **3 para KL#57**; de los de KL#61, los que
 más hojas piden son `vacio-con-su-salida` (4), `texto-con-marcas` (3) y `celda-nula-con-palabra-y-nota` (3).
 Con KL#61 y KL#57 cerrados, lo que queda en cada hoja es propio —por el punto de extensión— más las dos lecturas
 que cada sistema conecta (H15) y la huella que KL#57 devolvió (H29b).
 
-**Si hneyra/normativa#52 declara algo que la gramática V8 no expresa y no está aquí**, lo añade como entrada con su
-cita: cuando se escribió esto, #52 no estaba en `main`.
+**hneyra/normativa#52 ya está en `main`** (se mezcló en #73, `dbd5d29`, después que este documento), y lo que declaró
+que la gramática V8 no expresa está conciliado arriba, en [N1–N12, conciliados](#n1n12-conciliados) (hneyra/normativa#76).
+Lo que salga de derivar o de montar una hoja y no esté aquí entra como entrada nueva con su cita, o se funde en la que
+ya lo diga.
