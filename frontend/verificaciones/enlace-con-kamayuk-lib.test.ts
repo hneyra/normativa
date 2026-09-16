@@ -15,9 +15,11 @@ import { enlacesDeclarados, problemasDelEnlace } from './enlace.ts';
  * **El primer clon hermano del frontend de `normativa`** (#115).
  *
  * **Calcado de `rentas/frontend/verificaciones/enlace-con-kamayuk-lib.test.ts` en `ac379ac`**, donde
- * nacio con `rentas`#74. Aqui el primer `link:` fue `@kamayuk/verificaciones` (#115), y no por
- * eleccion: de ahi salen las nueve prohibiciones de ESLint (`rentas`#137), asi que sin el clon
- * hermano **no hay lint**. Los cinco de ejecucion llegaron con `normativa`#55.
+ * nacio con `rentas`#74. Alli el primer `link:` fue `@kamayuk/verificaciones` (`rentas`#115), y no
+ * por eleccion: de ahi salen las nueve prohibiciones de ESLint (`rentas`#137), asi que sin el clon
+ * hermano **no hay lint**. Aqui el orden fue el contrario —los cinco de ejecucion con #55, y las
+ * prohibiciones en #62, cuando `kamayuk-lib`#58 hizo que derivarlas no costara ninguna—, y el
+ * resultado es el mismo: los SEIS.
  *
  * <h2>Las dos mitades, y por que hacen falta las dos</h2>
  *
@@ -73,12 +75,14 @@ describe('el enlace con el clon hermano esta bien puesto', () => {
       '@kamayuk/sesion',
       '@kamayuk/shell',
       '@kamayuk/ui',
-      // **Y no hay un sexto todavia, a proposito.** `rentas` y `catastro` enlazan ademas
-      // `@kamayuk/verificaciones` en `devDependencies`, que es de donde sacan sus prohibiciones de
-      // ESLint. Aqui siguen siendo las DIEZ propias de `normativa` hasta #62: la lista de la
-      // libreria lleva los nombres de importe de `rentas` y no tiene `cifra-tributaria-literal`,
-      // asi que adoptarla hoy DEBILITARIA el lint (decision de la epica #47). Cuando #62 lo
-      // cambie, este rojo es lo que obliga a decirlo aqui.
+      // **Y el SEXTO, desde #62**, que es el unico que no entra en el paquete: de el salen las
+      // nueve prohibiciones de ESLint del producto y la opcional `cifra-tributaria-literal`, que
+      // este sistema enciende y ningun otro. Hasta #62 las diez estaban escritas en este arbol, y
+      // adoptar la lista de la libreria habria costado nombres de cifra; lo desbloqueo
+      // `kamayuk-lib`#58, que las hizo una union. Es ademas el enlace que hace falta ANTES que
+      // ninguno: sin el clon hermano no hay `yarn lint`, porque `eslint.config.js` lo carga en su
+      // primera linea.
+      '@kamayuk/verificaciones',
     ]);
     // Y todos apuntan al mismo clon hermano: tres rutas a tres sitios distintos serian tres
     // dependencias que mantener, no una.

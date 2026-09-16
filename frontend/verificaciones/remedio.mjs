@@ -14,10 +14,11 @@
  * sale con **codigo 0** y no enlaza nada, de modo que el primer sintoma aparece dos pasos despues
  * y no se parece a su causa.
  *
- * **Aqui el `eslint.prohibiciones.mjs` todavia NO importa de la libreria** —las diez prohibiciones
- * siguen siendo las propias hasta #62—, asi que el `.mjs` no hace falta para ESLint: hace falta
- * igual, y se calca tal cual, porque `enlace.ts` y `especificadores.ts` lo importan los dos y el
- * dia que #62 entre no tiene que moverse nada. Calcado de
+ * **Y desde #62 aqui pasa exactamente lo mismo que en `rentas`**: `eslint.prohibiciones.mjs`
+ * importa `@kamayuk/verificaciones/prohibiciones` del clon hermano, asi que este `.mjs` ya no hace
+ * falta «igual» sino por su motivo original. Se calco tal cual con #55 —cuando las diez
+ * prohibiciones todavia eran propias y ESLint no lo necesitaba— precisamente para que el dia que
+ * #62 entrara no hubiera que mover nada, y no hubo que moverlo. Calcado de
  * `rentas/frontend/verificaciones/remedio.mjs` en `ac379ac` (#55), con el nombre de este clon.
  */
 

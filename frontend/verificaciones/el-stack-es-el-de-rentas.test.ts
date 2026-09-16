@@ -33,16 +33,19 @@ import { describe, expect, it } from 'vitest';
  * un PR que lo diga, con el `sha` nuevo y la lista nueva juntos. Si el stack de `rentas` cambia,
  * se sigue, pero nunca en silencio.
  *
- * <h2>Lo que queda fuera, y hasta cuando</h2>
+ * <h2>Lo que queda fuera, y hasta cuando: ya no queda ninguno</h2>
  *
- * **Los cinco `@kamayuk/*` de ejecucion ya estan**: los enchufo #55, junto con `preserveSymlinks`,
+ * **Los cinco `@kamayuk/*` de ejecucion entraron con #55**, junto con `preserveSymlinks`,
  * `resolucion.ts`, los `@source` de `src/estilos.css` y el contexto con nombre de la imagen. Ese
  * dia esta prueba salio roja —«@kamayuk/api entra con #55»— y ese PR los movio de
  * {@link ENTRAN_DESPUES} a la lista, que es exactamente lo que esta guarda existe para obligar.
  *
- * El que queda es `@kamayuk/verificaciones`, y entra con #62: es cuando las prohibiciones dejan de
- * ser las diez propias. Sigue en {@link ENTRAN_DESPUES} con su issue, y **tambien es parte de la
- * guarda**: el dia que entre, esto se pone rojo y ese PR lo mueve.
+ * **Y el sexto, `@kamayuk/verificaciones`, entro con #62**, que es cuando las diez prohibiciones
+ * dejaron de ser un fork y pasaron a derivarse de la libreria. Esta guarda volvio a salir roja
+ * —«@kamayuk/verificaciones entra con #62»— y ese PR lo movio igual. Asi que
+ * {@link ENTRAN_DESPUES} queda **vacio**, y es correcto que se vea asi: no hay ningun `@kamayuk/*`
+ * de `rentas` que este arbol no declare. El dia que `rentas` anada un septimo, lo que sale rojo es
+ * la comparacion de arriba, con un `-` que lo nombra.
  */
 
 /** De donde se copio la lista. Cambiarlo es cambiar la lista, en el mismo PR. */
@@ -83,6 +86,11 @@ const EL_STACK_DE_RENTAS: Readonly<Record<Seccion, Readonly<Record<string, strin
   },
   devDependencies: {
     '@eslint/js': '^9.39.0',
+    // El sexto, y el unico que no entra en el paquete: de aqui salen las nueve prohibiciones de
+    // ESLint del producto y la opcional que este sistema enciende (#62). Entro cuando la libreria
+    // publico los nombres de cifra como union y `cifra-tributaria-literal` como opcional
+    // (`kamayuk-lib`#58); antes de eso, derivar habria debilitado el lint.
+    '@kamayuk/verificaciones': 'link:../../kamayuk-lib/paquetes/verificaciones',
     '@playwright/test': '^1.63.0',
     '@tailwindcss/vite': '^4.3.3',
     '@testing-library/dom': '^10.4.0',
@@ -107,20 +115,19 @@ const EL_STACK_DE_RENTAS: Readonly<Record<Seccion, Readonly<Record<string, strin
   },
 };
 
-/** Los que `rentas` declara y aqui entran despues, cada uno con su seccion, su rango y su issue. */
+/**
+ * Los que `rentas` declara y aqui entran despues, cada uno con su seccion, su rango y su issue.
+ *
+ * **Vacio desde #62, y es el final del camino que #55 empezo.** El ultimo que quedaba era
+ * `@kamayuk/verificaciones`, y entro cuando las prohibiciones dejaron de ser un fork. Se deja el
+ * mapa —y la prueba que lo ejerce— porque es el sitio donde se declara el siguiente: `rentas` es
+ * el que va delante, y cada `@kamayuk/*` que anada llega aqui con su issue antes que con su
+ * `yarn add`. Mientras este vacio, quien vigila que no falte ninguno es la comparacion de arriba,
+ * que saca un `-` por cada dependencia que `rentas` declara y este manifiesto no.
+ */
 const ENTRAN_DESPUES: Readonly<
   Record<string, { readonly seccion: Seccion; readonly rango: string; readonly issue: string }>
-> = {
-  // Uno solo desde #55, y es el que NO entra en el paquete: trae las prohibiciones de ESLint, que
-  // aqui siguen siendo las DIEZ propias. La lista de la libreria lleva los nombres de importe de
-  // `rentas` y no tiene `cifra-tributaria-literal` —la novena, que es de este repositorio—, asi
-  // que adoptarla hoy debilitaria el lint. Es la diferencia deliberada de la epica #47.
-  '@kamayuk/verificaciones': {
-    seccion: 'devDependencies',
-    rango: 'link:../../kamayuk-lib/paquetes/verificaciones',
-    issue: '#62',
-  },
-};
+> = {};
 
 /** El motor que `rentas` declara en `engines.node`, en el mismo `sha`. */
 const EL_MOTOR_DE_RENTAS = '>=22';
@@ -172,7 +179,22 @@ describe(`el stack es el de rentas@${RENTAS_EN.slice(0, 7)}, version a version`,
     const entradas =
       Object.keys(EL_STACK_DE_RENTAS.dependencies).length +
       Object.keys(EL_STACK_DE_RENTAS.devDependencies).length;
-    expect(entradas, 'la lista de rentas tiene 43 entradas; con 35 o menos alguien la vacio').toBeGreaterThan(35);
+    expect(entradas, 'la lista de rentas tiene 44 entradas; con 35 o menos alguien la vacio').toBeGreaterThan(35);
+    // Y los SEIS `@kamayuk/*` estan los seis desde #62. Es lo que sustituye al centinela que
+    // `ENTRAN_DESPUES` era mientras tenia algo dentro: con el mapa vacio, la prueba de mas abajo
+    // recorre cero elementos, y esta linea es la que dice que eso es porque ya entraron todos.
+    const delHermano = [
+      ...Object.keys(EL_STACK_DE_RENTAS.dependencies),
+      ...Object.keys(EL_STACK_DE_RENTAS.devDependencies),
+    ].filter((nombre) => nombre.startsWith('@kamayuk/'));
+    expect(delHermano.sort(), 'los seis `@kamayuk/*` de rentas, y el sexto entro con #62').toEqual([
+      '@kamayuk/api',
+      '@kamayuk/formato',
+      '@kamayuk/sesion',
+      '@kamayuk/shell',
+      '@kamayuk/ui',
+      '@kamayuk/verificaciones',
+    ]);
     // Un `sha` completo: uno corto se vuelve ambiguo con el tiempo, y entonces ya no dice de donde.
     expect(RENTAS_EN).toMatch(/^[0-9a-f]{40}$/);
     // Y el manifiesto se leyo de verdad, aqui dentro: un objeto vacio haria que la comparacion de
@@ -205,9 +227,14 @@ describe(`el stack es el de rentas@${RENTAS_EN.slice(0, 7)}, version a version`,
     ).toEqual([]);
   });
 
-  it('y el @kamayuk/* que falta no entra antes de su issue', () => {
+  it('y ningun @kamayuk/* entra antes de su issue — hoy no queda ninguno por entrar', () => {
     // Es la misma guarda que la de arriba —uno de estos anadido sale alli como «+»—, pero con el
     // remedio que le toca: no es un desvio de rentas sino el trabajo de otro issue empezado aqui.
+    //
+    // **Desde #62 recorre cero elementos**, porque los seis entraron ya, y eso lo dice el
+    // centinela de arriba —que nombra los seis— y no esta linea. Se queda porque es el mecanismo
+    // con el que llega el septimo: primero aparece aqui con su issue, y solo entonces en el
+    // manifiesto.
     const manifiesto = elManifiesto();
     const adelantados = Object.entries(ENTRAN_DESPUES)
       .filter(
@@ -220,9 +247,10 @@ describe(`el stack es el de rentas@${RENTAS_EN.slice(0, 7)}, version a version`,
       adelantados,
       'Un @kamayuk/* llego antes que el issue que lo enchufa:\n' +
         `${adelantados.join('\n')}\n\n` +
-        '  `@kamayuk/verificaciones` cambia de donde salen las prohibiciones: las diez propias\n' +
-        '  pasan a derivarse de la libreria (#62), y su lista no tiene `cifra-tributaria-literal`.\n' +
-        '  Ese PR lo mueve de ENTRAN_DESPUES a la lista, como #55 hizo con los cinco de ejecucion.',
+        '  Enchufar un paquete de la libreria no es un `yarn add`: trae su resolucion, su\n' +
+        '  `peerDependencies`, su sitio en la imagen y las guardas que lo vigilan. El PR de su\n' +
+        '  issue lo mueve de ENTRAN_DESPUES a la lista, como #55 hizo con los cinco de ejecucion\n' +
+        '  y #62 con `@kamayuk/verificaciones`.',
     ).toEqual([]);
   });
 

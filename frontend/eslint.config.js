@@ -18,9 +18,11 @@ import { PROHIBICIONES } from './eslint.prohibiciones.mjs';
  * tambien `verificaciones/reglas-de-eslint.test.ts`, que exige de cada una su muestra que
  * la viola. **Una regla que no puede fallar no protege nada.**
  *
- * Desde #50 este archivo es el de `rentas@ac379ac` con el nombre de este sistema. Lo que NO
- * se calca es de donde salen las prohibiciones: aqui siguen siendo las diez propias de
- * `normativa` hasta #62, y su cabecera dice por que.
+ * Desde #50 este archivo es el de `rentas@ac379ac` con el nombre de este sistema, y desde #62
+ * tambien lo es de donde salen las prohibiciones: `eslint.prohibiciones.mjs` las DERIVA de
+ * `@kamayuk/verificaciones`. Las dos diferencias que quedan con `rentas` estan medidas en la
+ * cabecera de aquel archivo: cuantas se encienden —diez aqui y nueve alli, porque este sistema
+ * enciende `cifra-tributaria-literal`— y que aqui `fetch` no se exceptua en ningun directorio.
  */
 
 /** Las prohibiciones que valen en todo el arbol. */
@@ -36,6 +38,12 @@ const EN_TODAS_PARTES = PROHIBICIONES.map(({ selector, message }) => ({ selector
  * `@kamayuk/verificaciones`: este bloque es el de `rentas@ac379ac`. Con la cadena que
  * `normativa` tenia hasta `c01fe9a`, `includes` buscaba una SUBCADENA y no un elemento; cuales
  * son los prefijos de aqui lo dice `DONDE_SE_LLAMA_A_FETCH`, en `eslint.prohibiciones.mjs`.
+ *
+ * **Y desde #62 esa lista esta VACIA**, asi que aqui no se monta ni un bloque de excepcion: este
+ * frontend no tiene cliente de API propio —lo pone `@kamayuk/api` (#55)— y no queda un solo
+ * `fetch` en `src/` (#57). El codigo se deja tal cual y no se simplifica: lo que decide si hay
+ * bloques o no es el dato, no este archivo, y el dia que aparezca un sitio donde `fetch` sea
+ * legitimo se declara alli y aqui no se toca nada.
  */
 const EXCEPCIONES = [...new Set(PROHIBICIONES.flatMap((p) => p.salvo ?? []))];
 
