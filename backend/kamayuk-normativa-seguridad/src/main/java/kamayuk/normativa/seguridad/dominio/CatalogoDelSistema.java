@@ -25,17 +25,17 @@ import java.util.List;
  *
  * <p>Hasta #53 habia <b>una</b> opcion, {@code SEGURIDAD/parametros}, y las cuatro hojas de la
  * interfaz nueva no tenian modulo propio del que colgar (epica #47). ADR-0043 §2 anade el modulo
- * {@code NORMATIVA} con <b>una sola</b> opcion, {@code conjuntos}, que es la que las tres lecturas
- * de conjuntos sellados declaran desde este mismo PR; las escrituras de #59 naceran sobre ella y
- * sin {@code oTambien}.
+ * {@code NORMATIVA} con <b>una sola</b> opcion, {@code conjuntos}, que es la que declaran desde
+ * este mismo PR las <b>cinco</b> lecturas de conjuntos y de su contenido; las escrituras de #59
+ * naceran sobre ella y sin {@code oTambien}.
  *
  * <p><b>{@code parametros} se queda donde esta</b>, en {@code SEGURIDAD} y con su nombre, y eso no
  * es conservadurismo: {@code SembradorDelCatalogo} siembra con {@code ON CONFLICT
  * (municipalidad_id, codigo) DO NOTHING}, asi que mover una opcion de modulo <b>no llega</b> a
  * ninguna base ya sembrada —la fila de {@code acceso} se queda con su {@code modulo_id} viejo— y
  * retirarla es {@code identidad}#16, que en {@code prod} dejo la replica de {@code rentas} parada
- * 20 horas ({@code identidad}#21). Las tres lecturas la siguen admitiendo por {@code oTambien}, asi
- * que quien solo tiene {@code parametros} sigue leyendo lo que leia.
+ * 20 horas ({@code identidad}#21). Las cinco lecturas la siguen admitiendo por {@code oTambien},
+ * asi que quien solo tiene {@code parametros} sigue leyendo lo que leia.
  *
  * <p>El nombre y el modulo estan transcritos de {@code
  * rentas/docs/10-negocio/catalogo-de-opciones.md}, que sigue siendo la fuente del manual. Se copian

@@ -41,10 +41,10 @@ import org.springframework.web.method.HandlerMethod;
  *
  * <p>{@code RequiereAcceso.oTambien} existe porque hay lecturas que dos opciones necesitan por
  * igual. Aqui el caso es el de #53: ADR-0043 §2 mete el modulo {@code NORMATIVA} con la opcion
- * {@code conjuntos}, y las tres lecturas de conjuntos sellados pasan a declararla como acceso
- * propio. Sin {@code oTambien}, esa reanotacion le quitaria el snapshot a quien lo lee <b>hoy</b>
- * con {@code parametros} —y {@code rentas} lo lee reenviando el {@code Authorization} de la persona
- * que calcula—, sin tocar ningun permiso y sin que nada lo dijera.
+ * {@code conjuntos}, y las CINCO lecturas de conjuntos —sellados o no— y de su contenido pasan a
+ * declararla como acceso propio. Sin {@code oTambien}, esa reanotacion le quitaria el snapshot a
+ * quien lo lee <b>hoy</b> con {@code parametros} —y {@code rentas} lo lee reenviando el {@code
+ * Authorization} de la persona que calcula—, sin tocar ningun permiso y sin que nada lo dijera.
  *
  * <p><b>Y es tambien el mecanismo con el que se puede abrir una puerta sin querer.</b> Una linea de
  * mas en una anotacion amplia el publico de una lectura sin tocar el catalogo de permisos, sin
@@ -71,14 +71,17 @@ class AccesosCompartidosTest {
      */
     private static final Map<String, Set<String>> LO_QUE_DOS_OPCIONES_CUBREN =
             Map.of(
-                    // ADR-0043 §2 — las TRES lecturas de conjuntos sellados. Su opcion propia pasa
-                    // a ser `conjuntos`, del modulo NORMATIVA del que cuelgan las cuatro hojas de
-                    // la interfaz nueva; `parametros` se queda como alternativa porque es lo que
-                    // hoy tiene concedido quien las lee, y `parametros` NO se retira ni se mueve
-                    // (SembradorDelCatalogo solo agrega; retirar es `identidad`#16, que dejo una
-                    // replica parada 20 h). No se ensancha que se ve: las tres leen el mismo
-                    // recurso —un conjunto sellado y su contenido—, y quien tiene `parametros`
-                    // leia ya las tres.
+                    // ADR-0043 §2 — las CINCO lecturas del mismo recurso: conjuntos y lo que llevan
+                    // dentro. Su opcion propia pasa a ser `conjuntos`, del modulo NORMATIVA del que
+                    // cuelgan las cuatro hojas de la interfaz nueva; `parametros` se queda como
+                    // alternativa porque es lo que hoy tiene concedido quien las lee, y NO se
+                    // retira ni se mueve (SembradorDelCatalogo solo agrega; retirar es
+                    // `identidad`#16, que dejo una replica parada 20 h). No se ensancha que se ve:
+                    // las cinco leen lo mismo, y quien tiene `parametros` las leia ya todas.
+                    //
+                    // Las ESCRITURAS de #59 nacen sobre `conjuntos` y SIN `oTambien`: darlas por la
+                    // alternativa seria dejar componer y sellar a todo el que tenga REGISTRO o
+                    // ESPECIAL sobre `parametros`.
                     //
                     // La lista de conjuntos por ejercicio y su estado.
                     "GET /seguridad/parametros",
@@ -90,6 +93,13 @@ class AccesosCompartidosTest {
                     // persona que calcula (`ClienteHttpDeNormativa`): sin la alternativa, esa
                     // persona deja de poder calcular el dia que se despliega esto.
                     "GET /conjuntos/{id}/snapshot",
+                    Set.of("parametros"),
+                    // Las dos de #56, que entro antes que este PR y las dejo sobre `parametros`
+                    // diciendolo: «ADR-0043 §2 la mueve a `conjuntos` con `oTambien = parametros`
+                    // cuando #53 declare el modulo NORMATIVA». Es aqui.
+                    "GET /conjuntos/{id}/parametros",
+                    Set.of("parametros"),
+                    "GET /parametros",
                     Set.of("parametros"));
 
     @BeforeEach
@@ -170,12 +180,12 @@ class AccesosCompartidosTest {
      *
      * <p>Se ejerce el guardia <b>de produccion</b> sobre las anotaciones <b>de produccion</b>: no
      * un controlador de prueba con dos opciones inventadas —eso ya lo mide {@code
-     * GuardiaDeAccesoTest}— sino las tres lecturas que este PR reanota. Es la unica forma de que
+     * GuardiaDeAccesoTest}— sino las lecturas que este PR reanota. Es la unica forma de que
      * quitarle el {@code oTambien} a una de ellas salga rojo aqui, y no en la municipalidad.
      */
     @Test
     @DisplayName(
-            "[AC-6] quien solo tiene `parametros` sigue leyendo las tres, y quien solo tiene"
+            "[AC-6] quien solo tiene `parametros` sigue leyendo las cinco, y quien solo tiene"
                     + " la opcion nueva tambien")
     void lasDosOpcionesAutorizanCadaLecturaCompartida() {
         for (String operacion : LO_QUE_DOS_OPCIONES_CUBREN.keySet()) {

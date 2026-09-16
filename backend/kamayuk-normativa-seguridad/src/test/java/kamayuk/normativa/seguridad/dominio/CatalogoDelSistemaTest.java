@@ -40,8 +40,8 @@ import org.junit.jupiter.api.Test;
  *
  * <p>Una opcion declarada <b>solo</b> como alternativa sigue siendo una opcion del catalogo: el
  * guardia la consulta igual que la propia, y sin fila en {@code acceso} no autorizaria a nadie. Sin
- * recogerla, ADR-0043 §2 pondria esta prueba roja diciendo que {@code parametros} «sobra» —las tres
- * lecturas lo declaran como alternativa y ninguna como acceso propio—, y no seria verdad. Se
+ * recogerla, ADR-0043 §2 pondria esta prueba roja diciendo que {@code parametros} «sobra» —las
+ * cinco lecturas lo declaran como alternativa y ninguna como acceso propio—, y no seria verdad. Se
  * reconocen sus <b>dos formas</b>: {@code oTambien = "x"} y {@code oTambien = {"x", "y"}}.
  *
  * <h2>Lo que el recorrido NO mira, y por que hace falta decirlo</h2>
