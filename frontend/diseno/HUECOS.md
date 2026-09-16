@@ -802,6 +802,17 @@ siguiente (`kamayuk-lib@942fb59:paquetes/shell/Armazon.tsx:147` dibuja la pantal
 tecleado se pierde al salir. `@kamayuk/shell` sólo pregunta antes de salir si la hoja se marcó sucia (`Armazon.tsx:174`,
 `:222`), y la V6 no preguntaba: conservaba. Las dos cosas no pueden ser verdad a la vez, y quien lo decide es KL#61.
 
+**Medido al cerrar [hneyra/normativa#58](https://github.com/hneyra/normativa/issues/58) (2026-09-16), y el choque es
+más grande de lo que decía el párrafo de arriba.** La librería **ya no dibuja la pantalla sin `key`**: desde
+`kamayuk-lib`#67, `paquetes/shell/Armazon.tsx` envuelve la llamada en `<Fragment key={hoja.destino.clave}>` y lo dice
+en su propio javadoc («sin ella, dos destinos cuya pantalla es el mismo componente en el mismo sitio comparten la
+instancia»). O sea que la `key` por destino ya está tomada **para las cuatro interfaces**, y no sólo aquí: la decisión
+de [`kamayuk-lib`#86](https://github.com/hneyra/kamayuk-lib/issues/86) AC-3 no es «ponerla o no», sino si hay que
+**retirarla o convivir con ella**. `normativa` pone además la suya en `src/pantallas/index.ts`, y el motivo está escrito
+ahí: `pantalla()` es una función pública de ese módulo, y quien la monte fuera del armazón no hereda la de la librería.
+Lo demuestra `frontend/verificaciones/la-hoja-no-hereda-lo-tecleado.test.tsx`, que mide las dos mitades por separado:
+quitar la de `src/` deja la mitad del armazón **en verde** y pone roja la del arnés.
+
 ### H37 · `aviso-efimero-tras-un-acto`
 
 **Hojas** `nor-ediciones`, `nor-publicacion` · **genérico** · **Renace en** KL#61
