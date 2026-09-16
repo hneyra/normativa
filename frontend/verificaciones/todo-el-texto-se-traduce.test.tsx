@@ -1,3 +1,4 @@
+import { peldanoDe } from '@kamayuk/sesion';
 import { TEXTOS_DEL_ARMAZON, type TextosDelArmazon } from '@kamayuk/shell';
 import { ProveedorDeTema, TEXTOS_DE_LA_UI } from '@kamayuk/ui';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
@@ -122,6 +123,30 @@ function sinTraducir(
 
 const DESTINOS = CATALOGO.flatMap((modulo) => modulo.destinos.map((destino) => destino.slug ?? destino.clave));
 
+/**
+ * **Lo que dice la ESCALERA, y por que se exime** (#63).
+ *
+ * Desde #63 el Panel pide de verdad, asi que montarlo dibuja el estado de sus dos lecturas. Aqui no
+ * hay backend: las dos fallan, y lo que sale es el peldano que `peldanoDe()` de `@kamayuk/sesion`
+ * resuelve — titulo, detalle y remedio.
+ *
+ * **Y ese texto no pasa por `t()` a proposito**, que es la parte que hay que decir para que la
+ * exencion no parezca un atajo: el peldano llega **ya en el idioma de la sesion**, del saco de
+ * `@kamayuk/sesion`, y el AC 4 de #63 prohibe expresamente una traduccion paralela en `normativa`
+ * —«Todo sale de `peldanoDe()`, sin una traduccion paralela»—. Traducirlo aqui seria tener dos
+ * verdades sobre la misma frase. Es la misma clase de exencion que ya tenia lo que contesta el
+ * emisor de identidad en la puerta caida, un poco mas abajo.
+ *
+ * Se computa llamando a `peldanoDe` y **no copiando sus frases**: una que la libreria reescriba
+ * entra sola, y esta guarda no se queda vieja afirmando la de ayer.
+ */
+const NO_CONTESTO = new TypeError('el arnes no deja salir ninguna peticion');
+
+function loQueDiceLaEscalera(): ReadonlySet<string> {
+  const peldano = peldanoDe(NO_CONTESTO);
+  return new Set([peldano.titulo, peldano.detalle, peldano.remedio]);
+}
+
 beforeAll(async () => {
   // Lo que jsdom no trae y las piezas del armazon piden. Sus motivos, en `@kamayuk/shell`.
   Element.prototype.scrollIntoView = () => {};
@@ -145,6 +170,11 @@ beforeAll(async () => {
     dispatchEvent: () => false,
   })) as typeof matchMedia;
 
+  // Ninguna peticion sale de aqui, y la que se intente falla IGUAL SIEMPRE. Sin esto, las dos
+  // lecturas del Panel corren contra `fetch` de Node y la pantalla se mide unas veces «pidiendo» y
+  // otras «fallo»: una guarda que depende de quien gane la carrera no dice nada de la pantalla.
+  globalThis.fetch = (() => Promise.reject(NO_CONTESTO)) as typeof fetch;
+
   await i18n.changeLanguage(IDIOMA_MARCADO);
 });
 
@@ -159,12 +189,20 @@ afterEach(() => {
   window.location.hash = '';
 });
 
-/** Monta la aplicacion con el hash ya puesto, y espera a que el marco este dibujado. */
+/**
+ * Monta la aplicacion con el hash ya puesto, y espera a que el marco este dibujado **y a que
+ * ninguna lectura siga en vuelo**.
+ *
+ * La segunda espera es de #63: con una lectura «pidiendo» la pantalla ensena barras, no el estado
+ * que haya de salir. Medir ahi daria verde sin haber mirado lo que la hoja dice cuando contesta —y
+ * daria verde o rojo segun la maquina, que es peor.
+ */
 async function abrir(slug: string): Promise<void> {
   window.location.hash = `#/${slug}`;
   render(<Aplicacion />);
   await waitFor(() => {
     expect(document.querySelector('[data-slot="barra-global"], header, nav')).not.toBeNull();
+    expect(document.querySelector('[data-estado-de-la-lectura="pidiendo"]')).toBeNull();
   });
 }
 
@@ -186,7 +224,7 @@ describe('ninguna cadena llega al DOM sin pasar por `t()`', () => {
 
   it.each(DESTINOS)('«%s» no ensena una sola cadena sin traducir, marco incluido', async (slug) => {
     await abrir(slug);
-    const escapadas = sinTraducir(document.body);
+    const escapadas = sinTraducir(document.body, loQueDiceLaEscalera());
     expect(
       escapadas,
       `«${slug}» dibuja texto que no paso por «t()»:\n` +
@@ -205,7 +243,7 @@ describe('ninguna cadena llega al DOM sin pasar por `t()`', () => {
       expect(screen.getByRole('dialog')).toBeTruthy();
     });
 
-    const escapadas = sinTraducir(document.body);
+    const escapadas = sinTraducir(document.body, loQueDiceLaEscalera());
     expect(
       escapadas,
       'La paleta de mando dibuja texto que no paso por «t()»:\n' +

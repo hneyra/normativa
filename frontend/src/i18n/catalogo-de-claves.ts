@@ -1,9 +1,10 @@
 import { FRASES_DE_LAS_ACCIONES } from '../acciones.ts';
+import { clavesDelPanel } from '../datos/panel.ts';
 import { FRASES_DE_LA_MARCA } from '../marca.ts';
 import { ARBOL } from '../pantallas/arbol.ts';
 import { PANTALLAS } from '../pantallas/definiciones/index.ts';
-import { AUSENCIA_SIN_CONECTAR } from '../pantallas/index.ts';
 import type { Modulo, Pantalla } from '../pantallas/tipos.ts';
+import { clavesDeLasAusencias } from '../porQueNoHayDato.ts';
 import { clavesDelMando } from '../preferencias/MandoDeTema.tsx';
 import { clavesDeLaPuerta } from '../puerta/AvisoDeLaPuerta.tsx';
 import { FRASES_DE_LA_SESION } from '../sesion.ts';
@@ -38,9 +39,11 @@ import { clavesDelMarco } from './textosDelMarco.ts';
  *
  * <h2>Lo que NO entra</h2>
  *
- * · **Los datos.** Un importe, una fecha, un `conjuntoId`. No hay ninguno todavia —las cuatro hojas
- *   se dibujan sin conectar (#63)— y cuando los haya no se traduciran: «S/ 9 418 204,60» no tiene
- *   traduccion, y el interprete ya los deja fuera de `traducir` por su cuenta.
+ * · **Los datos.** Un importe, una fecha, un `conjuntoId`. Desde #63 el Panel los trae de verdad, y
+ *   no se traducen: «S/ 9 418 204,60» no tiene traduccion, y el interprete ya los deja fuera de
+ *   `traducir` por su cuenta. Lo que SI entra es lo que este sistema **compone** con ellos —«El
+ *   ejercicio esta sellado: …»—, que es texto suyo aunque viaje por `valores`: por eso
+ *   `clavesDelPanel()` esta aqui abajo.
  * · **Los identificadores.** `clave`, `slug`, `codigo`, `tipo`, el verbo y la ruta de una operacion.
  *   El slug viaja al hash: traducirlo cambiaria la direccion de cada hoja.
  * · **Lo que dice el emisor de identidad.** `error` y `error_description` de una vuelta fallida son
@@ -69,6 +72,10 @@ function deLasPantallas(): readonly string[] {
       salida.push(tabla.titulo, ...tabla.columnas.map((c) => c.rotulo));
       if (tabla.nota !== undefined) salida.push(tabla.nota);
       if (tabla.accion !== undefined) salida.push(tabla.accion);
+      // El `vacio` de una tabla —«la lista contesto y no habia nada»— entra desde #63. Es una
+      // FRASE de la definicion, como la nota, y hasta ahora ninguna la traia: sin esto llegaria al
+      // DOM sin traducir y `todo-el-texto-se-traduce` lo diria, que es como se encontro.
+      if (tabla.vacio !== undefined) salida.push(tabla.vacio);
     }
   }
   return salida;
@@ -83,23 +90,17 @@ function delArbol(): readonly string[] {
   ]);
 }
 
-/**
- * Las frases con que el sistema explica que no hay dato.
- *
- * Hoy hay **una** y no tres como en `rentas`: aqui ninguna operacion esta conectada, asi que todas
- * las hojas dicen lo mismo. Sale de `src/pantallas/index.ts` y no de una copia, que es lo que hace
- * que el dia que #63 anada las otras dos entren solas.
- */
-function deLasAusencias(): readonly string[] {
-  return [AUSENCIA_SIN_CONECTAR.enElCampo, AUSENCIA_SIN_CONECTAR.explicacion];
-}
-
 /** El catalogo entero, sin repetidos y en orden. */
 export function catalogoDeClaves(): readonly string[] {
   const todas = new Set([
     ...deLasPantallas(),
     ...delArbol(),
-    ...deLasAusencias(),
+    // Las tres frases con que el sistema explica que no hay dato. Desde #63 son TRES y no una:
+    // «publicado y sin pedir», «ejercido y sin pedir» y «nada que pedir» no son lo mismo.
+    ...clavesDeLasAusencias(),
+    // Y las que compone el conector del Panel, que son texto de este sistema aunque viajen por
+    // `valores` —que el interprete no traduce— y por eso pasan por `t()` donde se componen.
+    ...clavesDelPanel(),
     ...clavesDelMarco(),
     ...clavesDelInterprete(),
     ...clavesDelMando(),

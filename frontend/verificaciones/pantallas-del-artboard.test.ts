@@ -16,7 +16,7 @@ import { describe, expect, it } from 'vitest';
 import { CLAVES_DE_HOJA, ARBOL } from '../src/pantallas/arbol.ts';
 import { CATALOGO } from '../src/catalogo.ts';
 import { PANTALLAS } from '../src/pantallas/definiciones/index.ts';
-import { tonoDeLaInsignia } from '../src/pantallas/index.ts';
+import { tonoDeLaInsignia } from '../src/pantallas/insignias.ts';
 import type { Modulo, Pantalla } from '../src/pantallas/tipos.ts';
 import { artboardDeclarado, type Artboard } from './artboards.ts';
 import {

@@ -91,6 +91,12 @@ const pantalla = crearPantalla(
   ((clave: string) => DOS_DEFINICIONES[clave] ?? DOS_DEFINICIONES['hoja-a']) as (
     clave: ClaveDeHoja,
   ) => Pantalla,
+  // Y los datos, tambien inyectados (#63). `useDatosDeLaHoja` cruzaria estas dos claves contra
+  // `hojaDe()`, que revienta a proposito con una que no este en el arbol —y estas dos no lo estan,
+  // que es justo lo que hace que la prueba pueda medir lo que mide—. Lo que se pasa es la ausencia
+  // sola: sin `explicacion` no se dibuja la alerta de arriba, asi que el arnes sigue siendo el
+  // campo y nada mas.
+  () => ({ ausencia: { enElCampo: 'sin dato', explicacion: '', tono: 'info' } }),
 );
 
 /** La hoja que el armazon le pasaria a `pantalla`. */

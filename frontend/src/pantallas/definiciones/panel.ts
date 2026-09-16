@@ -19,8 +19,21 @@ import type { Pantalla } from '../tipos.ts';
  * viven **solo** en el artboard, que no esta bajo `src/` y no lo importa una linea de produccion
  * (`rentas`#97). Lo que se conserva es la FORMA. Lo vigila `verificaciones/sin-cifras-inventadas`.
  *
- * Y **nada se rellena**: mientras ninguna operacion este conectada (#63), cada campo y cada tabla
- * dicen su ausencia con el motivo de `AUSENCIA_SIN_CONECTAR` (`src/pantallas/index.ts`).
+ * <h2>Y desde #63 esta hoja SI pide, que es lo unico que esta definicion gano</h2>
+ *
+ * Tres cosas, y ninguna es texto nuevo salvo el `vacio`:
+ *
+ *   · `lectura: { clave: 'ejercicio' }` en el primer bloque — su cuerpo es lo que contesta
+ *     `GET /seguridad/parametros/ejercicios/{ejercicio}`;
+ *   · `fallosDe: ['versiones']` — el fallo de `GET /seguridad/parametros` se dice **encima** y no
+ *     tapa el estado del ejercicio, porque son dos autorizaciones distintas;
+ *   · `clave` y `vacio` en su tabla — sus filas llegan por nombre, y una lista vacia es una
+ *     respuesta.
+ *
+ * Los bloques 2, 3 y 4 **siguen sin dato y es correcto**: ninguna operacion del backend publica ni
+ * las 33 filas del derivado, ni los 35 detalles, ni las diez filas sin archivo, ni las cuatro
+ * decisiones. Dicen «no publicado» con el motivo que redacta `src/datos/panel.ts`, y no se deducen
+ * de otra cosa — un numero deducido seria indistinguible de uno sellado.
  *
  * <h2>Lo que esta hoja NO dibuja todavia, dicho aqui y no descubierto luego</h2>
  *
@@ -37,6 +50,12 @@ export const PANEL = {
       {
         titulo: 'Estado del ejercicio',
         nota: 'Es lo que contesta GET /seguridad/parametros/ejercicios/{ejercicio}, la única de las cuatro operaciones que no exige el acceso «parametros». «No hay conjunto sellado» es una respuesta y llega como 200, no como 404.',
+        // El cuerpo de este bloque es lo que contesta la lectura del ESTADO. El fallo de la del
+        // LISTADO va encima y NO lo tapa: son dos autorizaciones distintas, y con un 403 en la
+        // segunda el estado del ejercicio sigue dibujado (#63, AC 2). Las dos claves son las de
+        // `src/datos/panel.ts`, y que sigan cuadrando lo comprueba `camino-a-la-api`.
+        lectura: { clave: 'ejercicio' },
+        fallosDe: ['versiones'],
         campos: [
           { etiqueta: 'Ejercicio', tipo: 'r' },
           { etiqueta: '¿Sellado?', tipo: 'r' },
@@ -55,6 +74,14 @@ export const PANEL = {
           ],
           nota: 'Puede haber varias del mismo año y no es un error: conjunto_uq lleva la versión, y la lectura ordena por versión y toma la última. La marcada es la que rige.',
           columnaDeInsignia: 4,
+          // Sus filas salen de `DatosDeLaPantalla.tablas` por este nombre, y no del indice del
+          // bloque: por indice solo caben `string[]`, y una celda nula tiene que poder decir
+          // `{ texto: null, nota }` — que es el AC 5 (#63).
+          clave: 'versiones',
+          // La lista CONTESTO y no habia ninguna de este ejercicio. Es una respuesta y no la
+          // ausencia: sin esto, una tabla vacia saldria con el aviso «sin motivo» del saco.
+          vacio:
+            'El listado contestó y ninguno de los conjuntos que devolvió es de este ejercicio. No es un fallo: es que todavía no se ha compuesto ninguno.',
         },
       },
       {
