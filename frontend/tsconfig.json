@@ -8,6 +8,12 @@
     // COMPILADOR —`@ts-expect-error` falla cuando no hay error— y sin esta linea `tsc` ni
     // lo abriria, asi que las barreras de tipo dejarian de comprobarse en silencio.
     "verificaciones/**/*.tsx",
+    // El arnes de navegador (#61). `rentas@ac379ac` lo deja FUERA de su `include` —con un
+    // comentario diciendo que volveria con su issue— y aqui entra desde el principio: Playwright
+    // transpila los `.spec.ts` **sin comprobar tipos**, asi que sin esta linea un `page.evaluate`
+    // que devuelve otra cosa de la que se lee no lo dice nadie hasta que el camino sale rojo por
+    // el motivo equivocado.
+    "e2e/**/*.ts",
     "eslint.prohibiciones.mjs",
     "vitest.setup.ts",
     "*.config.ts"

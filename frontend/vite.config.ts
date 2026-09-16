@@ -95,6 +95,38 @@ export default defineConfig({
       },
     },
   },
+  /**
+   * **El nombre con que el arnes comprueba que sin origen seguro no hay puerta** (#61, AC 3).
+   *
+   * <h2>Que hace esta linea, y sobre todo que NO hace</h2>
+   *
+   * `vite preview` es el servidor con que se mira el `dist` en local y el que levanta
+   * `playwright.config.ts`. **No sirve nada en el cluster**: ahi el `dist` lo entrega el `nginx`
+   * de `frontend/Dockerfile`. Asi que esta llave no toca ni un byte del paquete ni del despliegue:
+   * solo le dice al servidor de mirar que acepte una peticion cuyo `Host` sea ese nombre.
+   *
+   * <h2>Por que hace falta, medido</h2>
+   *
+   * `sin-origen-seguro.spec.ts` comprueba que la interfaz servida por un nombre que **no** es
+   * `localhost` diga que no hay puerta —el navegador no expone `crypto.subtle` fuera de un origen
+   * seguro— en vez de quedarse muda. Para eso Chromium arranca con
+   * `--host-resolver-rules=MAP normativa.prueba [::1]` y pide `http://normativa.prueba:<puerto>/`.
+   * Sin esta llave, lo que contesta Vite es **403** y esto:
+   *
+   *     Blocked request. This host ("normativa.prueba") is not allowed.
+   *     To allow this host, add "normativa.prueba" to `preview.allowedHosts` in vite.config.js
+   *
+   * O sea: la aplicacion ni se carga, y la prueba mediria la pagina de bloqueo de Vite en lugar de
+   * la interfaz. El `[::1]` tampoco es decorativo: medido con `ss -ltnp`, `vite preview` escucha
+   * en `[::1]` y **no** en `127.0.0.1`, asi que un `MAP` a la cara IPv4 no llega a nadie.
+   *
+   * Y el nombre no puede ser cualquiera: `*.localhost` lo aceptaria Vite sin declararlo, pero
+   * Chromium trata `*.localhost` como origen **seguro**, que es justo lo contrario de lo que hay
+   * que medir.
+   */
+  preview: {
+    allowedHosts: ['normativa.prueba'],
+  },
   build: {
     outDir: 'dist',
     // Que el bundle sea reproducible importa mas que su tamano: la imagen se etiqueta con

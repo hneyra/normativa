@@ -27,3 +27,8 @@ backend/.gradle/
 # relativas que desde `normativa/.claude/worktrees/<rama>/` no llegan a los clones hermanos. Un
 # worktree por issue va en `…/.relevo/<issue>/normativa`, al lado de sus hermanos (epica #47).
 .claude/
+
+# El arnes de navegador (#61). Ni el informe ni las trazas se versionan: son de una corrida,
+# pesan, y en CI viajan como artefacto del trabajo — que es donde se miran.
+frontend/playwright-report/
+frontend/test-results/

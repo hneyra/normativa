@@ -1,9 +1,9 @@
 import type { FallaDeLaPuerta, Vuelta } from '@kamayuk/sesion';
 
 /**
- * **Por que no se entro, cuando no se entro** (#57, AC 4).
+ * **Por que no se entro, cuando no se entro** (#57, AC 4; el tercer caso, #61).
  *
- * <h2>Son DOS cosas distintas, y las dos dejan la pantalla muda si no se cuentan</h2>
+ * <h2>Son TRES cosas distintas, y las tres dejan la pantalla muda si no se cuentan</h2>
  *
  *   · **No se pudo llegar al emisor** (`FallaDeLaPuerta`, de `rentas`#112): el emisor apagado, un
  *     DNS que no resuelve, una espera agotada. La navegacion se rechaza y no queda ni documento
@@ -12,6 +12,26 @@ import type { FallaDeLaPuerta, Vuelta } from '@kamayuk/sesion';
  *   · **El emisor no dejo entrar** (`Vuelta` con `estado: 'fallo'`): volvimos con un `?error=`.
  *     Aqui la pagina si esta, pero la causa vive en una cadena de la URL que el canje **borra**, y
  *     lo que quedaria en pantalla es el armazon vacio sin sesion.
+ *   · **No hay puerta que abrir** (#61): el navegador no expone `crypto.subtle`, asi que S256 no
+ *     se puede calcular. `hayPuerta()` de `@kamayuk/sesion` ya lo sabia y `arranque.ts` ya paraba
+ *     la ida — pero **paraba en silencio**: la aplicacion montaba sin sesion, sin token y sin una
+ *     palabra, y lo unico visible era que las pantallas no traian datos.
+ *
+ * <h2>El tercero pasa de verdad, y esta medido</h2>
+ *
+ * El navegador solo expone `crypto.subtle` en un **origen seguro**. Medido en Chromium 151 con
+ * una pagina servida en `127.0.0.1` y alcanzada por tres nombres distintos:
+ *
+ *     http://localhost          isSecureContext: true    crypto.subtle: objeto
+ *     http://127.0.0.1          isSecureContext: true    crypto.subtle: objeto
+ *     http://normativa.prueba   isSecureContext: false   crypto.subtle: undefined
+ *       (MAP a 127.0.0.1)                                crypto.randomUUID: undefined
+ *
+ * O sea: **basta con servir esta interfaz por `http://` con un nombre de maquina** —lo mas normal
+ * del mundo en una marcha blanca antes de que haya certificado— para que no haya puerta. Y sin la
+ * comprobacion, lo que sale no es «no hay puerta» sino
+ * `TypeError: Cannot read properties of undefined (reading 'digest')`, que no nombra ni el origen
+ * ni el certificado que falta. Lo mide `e2e/sin-origen-seguro.spec.ts`.
  *
  * <h2>El segundo no es de la libreria, y esto es lo que lo hace visible</h2>
  *
@@ -51,7 +71,14 @@ import type { FallaDeLaPuerta, Vuelta } from '@kamayuk/sesion';
 /** Lo que impidio entrar, dicho con lo que hace falta para arreglarlo. */
 export type PorQueNoSeEntro =
   | { readonly tipo: 'no-contesto'; readonly falla: FallaDeLaPuerta }
-  | { readonly tipo: 'no-dejo-entrar'; readonly motivo: string; readonly detalle: string };
+  | { readonly tipo: 'no-dejo-entrar'; readonly motivo: string; readonly detalle: string }
+  /**
+   * No hay `crypto.subtle`, o sea que no hay origen seguro. No lleva datos: lo que hace falta para
+   * arreglarlo —el origen desde el que se sirvio— lo tiene la propia pagina, y lo lee quien lo
+   * dibuja. Inventar aqui un campo `origen` seria pasar por tres modulos algo que
+   * `window.location` ya dice.
+   */
+  | { readonly tipo: 'sin-origen-seguro' };
 
 let elPorQue: PorQueNoSeEntro | null = null;
 

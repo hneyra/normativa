@@ -50,6 +50,13 @@ import { identidad } from './sesion.ts';
  * (`hayPuerta()`), porque S256 no se puede calcular. El navegador no lo expone fuera de un origen
  * seguro, asi que esto pasa de verdad: `http://` con un nombre que no sea `localhost`.
  *
+ * **Y desde #61 ese cuarto caso se ANOTA, no solo se para.** Hasta aqui vivia dentro del mismo
+ * `&&` que los otros dos frenos, asi que sin `crypto.subtle` la aplicacion montaba sin sesion **y
+ * sin una palabra**: lo unico visible era que las pantallas no traian datos. Por eso la condicion
+ * esta partida en dos —hacen falta las dos ramas, y con un solo `&&` solo hay una—: ahora se fija
+ * el porque y `PuertaCaida` lo dice, nombrando el origen desde el que se sirvio. La medicion de
+ * Chromium que lo sostiene esta en `puerta/falla.ts`, y lo mide `e2e/sin-origen-seguro.spec.ts`.
+ *
  * <h2>Y hay un QUINTO caso en que se monta: cuando la ida no llega a ocurrir</h2>
  *
  * No montar es correcto **cuando la puerta contesta**. Cuando no —el emisor apagado, un DNS que no
@@ -75,14 +82,19 @@ export async function arrancar(montar: () => void): Promise<void> {
   if (
     !noDejoEntrar &&
     identidad.token() === null &&
-    identidad.hayPuerta() &&
     identidad.puedeIrALaPuerta() &&
     !identidad.vieneDeSalir()
   ) {
-    const falla = await identidad.entrar();
-    if (falla !== null) fijarElPorQue({ tipo: 'no-contesto', falla });
-    // Solo se deja de montar cuando la navegacion SI ocurrio.
-    if (falla === null) return;
+    // Sin `crypto.subtle` no hay S256 y por tanto no hay puerta. No se va a ninguna parte —ir
+    // reventaria con `Cannot read properties of undefined (reading 'digest')`— y **se dice**.
+    if (!identidad.hayPuerta()) {
+      fijarElPorQue({ tipo: 'sin-origen-seguro' });
+    } else {
+      const falla = await identidad.entrar();
+      if (falla !== null) fijarElPorQue({ tipo: 'no-contesto', falla });
+      // Solo se deja de montar cuando la navegacion SI ocurrio.
+      if (falla === null) return;
+    }
   }
 
   montar();

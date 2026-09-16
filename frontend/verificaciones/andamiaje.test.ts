@@ -132,18 +132,23 @@ describe('«yarn verificar» encadena las cuatro comprobaciones', () => {
 
   it('los guiones son los de rentas que ya tienen de que colgar, y ninguno mas', () => {
     // `rentas@ac379ac` declara trece. Los tres que faltan aqui llaman a piezas que todavia no
-    // existen, y cada uno entra con la suya: `e2e` y `e2e:navegador` con el arnes de Playwright
-    // (#61), y `dev:con-plataforma` con la puerta de identidad (#57). Un guion que llama a algo
-    // que no esta sale rojo al usarlo, no al escribirlo.
+    // existen, y `dev:con-plataforma` entra con la suya. Un guion que llama a algo que no esta sale
+    // rojo al usarlo, no al escribirlo.
     //
     // **`i18n` e `i18n:regenerar` entraron con #60**, que es cuando i18next tuvo de que colgar: el
     // primero encadenado dentro de `verificar` —es el que avisa de una clave que el codigo usa y el
     // locale no tiene— y el segundo suelto, porque regenerar es un acto deliberado que deja un
     // diff, no un paso de la verificacion.
+    //
+    // **Y `e2e` y `e2e:navegador` con #61**, el arnes de Playwright. Que hace cada uno —y por que
+    // la comprobacion del puerto va DELANTE de `playwright test` y no dentro del `webServer`— lo
+    // mide `el-puerto-del-arnes-sale-del-arbol.test.ts`.
     expect(Object.keys(scripts).sort()).toEqual(
       [
         'build',
         'dev',
+        'e2e',
+        'e2e:navegador',
         'i18n',
         'i18n:regenerar',
         'lint',
@@ -154,6 +159,14 @@ describe('«yarn verificar» encadena las cuatro comprobaciones', () => {
         'verificar',
       ].sort(),
     );
+  });
+
+  it('y «verificar» NO arrastra el arnes: son dos ordenes, a proposito (#61)', () => {
+    // El arnes necesita un navegador de 114 MB y construye el bundle entero antes de medir nada.
+    // Metido dentro de `verificar`, la orden que se teclea antes de cada commit dejaria de poder
+    // tecleerse — y lo que pasa entonces es que se deja de teclear. En la CI corre en su propio
+    // job, que es donde hay tiempo.
+    expect(scripts['verificar']).not.toContain('e2e');
   });
 });
 
@@ -320,6 +333,40 @@ describe('el frontend tiene su propia CI', () => {
     // Veinte y no diez desde #55: la imagen repite la instalacion y el `vite build` dentro de
     // Docker, sin la cache de `setup-node`.
     expect(workflow).toContain('timeout-minutes: 20');
+  });
+
+  it('y el arnes de navegador tiene su propio job, detras de `verificar` (#61)', () => {
+    // Detras y no en paralelo: el arnes tarda minutos y construye el bundle entero, asi que un
+    // lint roto tiene que salir antes y sin gastarlo. `needs: verificar` es lo que lo garantiza.
+    expect(workflow).toContain('arnes:');
+    expect(workflow).toContain('needs: verificar');
+    // Las dos ordenes, y en ese orden: el navegador se descarga aparte —`@playwright/test` trae
+    // el arnes, no Chromium— y `yarn e2e` construye y sirve el bundle.
+    expect(workflow).toContain('yarn e2e:navegador');
+    expect(workflow).toMatch(/run: yarn e2e$/m);
+    expect(workflow.indexOf('yarn e2e:navegador')).toBeLessThan(
+      workflow.indexOf('- name: Correr el arnes'),
+    );
+  });
+
+  it('el arnes sube su informe SIEMPRE, tambien cuando sale rojo', () => {
+    // Sin `if: always()` el informe solo viaja cuando no hace falta. El de una corrida que fallo
+    // es justo el que hay que mirar, y lleva dentro las trazas de `trace: retain-on-failure`.
+    expect(workflow).toContain('name: informe-del-arnes');
+    expect(workflow).toContain('path: normativa/frontend/playwright-report/');
+    expect(workflow).toMatch(/if: always\(\)\n\s+with:\n\s+name: informe-del-arnes/);
+  });
+
+  it('y su tope no es solo un corte: hay un paso que mide y AVISA al 75 % (#61)', () => {
+    // La leccion de `catastro`#121 (AC 3) y del #86 de su V6: aquel job iba al 59 % de su tope y
+    // nadie lo sabia. `timeout-minutes` dice cuando cortar; no dice que te estabas acercando, y
+    // para cuando corta ya es la CI en rojo por tiempo en un PR que no lo causo entero.
+    expect(workflow).toContain('- name: Lo que tardo, contra su tope');
+    expect(workflow).toContain('GITHUB_STEP_SUMMARY');
+    expect(workflow).toContain('::warning::');
+    expect(workflow).toContain('-ge 75');
+    // El tope del job, y el mismo numero que usa la cuenta del paso.
+    expect(workflow).toContain('tope=$(( 20 * 60 ))');
   });
 
   it('un push nuevo cancela la corrida anterior, pero solo en PR', () => {
