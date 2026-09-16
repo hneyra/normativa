@@ -110,6 +110,33 @@ class FormasDeLaApiTest {
 
     private static final String ARCHIVO = "docs/50-api/formas-de-la-api.json";
 
+    /**
+     * Las operaciones cuyo cuerpo es un <b>mapa</b>, con la forma que de verdad emiten.
+     *
+     * <p>Hoy es una, y entra con #54: {@code GET /seguridad/sesion/permisos} devuelve {@code
+     * Map<String, List<String>>} —por cada opcion del catalogo sobre la que la cuenta tiene algun
+     * privilegio, la lista de privilegios en minuscula—. {@code FormaDeLaRespuesta}, que es
+     * compartido, <b>no sabe describir un mapa</b>: lo reduce a la hoja {@code "objeto"}, que no
+     * tiene un solo campo que contrastar. Es el mismo defecto que {@code rentas} publica hoy en esa
+     * misma ruta, y el que {@code frontend/verificaciones/camino-a-la-api.test.ts} se niega a dar
+     * por bueno con todas las letras.
+     *
+     * <p>Se declara <b>aqui y no en {@code comun-verificaciones}</b> porque enseñarle mapas al
+     * resolutor compartido toca los seis builds y hay que medir que no cambie ninguna otra forma
+     * publicada; mientras tanto, lo que la interfaz lee es esto y no «objeto». La clave no es un
+     * nombre de campo sino el <b>hueco</b> que ocupa un codigo de opcion, y va entre angulos
+     * —{@code <codigo>}— para que nadie la confunda con uno: los codigos de {@code acceso} son
+     * {@code [a-z0-9_]+}. La respuesta concreta, con codigos de verdad, es la captura {@code
+     * docs/50-api/seguridad/sesion-permisos.json} de #54.
+     *
+     * <p>Lo que impide que esto sea una puerta para sustituir una forma real por otra lo comprueba
+     * {@link #lasFormasDeUnMapaSonLegitimas()}.
+     */
+    private static final Map<String, Object> FORMAS_DE_UN_MAPA =
+            Map.of(
+                    "GET /seguridad/sesion/permisos",
+                    Map.of("<codigo>", List.of(FormaDeLaRespuesta.TEXTO)));
+
     @Test
     @DisplayName("el archivo de formas es el que producen los controladores de hoy")
     void lasFormasSonLasDelArchivo() throws IOException {
@@ -253,12 +280,56 @@ class FormasDeLaApiTest {
                 .isEmpty();
     }
 
+    @Test
+    @DisplayName("ninguna operacion se publica como un escalar, y lo declarado como mapa lo es")
+    void lasFormasDeUnMapaSonLegitimas() {
+        Map<String, Method> publicadas = EndpointsPublicados.porOperacion();
+
+        for (String operacion : FORMAS_DE_UN_MAPA.keySet()) {
+            Method metodo = publicadas.get(operacion);
+            assertThat(metodo)
+                    .as("«%s» no es una operacion de este backend", operacion)
+                    .isNotNull();
+            assertThat(FormaDeLaRespuesta.de(metodo))
+                    .as(
+                            "«%s» se declara como mapa, y el resolutor compartido YA sabe describir"
+                                    + " su forma: la declaracion estaria sustituyendo una forma real por"
+                                    + " una escrita a mano. Quitala de FORMAS_DE_UN_MAPA.",
+                            operacion)
+                    .isNotInstanceOf(Map.class);
+        }
+
+        // Y la otra mitad, que es la que la interfaz necesita: DESPUES de aplicar las dos
+        // declaraciones, ninguna operacion puede quedar publicada como una hoja. Una forma asi no
+        // tiene campos que contrastar, y `frontend/verificaciones/camino-a-la-api.test.ts` la
+        // rechaza nombrandola — pero lo haria en el PR siguiente, porque su flujo filtra por
+        // `frontend/**`. Esto lo dice aqui, en el PR que publica la ruta.
+        List<String> escalares = new ArrayList<>();
+        for (Map.Entry<String, Object> forma : formasPorOperacion().entrySet()) {
+            if (!(forma.getValue() instanceof Map) && !(forma.getValue() instanceof List)) {
+                escalares.add(forma.getKey() + " se publica como «" + forma.getValue() + "»");
+            }
+        }
+        assertThat(escalares)
+                .as(
+                        "estas operaciones se publican en «%s» como una hoja, sin un solo campo que"
+                                + " la interfaz pueda comparar. Si el cuerpo es un mapa, declaralo en"
+                                + " FORMAS_DE_UN_MAPA; si serializa a mano, en RespuestasEscritasAMano.",
+                        ARCHIVO)
+                .isEmpty();
+    }
+
     // ------------------------------------------------------------------
 
     /** La forma de cada operacion: la del tipo de retorno o, si serializa a mano, la declarada. */
     static Map<String, Object> formasPorOperacion() {
         Map<String, Object> formas = new TreeMap<>();
         for (Map.Entry<String, Method> endpoint : EndpointsPublicados.porOperacion().entrySet()) {
+            Object deUnMapa = FORMAS_DE_UN_MAPA.get(endpoint.getKey());
+            if (deUnMapa != null) {
+                formas.put(endpoint.getKey(), deUnMapa);
+                continue;
+            }
             Class<?> aMano = RespuestasEscritasAMano.DE_ESTE_BACKEND.get(endpoint.getKey());
             formas.put(
                     endpoint.getKey(),

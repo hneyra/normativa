@@ -7,9 +7,16 @@
 tasks.register("verificarAislamiento") {
     group = "verification"
     description =
-        "Aislamiento multi-tenant: la prueba del esquema y la del pool. Bloqueante. " +
-            "Requiere PostgreSQL 16."
-    dependsOn(":kamayuk-normativa-esquema:test", ":kamayuk-normativa-plataforma:test")
+        "Aislamiento multi-tenant: la prueba del esquema, la del pool y la de las cinco lecturas " +
+            "de seguridad de punta a punta. Bloqueante. Requiere PostgreSQL 16."
+    // La tercera entra con #54: las lecturas de `/seguridad` de HTTP a PostgreSQL, con dos
+    // municipalidades y el inquilino puesto solo por el filtro. Es la unica que ve el defecto que
+    // vive entre las otras dos —una lectura sin transaccion, o la fila de `municipalidad` de otra,
+    // que no la aisla RLS porque su politica es USING (true)—.
+    dependsOn(
+        ":kamayuk-normativa-esquema:test",
+        ":kamayuk-normativa-plataforma:test",
+        ":kamayuk-normativa-seguridad:pruebaDeAislamiento")
 }
 
 tasks.register("verificarArquitectura") {

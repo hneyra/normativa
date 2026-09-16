@@ -95,6 +95,39 @@
     "totalPaginas": "entero",
     "hayMas": "booleano"
   },
+  "GET /seguridad/accesos": {
+    "contenido": [
+      {
+        "id": "entero",
+        "moduloId": "entero",
+        "tipo": "texto",
+        "codigo": "texto",
+        "nombre": "texto",
+        "activo": "booleano"
+      }
+    ],
+    "pagina": "entero",
+    "tamano": "entero",
+    "totalElementos": "entero",
+    "totalPaginas": "entero",
+    "hayMas": "booleano"
+  },
+  "GET /seguridad/modulos": {
+    "contenido": [
+      {
+        "id": "entero",
+        "codigo": "texto",
+        "nombre": "texto",
+        "orden": "entero",
+        "activo": "booleano"
+      }
+    ],
+    "pagina": "entero",
+    "tamano": "entero",
+    "totalElementos": "entero",
+    "totalPaginas": "entero",
+    "hayMas": "booleano"
+  },
   "GET /seguridad/parametros": {
     "contenido": [
       {
@@ -117,5 +150,22 @@
     "sellado": "booleano",
     "conjuntoId": "entero",
     "version": "entero"
+  },
+  "GET /seguridad/sesion": {
+    "usuarioId": "entero",
+    "cuenta": "texto",
+    "nombre": "texto",
+    "ejercicioDeTrabajo": "entero"
+  },
+  "GET /seguridad/sesion/municipalidad": {
+    "id": "entero",
+    "ubigeo": "texto",
+    "nombre": "texto",
+    "tipo": "texto"
+  },
+  "GET /seguridad/sesion/permisos": {
+    "<codigo>": [
+      "texto"
+    ]
   }
 }

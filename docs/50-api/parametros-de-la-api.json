@@ -30,6 +30,24 @@
     "ordenarPorAdmitidos": ["clave", "id", "tipo", "vigenciaDesde", "vigencia_desde"],
     "tamanoMaximo": 500
   },
+  "GET /seguridad/accesos": {
+    "obligatorios": [],
+    "algunoDeEstos": [],
+    "condicionales": [],
+    "opcionales": ["direccion", "ordenarPor", "pagina", "tamano"],
+    "enElCuerpo": [],
+    "ordenarPorAdmitidos": ["codigo", "id", "nombre", "tipo"],
+    "tamanoMaximo": 500
+  },
+  "GET /seguridad/modulos": {
+    "obligatorios": [],
+    "algunoDeEstos": [],
+    "condicionales": [],
+    "opcionales": ["direccion", "ordenarPor", "pagina", "tamano"],
+    "enElCuerpo": [],
+    "ordenarPorAdmitidos": ["codigo", "id", "nombre", "orden"],
+    "tamanoMaximo": 500
+  },
   "GET /seguridad/parametros": {
     "obligatorios": [],
     "algunoDeEstos": [],
@@ -40,6 +58,27 @@
     "tamanoMaximo": 500
   },
   "GET /seguridad/parametros/ejercicios/{ejercicio}": {
+    "obligatorios": [],
+    "algunoDeEstos": [],
+    "condicionales": [],
+    "opcionales": [],
+    "enElCuerpo": []
+  },
+  "GET /seguridad/sesion": {
+    "obligatorios": [],
+    "algunoDeEstos": [],
+    "condicionales": [],
+    "opcionales": [],
+    "enElCuerpo": []
+  },
+  "GET /seguridad/sesion/municipalidad": {
+    "obligatorios": [],
+    "algunoDeEstos": [],
+    "condicionales": [],
+    "opcionales": [],
+    "enElCuerpo": []
+  },
+  "GET /seguridad/sesion/permisos": {
     "obligatorios": [],
     "algunoDeEstos": [],
     "condicionales": [],
