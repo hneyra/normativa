@@ -190,3 +190,104 @@ jobs:
           --target interfaz
           -t kamayuk-normativa-interfaz:pr
           .
+
+  # ---------------------------------------------------------------------------------------
+  # EL ARNES DE NAVEGADOR (#61)
+  #
+  # La V6 NUNCA tuvo uno: `git show c01fe9a:.github/workflows/frontend.yml` tiene un solo job
+  # —`verificar`— y todo lo que media corria en jsdom. Este viene de `rentas`#107 y corre contra
+  # **el bundle construido**, en Chromium y sin backend: mide lo que las pruebas de `vitest` no
+  # pueden —que Tailwind emita el CSS, que el navegador lo aplique, que la rejilla se reacomode,
+  # que ninguna tabla desplace la pagina, que la puerta de identidad pida S256 con el retorno
+  # correcto y que sin origen seguro la pagina lo diga en vez de quedarse muda—, y para eso no
+  # hace falta ni una base de datos.
+  #
+  # Que valia la pena esta medido en `rentas`: lo primero que su arnes encontro fue que **mas de
+  # la mitad de las clases de `@kamayuk/{ui,shell}` no generaban regla** —Tailwind omite
+  # `node_modules` y la libreria vive ahi por el `link:`—, con la rejilla de campos en una sola
+  # columna. La pantalla se dibujaba, con su estructura correcta y la mitad de su aspecto.
+  #
+  # NO corre dentro de `yarn verificar`, a proposito: necesita un navegador de 114 MB y construir
+  # el bundle entero. Aqui si, porque aqui hay tiempo y porque lo que mide no lo mide nadie mas.
+  #
+  # LO QUE SIGUE SIN PODER CORRER: entrar por el formulario de Keycloak con PKCE y canje contra un
+  # emisor de verdad. Le faltan la plataforma levantada, el realm con sus cuentas y el secreto. Es
+  # #69, y queda declarado.
+  # ---------------------------------------------------------------------------------------
+  arnes:
+    name: "El arnes: la interfaz se ve, en Chromium"
+    runs-on: ubuntu-latest
+    needs: verificar
+    # El tope, y ademas MEDIDO: el paso de abajo avisa en el resumen del job al pasar del 75 %.
+    # Es la leccion de `catastro`#121 (AC 3) y del #86 de su V6: aquel job iba al 59 % de su tope
+    # y nadie lo sabia hasta que un dia lo paso. Un `timeout-minutes` solo dice cuando cortar; no
+    # dice que te estabas acercando.
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: normativa/frontend
+
+    steps:
+      - name: Este repositorio
+        uses: actions/checkout@v4
+        with:
+          path: normativa
+
+      # El mismo doble checkout que dejo #55: los cinco `link:` de `frontend/package.json` cuelgan
+      # de este clon, y yarn los resuelve contra el DISCO.
+      - name: Las librerias comunes
+        uses: actions/checkout@v4
+        with:
+          repository: hneyra/kamayuk-lib
+          path: kamayuk-lib
+          token: ${{ secrets.GH_CLONE_KEY || github.token }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: normativa/frontend/.nvmrc
+          cache: yarn
+          cache-dependency-path: normativa/frontend/yarn.lock
+
+      - name: Instalar
+        run: yarn install --frozen-lockfile
+
+      # Cuando empieza el trabajo de verdad. Lo de arriba —checkout, Node, `yarn install`— no es
+      # lo que puede desbocarse; lo que mide el presupuesto es el arnes.
+      - name: Empieza el arnes
+        id: empieza
+        run: echo "en=$(date +%s)" >> "$GITHUB_OUTPUT"
+
+      # El navegador se descarga aparte: `@playwright/test` trae el arnes, no Chromium.
+      - name: Instalar Chromium
+        run: yarn e2e:navegador
+
+      # `yarn e2e` comprueba primero que el puerto este libre —y si no, dice quien lo tiene— y
+      # despues construye el bundle y lo sirve: ver `playwright.config.ts`. Contra el artefacto y
+      # no contra `yarn dev`, porque verde en desarrollo y roto en produccion es lo que un arnes
+      # tiene que impedir.
+      - name: Correr el arnes
+        run: yarn e2e
+
+      # EL PRESUPUESTO. `timeout-minutes` corta; esto AVISA antes de que corte, que es lo que
+      # permite reaccionar en el PR que lo empeora y no el dia que la CI se pone roja por tiempo.
+      # `if: always()`: un arnes que se acerca al tope suele ser justo el que acaba de fallar.
+      - name: Lo que tardo, contra su tope
+        if: always()
+        run: |
+          tope=$(( 20 * 60 ))
+          tardo=$(( $(date +%s) - ${{ steps.empieza.outputs.en }} ))
+          parte=$(( tardo * 100 / tope ))
+          echo "El arnes tardo ${tardo}s de ${tope}s de tope: ${parte}%." >> "$GITHUB_STEP_SUMMARY"
+          if [ "$parte" -ge 75 ]; then
+            echo "::warning::El arnes va al ${parte}% de su tope (${tardo}s de ${tope}s). Con un camino mas se queda sin margen: o se sube el tope, o se reparte el trabajo."
+            echo "**AVISO: por encima del 75 %.** Con un camino mas se queda sin margen." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      # Siempre, tambien en rojo: el informe de una corrida que fallo es justo el que hay que
+      # mirar, y con las trazas de `trace: retain-on-failure` dentro.
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: informe-del-arnes
+          path: normativa/frontend/playwright-report/
+          retention-days: 7

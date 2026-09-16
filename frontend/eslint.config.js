@@ -127,7 +127,13 @@ export default tseslint.config(
     // llevaria por delante `verificaciones/muestras/`, y entonces las muestras dejarian de
     // violar nada a ojos de `yarn lint`. Hoy no se lintan porque estan en `ignores`; si
     // manana alguien quita esa linea, tienen que ponerse ROJAS, no pasar en silencio.
-    files: ['**/*.test.{ts,tsx}', 'verificaciones/*.ts'],
+    //
+    // **`e2e/*.ts` entra en la lista desde #61**, y por lo mismo: el arnes de navegador vive ahi,
+    // corre en Node y **habla de** las prohibiciones. `la-puerta.spec.ts` recorre `localStorage` y
+    // `sessionStorage` enteros buscando el token, precisamente para exigir que no este; con la
+    // regla puesta, la prueba que defiende `token-en-almacenamiento` seria la unica que no se
+    // puede escribir. Un nivel y no dos, por lo mismo que arriba.
+    files: ['**/*.test.{ts,tsx}', 'verificaciones/*.ts', 'e2e/*.ts'],
     languageOptions: { globals: { ...globals.node } },
     rules: { 'no-restricted-syntax': 'off' },
   },

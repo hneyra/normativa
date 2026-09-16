@@ -13,6 +13,14 @@ import type { PorQueNoSeEntro } from './falla.ts';
  * con `yarn dev` y nada mas levantado: `body.innerText` vacio, `body.innerHTML` vacio y la consola
  * con dos lineas de Vite, ni un error. Nada que leer en ninguna parte.
  *
+ * <h2>Y el tercero, de #61: no hay puerta que abrir</h2>
+ *
+ * El navegador no expone la criptografia que S256 necesita fuera de un **origen seguro**, asi que
+ * basta con servir esta interfaz por `http://` con un nombre de maquina —lo normal en una marcha
+ * blanca antes de que haya certificado— para que no haya puerta. `hayPuerta()` ya paraba la ida y
+ * `arranque.ts` la para todavia; lo que #61 anade es que **se diga**, con el origen desde el que se
+ * sirvio y con un remedio que no es el de los otros dos. La medicion, en `falla.ts`.
+ *
  * <h2>Y el segundo caso, que es de ESTE sistema</h2>
  *
  * Volver con un `?error=` del emisor. La pagina si esta, pero la causa vive en una cadena de la URL
@@ -60,6 +68,10 @@ export interface AvisoDeLaPuertaProps {
  * Las dos primeras son calcadas de `rentas@ac379ac:src/aplicacion.tsx:275-285`, palabra por palabra.
  * La tercera es de este sistema: `rentas` no tiene el caso «el emisor no dejo entrar» porque alli un
  * canje fallido acaba saliendo como un 401 (ver `falla.ts`).
+ *
+ * **Y las tres ultimas son del tercer caso, el de #61**: sin origen seguro no hay puerta. Son tres y
+ * no una porque el remedio **no es el mismo**: ahi la plataforma esta perfectamente levantada y lo
+ * que falta es TLS, asi que mandar a levantarla seria mandar a buscar donde no es.
  */
 export const FRASES_DE_LA_PUERTA = {
   noContesto: 'No se pudo llegar al emisor de identidad, asi que no se mando a nadie a identificarse.',
@@ -68,6 +80,26 @@ export const FRASES_DE_LA_PUERTA = {
   queHacer:
     'Si esto es un puesto de desarrollo, levante la plataforma; si no, avise a quien la ' +
     'administra. Despues vuelva a cargar la pagina.',
+  sinOrigenSeguro:
+    'Esta direccion no es un origen seguro, asi que no hay puerta de identidad y no se mando a ' +
+    'nadie a identificarse.',
+  // El origen entra por interpolacion, como el emisor y la URL de arriba: es un dato de la
+  // instalacion y no una frase de este sistema, asi que no se traduce — y asi cae donde el idioma
+  // lo ponga.
+  //
+  // **Y aqui NO se escribe el nombre de la funcion que falta**, aunque sea lo primero que querria
+  // leer quien programa: `verificaciones/la-puerta-y-el-cliente-son-de-la-libreria` prohibe esa
+  // cadena en `src/`, y con razon —lo que vigila es que nadie escriba PKCE a mano—. El nombre esta
+  // en el docblock de `puerta/falla.ts`, que esa guarda no barre a proposito, y en el
+  // `data-porque` del elemento. Para quien esta en la ventanilla, ademas, el dato accionable no es
+  // el nombre de una API: es que falta «https».
+  senasDelOrigen:
+    'Esta pagina se sirve desde {{origen}}. El navegador solo ofrece el cifrado que la puerta ' +
+    'necesita —el reto PKCE S256— bajo «https://», en «localhost» o en «127.0.0.1»; en cualquier ' +
+    'otra direccion por «http://» no lo ofrece, y sin el no se puede pedir una sesion.',
+  queHacerSinOrigenSeguro:
+    'Sirva esta interfaz por «https://», o abrala por «localhost» si esto es un puesto de ' +
+    'desarrollo. Despues vuelva a cargar la pagina.',
 } as const;
 
 /** Todo lo que este archivo aporta al inventario del locale. Ver `catalogo-de-claves.ts`. */
@@ -76,17 +108,20 @@ export function clavesDeLaPuerta(): readonly string[] {
 }
 
 /**
- * El titulo y la linea de las senas, segun cual de los dos casos sea.
+ * Lo que se le dice a quien mira, segun cual de los TRES casos sea.
  *
  * `traducir` entra por parametro con la firma estrecha —«una clave, y los datos que lleve dentro»—
  * y no como el `TFunction` de i18next: esto no es un componente y no puede llamar al gancho, y atar
  * su firma a la de la libreria la ataria a su version. Es la misma decision que `t` en
  * `src/i18n/i18n.ts`.
+ *
+ * El `remedio` sale de aqui y no del cuerpo desde #61, por lo que dice {@link FRASES_DE_LA_PUERTA}:
+ * el tercer caso no se arregla levantando la plataforma.
  */
 function loQuePaso(
   porQue: PorQueNoSeEntro,
   traducir: (clave: string, datos?: Readonly<Record<string, unknown>>) => string,
-): { readonly titulo: string; readonly senas: string } {
+): { readonly titulo: string; readonly senas: string; readonly remedio: string } {
   if (porQue.tipo === 'no-contesto') {
     return {
       titulo: traducir(FRASES_DE_LA_PUERTA.noContesto),
@@ -95,18 +130,29 @@ function loQuePaso(
         url: porQue.falla.url,
         motivo: porQue.falla.motivo,
       }),
+      remedio: traducir(FRASES_DE_LA_PUERTA.queHacer),
+    };
+  }
+  if (porQue.tipo === 'sin-origen-seguro') {
+    return {
+      titulo: traducir(FRASES_DE_LA_PUERTA.sinOrigenSeguro),
+      // El origen se lee AQUI y no viaja dentro del motivo: `window.location` ya lo dice, y es el
+      // dato que convierte «no hay puerta» en «falta el certificado de ESTA direccion».
+      senas: traducir(FRASES_DE_LA_PUERTA.senasDelOrigen, { origen: window.location.origin }),
+      remedio: traducir(FRASES_DE_LA_PUERTA.queHacerSinOrigenSeguro),
     };
   }
   return {
     titulo: traducir(FRASES_DE_LA_PUERTA.noDejoEntrar, { motivo: porQue.motivo }),
     // Lo dice el emisor, no este sistema: ver el javadoc.
     senas: porQue.detalle,
+    remedio: traducir(FRASES_DE_LA_PUERTA.queHacer),
   };
 }
 
 export function AvisoDeLaPuerta({ porQue }: AvisoDeLaPuertaProps) {
   const { t } = useTranslation();
-  const { titulo, senas } = loQuePaso(porQue, t);
+  const { titulo, senas, remedio } = loQuePaso(porQue, t);
 
   return (
     <div
@@ -122,8 +168,8 @@ export function AvisoDeLaPuerta({ porQue }: AvisoDeLaPuertaProps) {
         <p data-slot="senas-del-emisor" className="mt-[10px] mb-0 break-all text-tinta-2">
           {senas}
         </p>
-        <p className="mt-[10px] mb-0 text-tinta-2 text-pretty">
-          {t(FRASES_DE_LA_PUERTA.queHacer)}
+        <p data-slot="remedio-de-la-puerta" className="mt-[10px] mb-0 text-tinta-2 text-pretty">
+          {remedio}
         </p>
       </div>
     </div>
