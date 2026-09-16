@@ -3,6 +3,8 @@ import { Pantalla, type DatosDeLaPantalla } from '@kamayuk/ui';
 import { createElement, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { OPERACION_DE_GUARDAR } from '../datos/lecturas.ts';
+import { guardarElSnapshot } from '../datos/publicacion.ts';
 import { useDatosDeLaHoja } from '../datos/useDatosDeLaHoja.ts';
 import { TEXTOS_DEL_INTERPRETE } from '../i18n/textosDelInterprete.ts';
 import type { ClaveDeHoja } from './arbol.ts';
@@ -138,8 +140,27 @@ function CuerpoDeLaHoja({
     tonoDeLaInsignia,
     traducir: (texto: string) => t(texto),
     textos: TEXTOS_DEL_INTERPRETE,
+    alHacer: LO_QUE_LAS_HOJAS_HACEN,
   });
 }
+
+/**
+ * **Las operaciones que una accion de un bloque `hace`** (#67).
+ *
+ * Es el registro que `<Pantalla alHacer>` consulta por la clave que declara la definicion. Una
+ * accion cuya clave no este aqui **no sale muda**: el interprete la dibuja impedida con «nadie
+ * atiende esto» (`motivoDeLaAccion` de `@kamayuk/ui`), que es lo que hace que registrar mal una
+ * clave se vea en la pantalla y no haya que descubrirlo pulsando.
+ *
+ * Hoy hay **una**, la de Publicacion: guardar como archivo los bytes cuyo `sha256` se comparo contra
+ * el `ETag`. Va aqui y no en `src/acciones.ts` porque aquello es el pie del ARMAZON —cuatro actos
+ * fijos para todas las hojas— y esto es una accion de un bloque de UNA hoja.
+ */
+const LO_QUE_LAS_HOJAS_HACEN = {
+  [OPERACION_DE_GUARDAR]: () => {
+    guardarElSnapshot();
+  },
+};
 
 /**
  * Lo que se dibuja para un destino: su definicion, interpretada.

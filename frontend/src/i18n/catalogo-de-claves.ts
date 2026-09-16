@@ -1,5 +1,6 @@
 import { FRASES_DE_LAS_ACCIONES } from '../acciones.ts';
 import { clavesDelPanel } from '../datos/panel.ts';
+import { clavesDeLaPublicacion } from '../datos/publicacion.ts';
 import { FRASES_DE_LA_MARCA } from '../marca.ts';
 import { ARBOL } from '../pantallas/arbol.ts';
 import { PANTALLAS } from '../pantallas/definiciones/index.ts';
@@ -67,6 +68,13 @@ function deLasPantallas(): readonly string[] {
         if ('ayuda' in campo && campo.ayuda !== undefined) salida.push(campo.ayuda);
         if ('marcador' in campo && campo.marcador !== undefined) salida.push(campo.marcador);
       }
+      // El rotulo de una accion del bloque (#67). Es `Texto` en la libreria —puede ser una
+      // plantilla o un dato— y solo se traduce lo que es una CADENA: un `{ desde: … }` nombra un
+      // dato de la pantalla, y un dato no se traduce. El `motivo` de un impedimento no entra por lo
+      // mismo: los de esta hoja salen del conector, que ya los pasa por `t()` donde los compone.
+      for (const accion of bloque.acciones ?? []) {
+        if (typeof accion.rotulo === 'string') salida.push(accion.rotulo);
+      }
       const tabla = bloque.tabla;
       if (tabla === undefined) continue;
       salida.push(tabla.titulo, ...tabla.columnas.map((c) => c.rotulo));
@@ -101,6 +109,10 @@ export function catalogoDeClaves(): readonly string[] {
     // Y las que compone el conector del Panel, que son texto de este sistema aunque viajen por
     // `valores` —que el interprete no traduce— y por eso pasan por `t()` donde se componen.
     ...clavesDelPanel(),
+    // Y las de Publicacion (#67): el veredicto de la huella, lo de la cache, los motivos de cada
+    // lista y por que no se puede guardar. Viajan por `valores`, por celdas y por `nombrados`, que
+    // el interprete no traduce, asi que se traducen donde se componen.
+    ...clavesDeLaPublicacion(),
     ...clavesDelMarco(),
     ...clavesDelInterprete(),
     ...clavesDelMando(),

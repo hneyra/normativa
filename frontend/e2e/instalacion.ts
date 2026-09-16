@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -123,6 +124,144 @@ export async function conElEstadoDelEjercicio(pagina: Page): Promise<void> {
       body: JSON.stringify(elEstadoDelEjercicio()),
     }),
   );
+}
+
+/* ── Lo que Publicacion pide (#67) ─────────────────────────────────────────────────────────── */
+
+/** La lectura que resuelve QUE conjunto rige. Lleva consulta, asi que es expresion y no globo. */
+export const LECTURA_DEL_CONJUNTO = /\/normativa\/api\/v1\/conjuntos\?/;
+
+/** Y la del snapshot, que es la que viene firmada con su `ETag`. */
+export const LECTURA_DEL_SNAPSHOT = /\/normativa\/api\/v1\/conjuntos\/\d+\/snapshot\?/;
+
+/** El `Cache-Control` que el controlador manda, y contra el que la hoja compara. */
+export const CACHE_DEL_CONTRATO = 'public, max-age=31536000, immutable';
+
+/** La identidad del conjunto que este arnes sirve. */
+export const CONJUNTO_SERVIDO = { conjuntoId: 2, ejercicio: 2026, version: 3 };
+
+/** La forma publicada de una operacion, o un rojo que nombra la que falta. */
+function formaDe(operacion: string): Record<string, unknown> {
+  const formas = JSON.parse(
+    readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), '../../docs/50-api/formas-de-la-api.json'),
+      'utf8',
+    ),
+  ) as Record<string, unknown>;
+  const forma = formas[operacion];
+  if (typeof forma !== 'object' || forma === null) {
+    throw new Error(
+      `El contrato no publica una forma para «${operacion}». Sin ella, el cuerpo que este arnes ` +
+        'dobla no lo comprueba nada.',
+    );
+  }
+  return forma as Record<string, unknown>;
+}
+
+/** Un cuerpo doblado, comprobado CAMPO A CAMPO contra la forma que el contrato publica. */
+function comoElContrato<T extends Record<string, unknown>>(operacion: string, cuerpo: T): T {
+  expect(
+    Object.keys(cuerpo).sort(),
+    `El cuerpo doblado de «${operacion}» dejo de cuadrar con la forma publicada.`,
+  ).toEqual(Object.keys(formaDe(operacion)).sort());
+  return cuerpo;
+}
+
+/** El 200 de `GET /conjuntos`: la identidad, sin una sola fila. */
+export function elConjuntoVigente(): Record<string, unknown> {
+  return comoElContrato('GET /conjuntos', { ...CONJUNTO_SERVIDO });
+}
+
+/**
+ * El 200 de `GET /conjuntos/{id}/snapshot`, **con tildes dentro**.
+ *
+ * «Resolución Ministerial» va en cada fila del derivado del corpus, y es donde la huella de los
+ * bytes y la de las unidades de codigo de JavaScript divergen: sobre un cuerpo ASCII las dos formas
+ * coinciden y este arnes pasaria con la implementacion equivocada.
+ *
+ * Las cifras son de juguete y no salen de ningun corpus: lo que se mide es la huella de unos bytes.
+ */
+export function elSnapshot(ambito: 'VALUACION' | 'OBLIGACION'): Record<string, unknown> {
+  const laValuacion = ambito === 'VALUACION';
+  const fuente = 'Resolución Ministerial';
+  return comoElContrato('GET /conjuntos/{id}/snapshot', {
+    ...CONJUNTO_SERVIDO,
+    ambito,
+    filas: 2,
+    parametros: [{ tipo: 'UIT', clave: 'UIT:2026', documentoFuente: fuente }],
+    valoresUnitarios: laValuacion ? [{ partida: 'MUROS', documentoFuente: fuente }] : [],
+    depreciaciones: laValuacion ? [{ uso: 'CASA_HABITACION', documentoFuente: fuente }] : [],
+    valoresReferenciales: laValuacion ? [] : [{ categoria: 'A1', documentoFuente: fuente }],
+  });
+}
+
+/** El `sha256` de unos bytes en UTF-8, en hexadecimal minusculo: lo mismo que hace el backend. */
+export function sha256(cuerpo: string): string {
+  return createHash('sha256').update(cuerpo, 'utf8').digest('hex');
+}
+
+/**
+ * **Los BYTES del snapshot, que no son los que `JSON.stringify` daria** (#67).
+ *
+ * Se sirven con sangrado a proposito, y no es estetica: lo que el servidor firma son SUS bytes, y
+ * nada obliga a que coincidan con los que la interfaz produciria al volver a serializar el objeto
+ * —`JSON.parse` y `JSON.stringify` no son inversas—. Con un cuerpo compacto las dos formas de
+ * calcular la huella dan lo mismo y **este arnes pasaria con la implementacion equivocada**: la
+ * que resume sobre `JSON.stringify(JSON.parse(texto))`. Con el sangrado, no.
+ *
+ * Es la misma clase de precaucion que la tilde de «Resolución Ministerial»: se elige el cuerpo que
+ * hace visible la diferencia, en vez de uno que la esconde.
+ */
+export function cuerpoDelSnapshot(ambito: 'VALUACION' | 'OBLIGACION'): string {
+  return JSON.stringify(elSnapshot(ambito), null, 2);
+}
+
+/** Como se sirve una descarga: su cuerpo, su `ETag` y su `Cache-Control`. */
+export interface SnapshotServido {
+  readonly cuerpo?: string;
+  /** Ya con sus comillas, o `null` para no mandar la cabecera. Por omision, el de verdad. */
+  readonly etag?: string | null;
+  readonly cacheControl?: string | null;
+}
+
+/**
+ * Deja contestadas las dos lecturas de Publicacion, y cuenta lo que se pidio.
+ *
+ * El conteo es la mitad del criterio de la descarga: lo que se guarda son **los bytes que ya se
+ * verificaron**, asi que guardar no puede emitir una segunda peticion al snapshot.
+ */
+export async function conLoDePublicacion(
+  pagina: Page,
+  cambios: Partial<Record<'VALUACION' | 'OBLIGACION', SnapshotServido>> = {},
+): Promise<{ readonly peticiones: string[] }> {
+  const peticiones: string[] = [];
+  await pagina.route(LECTURA_DEL_CONJUNTO, (ruta) => {
+    peticiones.push(ruta.request().url());
+    return ruta.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(elConjuntoVigente()),
+    });
+  });
+  await pagina.route(LECTURA_DEL_SNAPSHOT, (ruta) => {
+    const url = ruta.request().url();
+    peticiones.push(url);
+    const ambito = url.includes('ambito=OBLIGACION') ? 'OBLIGACION' : 'VALUACION';
+    const suyo = cambios[ambito] ?? {};
+    const cuerpo = suyo.cuerpo ?? cuerpoDelSnapshot(ambito);
+    const cabeceras: Record<string, string> = {};
+    const etag = suyo.etag === undefined ? `"${sha256(cuerpo)}"` : suyo.etag;
+    if (etag !== null) cabeceras['ETag'] = etag;
+    const cache = suyo.cacheControl === undefined ? CACHE_DEL_CONTRATO : suyo.cacheControl;
+    if (cache !== null) cabeceras['Cache-Control'] = cache;
+    return ruta.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      headers: cabeceras,
+      body: cuerpo,
+    });
+  });
+  return { peticiones };
 }
 
 /**

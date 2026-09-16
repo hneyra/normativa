@@ -71,8 +71,34 @@ function sinComentarios(fuente: string): string {
   return fuente.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/^[ \t]*\/\/.*$/gm, ' ');
 }
 
+/**
+ * **La UNICA excepcion, y su motivo** (#67).
+ *
+ * `src/datos/huella.ts` nombra `crypto.subtle`, y tiene que nombrarlo: la hoja de Publicacion
+ * recalcula el `sha256` de los bytes del snapshot y lo compara con el `ETag` que el servidor
+ * anuncio. **Eso no es PKCE**, que es de lo que esta guarda defiende: `kamayuk-lib`#57 subio
+ * `solicitarRespuesta()` —las cabeceras y el texto sin interpretar— y **devolvio la comprobacion**
+ * con ese motivo escrito, «quien sabe que algoritmo firmo su recurso es el sistema que lo pide»
+ * (H29b de `frontend/diseno/HUECOS.md`).
+ *
+ * Es **un archivo y solo uno**, corto y sin nada mas dentro, precisamente para que la excepcion se
+ * pueda leer entera. Y no se apaga la regla: se exceptua **esta prohibicion en este archivo**, y las
+ * otras cinco le siguen aplicando —ahi no hay `fetch`, ni almacenamiento, ni `code_verifier`—.
+ *
+ * El centinela de mas abajo comprueba que el archivo exceptuado **existe y de verdad la contiene**:
+ * una excepcion sobre un archivo que ya no dice `crypto.subtle` es una puerta que se queda abierta
+ * sin que nadie la vea.
+ */
+const DONDE_SE_RESUME = 'src/datos/huella.ts';
+
 /** Lo que no puede aparecer en `src/`, con lo que hay que usar en su lugar. */
-const PROHIBIDO: readonly { readonly que: string; readonly patron: RegExp; readonly enVezDe: string }[] =
+const PROHIBIDO: readonly {
+  readonly que: string;
+  readonly patron: RegExp;
+  readonly enVezDe: string;
+  /** Las rutas —relativas a `frontend/`— donde esta prohibicion NO aplica. Ver arriba. */
+  readonly salvo?: readonly string[];
+}[] =
   [
     {
       que: 'una llamada a `fetch`',
@@ -83,6 +109,7 @@ const PROHIBIDO: readonly { readonly que: string; readonly patron: RegExp; reado
       que: '`crypto.subtle`',
       patron: /crypto\s*\.\s*subtle/,
       enVezDe: '`crearIdentidad` de `@kamayuk/sesion`: el reto S256 lo calcula la libreria',
+      salvo: [DONDE_SE_RESUME],
     },
     {
       que: '`localStorage` o `sessionStorage`',
@@ -123,8 +150,29 @@ describe('en `src/` no hay ni puerta ni cliente escritos a mano', () => {
     expect(sinComentarios("const b = fetch('/x');\n")).toMatch(/fetch\s*\(/);
   });
 
-  it.each(PROHIBIDO.map((p) => ({ ...p })))('no aparece $que', ({ que, patron, enVezDe }) => {
+  it('EL CENTINELA: el archivo exceptuado existe y DE VERDAD dice lo que se le exceptua', () => {
+    // Una excepcion sobre un archivo que ya no contiene lo exceptuado —renombrado, borrado, o
+    // reescrito para esquivar el patron— no da error: **deja la puerta abierta en silencio**. Aqui
+    // se exige que ese archivo exista, que la cadena este dentro, y que el patron la vea.
+    const exceptuado = archivosDeProduccion().find(({ ruta }) => ruta === DONDE_SE_RESUME);
+    expect(
+      exceptuado,
+      `«${DONDE_SE_RESUME}» esta exceptuado de «crypto.subtle» y no existe.\n` +
+        '  O vuelve a su sitio, o la excepcion sobra: una excepcion sin sujeto es una prohibicion\n' +
+        '  apagada que nadie ve.',
+    ).toBeDefined();
+    expect(
+      sinComentarios(exceptuado?.fuente ?? ''),
+      `«${DONDE_SE_RESUME}» ya no dice «crypto.subtle» FUERA de sus comentarios. Si la comprobacion\n` +
+        '  de la huella subio a la libreria, quitese la excepcion; si se escribio de otra forma para\n' +
+        '  esquivar el patron, eso es lo que esta guarda existe para impedir.',
+    ).toMatch(/crypto\s*\.\s*subtle/);
+  });
+
+  it.each(PROHIBIDO.map((p) => ({ ...p })))('no aparece $que', ({ que, patron, enVezDe, salvo }) => {
+    const exentos = new Set(salvo ?? []);
     const culpables = archivosDeProduccion()
+      .filter(({ ruta }) => !exentos.has(ruta))
       .filter(({ fuente }) => patron.test(sinComentarios(fuente)))
       .map(({ ruta }) => `  ${ruta}`);
 
@@ -134,8 +182,29 @@ describe('en `src/` no hay ni puerta ni cliente escritos a mano', () => {
         `  Se usa ${enVezDe}.\n` +
         '  Es la decision 3 de la epica #47: `normativa` nace sobre la libreria y no tiene\n' +
         '  puerta ni cliente propios. Si a la libreria le falta algo, se le pide (AC 8 de #57):\n' +
-        '  NO se copia aqui.',
+        '  NO se copia aqui.' +
+        (exentos.size === 0
+          ? ''
+          : `\n\n  Exentos, con su motivo en esta guarda: ${[...exentos].join(', ')}.`),
     ).toEqual([]);
+  });
+
+  it('y la exencion es de UNA prohibicion en UN archivo: las otras cinco le siguen aplicando', () => {
+    // Lo que se exceptua es `crypto.subtle` en `src/datos/huella.ts`, y nada mas. Si ese archivo
+    // ganara un `fetch`, un `sessionStorage` o un `switch` sobre codigos HTTP, seguiria saliendo
+    // rojo — que es la diferencia entre exceptuar una regla y apagarlas todas en un directorio.
+    const exceptuado = archivosDeProduccion().find(({ ruta }) => ruta === DONDE_SE_RESUME);
+    const otras = PROHIBIDO.filter((p) => !(p.salvo ?? []).includes(DONDE_SE_RESUME));
+
+    expect(otras.length, 'la excepcion cubre TODAS las prohibiciones: eso no es una excepcion').toBe(
+      PROHIBIDO.length - 1,
+    );
+    const rotas = otras
+      .filter((p) => p.patron.test(sinComentarios(exceptuado?.fuente ?? '')))
+      .map((p) => `  ${p.que}`);
+    expect(rotas, `«${DONDE_SE_RESUME}» rompe prohibiciones que NO se le exceptuan:\n${rotas.join('\n')}`).toEqual(
+      [],
+    );
   });
 });
 
