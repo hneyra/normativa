@@ -5,7 +5,6 @@ import { ESLint } from 'eslint';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import {
-  CLIENTE_DE_API,
   DONDE_SE_LLAMA_A_FETCH,
   PROHIBICIONES,
   REGLAS_EXIGIDAS,
@@ -35,14 +34,26 @@ import {
  * aqui se lintan como TEXTO, con una ruta sintetica dentro de `src/`, que es donde la
  * regla tiene que aplicar de verdad.
  *
- * <h2>Desde #50, el de `rentas@ac379ac` mas lo propio</h2>
+ * <h2>Desde #50, el de `rentas@ac379ac` mas lo propio; y desde #62, sobre la lista DERIVADA</h2>
  *
  * La forma es la de `rentas`: el arranque en frio en `beforeAll` y la excepcion de `fetch` como
  * LISTA (`DONDE_SE_LLAMA_A_FETCH`). Lo que `rentas` no tiene y aqui se queda, cada cosa por lo
- * suyo: los casos de `cifra-tributaria-literal`, que es la decima prohibicion y solo existe en
- * este repositorio; la cifra escrita de `REGLAS_EXIGIDAS`, porque aqui esa lista sigue siendo
- * propia hasta #62 y en `rentas` la sujeta la libreria; y los ejemplos de «codigo correcto», que
- * en `rentas` declaran `alicuotaPredial = '0.006'` —aqui eso es justo lo prohibido—.
+ * suyo: los casos de `cifra-tributaria-literal`, que es la decima prohibicion y que aqui se
+ * ENCIENDE —la publica `@kamayuk/verificaciones` en `PROHIBICIONES_OPCIONALES` y nadie mas la
+ * enciende (`kamayuk-lib`#58)—, y los ejemplos de «codigo correcto», que en `rentas` declaran
+ * `alicuotaPredial = '0.006'` —aqui eso es justo lo prohibido—.
+ *
+ * **Lo que #62 cambia no es este archivo sino de donde sale su lista**: `PROHIBICIONES` y
+ * `REGLAS_EXIGIDAS` ya no se escriben en este arbol, se derivan. Que la derivacion no haya costado
+ * ni una prohibicion, ni un nombre de cifra, lo mide
+ * `las-prohibiciones-son-las-de-la-libreria.test.ts`; lo que se mide aqui sigue siendo lo mismo:
+ * que cada una tenga su muestra y que ESLint la senale.
+ *
+ * **Y la excepcion de `fetch` pasa a ser la lista VACIA** (#62): este frontend no tiene cliente de
+ * API propio —lo pone `@kamayuk/api` (#55)— y no queda un solo `fetch` en `src/` (#57). Los dos
+ * casos que `rentas` dedica a «el cliente de API no queda exento de TODO» no tienen aqui sujeto, y
+ * en su lugar va el simetrico: que `fetch` salga rojo TAMBIEN en el directorio que en `rentas`
+ * esta exceptuado.
  *
  * Salio el bloque «AC8 — las dos barreras de `Importe`»: afirmaba que el tipo de `Importe`
  * cubria el `createElement` que ESLint no ve, y ese tipo salio con `src/ds/`. Vuelve con la
@@ -167,23 +178,28 @@ describe('la lista de prohibiciones y la de muestras no se separan', () => {
   });
 
   it('las nueve reglas que el issue nombra estan las nueve', () => {
-    // El numero escrito, y a proposito: `REGLAS_EXIGIDAS` es la unica lista a mano, y
-    // esta es la unica cifra a mano. Si alguien borra una regla del producto y ajusta la
-    // lista para que el resto siga en verde, esto es lo que se pone rojo.
+    // El numero escrito, y a proposito. Desde #62 `REGLAS_EXIGIDAS` se deriva —son las ocho del
+    // producto mas la opcional que este sistema enciende—, asi que esta cifra ya no sujeta una
+    // lista escrita aqui: sujeta la DECISION de encender la opcional. Si alguien deja de
+    // encenderla, o si la libreria mueve una regla de sitio, esto es lo que se pone rojo.
     expect(REGLAS_EXIGIDAS).toHaveLength(9);
+    expect(PROHIBICIONES).toHaveLength(10);
   });
 });
 
-describe('la excepcion del cliente de API es exactamente una, y en ESTE arbol', () => {
+describe('la excepcion de `fetch` existe, y en ESTE arbol no cae en ningun sitio', () => {
   const conExcepcion = PROHIBICIONES.filter((p) => p.salvo !== undefined);
 
-  it('solo `fetch` esta exceptuado, y solo en el sitio declarado', () => {
+  it('solo `fetch` la lleva, y aqui su lista de sitios es la VACIA', () => {
     // Se comprueba la LISTA ENTERA, no su tamano: anadir un prefijo exige decir cual.
     expect(conExcepcion.map((p) => p.clave)).toEqual(['fetch-fuera-del-cliente']);
     expect(new Set(conExcepcion.flatMap((p) => p.salvo ?? []))).toEqual(
       new Set(DONDE_SE_LLAMA_A_FETCH),
     );
-    expect(DONDE_SE_LLAMA_A_FETCH).toEqual([CLIENTE_DE_API]);
+    // Vacia desde #62, y no es una omision: el cliente HTTP lo pone `@kamayuk/api` desde el clon
+    // hermano (#55) y aqui no queda un solo `fetch` (#57). Que eso siga siendo cierto lo mide
+    // `las-prohibiciones-son-las-de-la-libreria.test.ts`, leyendo `src/`.
+    expect(DONDE_SE_LLAMA_A_FETCH).toEqual([]);
   });
 
   it('y cada `salvo` es una LISTA, no una cadena que funciona por accidente', () => {
@@ -205,22 +221,7 @@ describe('la excepcion del cliente de API es exactamente una, y en ESTE arbol', 
     ).toEqual([]);
   });
 
-  it.each(
-    conExcepcion.flatMap((p) =>
-      [...(p.salvo ?? [])].map((directorio: string) => ({
-        clave: p.clave,
-        message: p.message,
-        directorio,
-      })),
-    ),
-  )('«$clave» no se senala dentro de $directorio', async ({ clave, message, directorio }) => {
-    const archivo = archivoDeLaMuestra(clave);
-    const mensajes = await mensajesDe(archivo as string, join(RAIZ, directorio, 'x.ts'));
-
-    expect(mensajes).not.toContain(message);
-  });
-
-  it('pero fuera de el, si', async () => {
+  it('en una pantalla, `fetch` sale rojo', async () => {
     const mensajes = await mensajesDe(
       archivoDeLaMuestra('fetch-fuera-del-cliente') as string,
       enUnaPantalla('cualquiera.ts'),
@@ -229,24 +230,35 @@ describe('la excepcion del cliente de API es exactamente una, y en ESTE arbol', 
     expect(mensajes.join('\n')).toMatch(/Las peticiones pasan por «solicitar»/);
   });
 
-  it('y el cliente de API no queda exento de TODO: solo de su excepcion', async () => {
-    // Que `src/api/` pueda llamar a `fetch` no lo pone fuera del idioma ni de la regla 2.
-    const mensajes = await mensajesDe(
-      archivoDeLaMuestra('municipalidad-en-el-cliente') as string,
-      join(RAIZ, CLIENTE_DE_API, 'x.ts'),
-    );
+  it.each(['src/api/', 'src/datos/', 'src/'])(
+    'y tambien dentro de «%s», que es el simetrico de la excepcion de `rentas`',
+    async (directorio) => {
+      // **Este es el caso que sustituye a los dos de `rentas`**, y es el que de verdad ejerce la
+      // lista vacia. `src/api/` es el prefijo que `rentas` exceptua y que este arbol NO: si
+      // alguien lo reintrodujera en `SALVO_EN_ESTE_ARBOL` «por simetria», esto es lo que lo dice.
+      // Con la lista vacia no hay bloque de excepcion en `eslint.config.js` y la prohibicion vale
+      // en todo el arbol, que es justo lo que se quiere comprobar.
+      const mensajes = await mensajesDe(
+        archivoDeLaMuestra('fetch-fuera-del-cliente') as string,
+        join(RAIZ, directorio, 'x.ts'),
+      );
 
-    expect(mensajes.join('\n')).toMatch(/jamas envia municipalidadId/);
-  });
+      expect(
+        mensajes.join('\n'),
+        `«${directorio}» dejo de prohibir \`fetch\`. Aqui no hay ningun sitio donde sea legitimo:\n` +
+          'toda peticion pasa por `solicitar()` de `@kamayuk/api`, y ahi viven el token, la clave\n' +
+          'de idempotencia y el formato de error.',
+      ).toMatch(/Las peticiones pasan por «solicitar»/);
+    },
+  );
 
-  it('ni de la regla propia de este repositorio', async () => {
-    // Y esta importa mas todavia: `src/api/` es justamente el sitio por donde la cifra
-    // llega del conjunto sellado, asi que es donde mas tienta escribir «mientras tanto»
-    // un valor por omision. Un valor por omision no cobra de mas, perdona de mas o
-    // autoriza de mas: eso lo hace una cifra que nadie sello.
+  it('y la regla propia tampoco se exceptua en ningun sitio', async () => {
+    // Importa mas todavia: el sitio por donde la cifra llega del conjunto sellado es donde mas
+    // tienta escribir «mientras tanto» un valor por omision. Un valor por omision no cobra de
+    // mas, perdona de mas o autoriza de mas: eso lo hace una cifra que nadie sello.
     const mensajes = await mensajesDe(
       archivoDeLaMuestra('cifra-tributaria-literal') as string,
-      join(RAIZ, CLIENTE_DE_API, 'x.ts'),
+      join(RAIZ, 'src/api/', 'x.ts'),
     );
 
     expect(mensajes.join('\n')).toMatch(/Ninguna cifra tributaria literal/);

@@ -1,246 +1,220 @@
 /**
- * Las prohibiciones del frontend de `normativa`, como DATO.
+ * Las prohibiciones del frontend de `normativa`: **las del producto, encendidas como las quiere
+ * este sistema** (#62).
  *
- * No estan escritas dentro de `eslint.config.js` a proposito. Este archivo lo leen dos
- * consumidores y tienen que leer lo mismo:
+ * <h2>Aqui habia un fork, y estaba medido</h2>
+ *
+ * Las nueve del producto viven en `@kamayuk/verificaciones/prohibiciones` desde `kamayuk-lib`#4, y
+ * `rentas` las deriva desde `rentas`#137. Aqui seguian siendo una COPIA hasta este issue, y **no
+ * una copia identica**: comparando los dos modulos clave a clave —`c01fe9a:frontend/eslint.
+ * prohibiciones.mjs` contra `kamayuk-lib@c61068f:paquetes/verificaciones/prohibiciones.mjs`— cinco
+ * claves eran identicas, tres diferian en el `selector`, una en el `salvo` y el `message`, y la
+ * decima solo existia aqui.
+ *
+ * Adoptar la lista de entonces habria costado nombres de cifra: `uit`, `alicuota`, `arancel` y
+ * `valorUnitario` no estaban en `CAMPOS_DE_DINERO`, que era el vocabulario de una ventanilla que
+ * cobra. Por eso este archivo espero a `kamayuk-lib`#58, que hizo de las dos listas **una union**
+ * —nada de lo que vigilaba la V6 se ha perdido; lo mide
+ * `las-prohibiciones-son-las-de-la-libreria.test.ts`— y saco `cifra-tributaria-literal` a
+ * `PROHIBICIONES_OPCIONALES`, que es la lista que enciende el sistema que quiera.
+ *
+ * <h2>Que pone este archivo de su parte, y es todo lo que pone</h2>
+ *
+ *   1. **Que la opcional se enciende.** `cifra-tributaria-literal` no se le exige a nadie y aqui
+ *      se exige: `normativa` es el sistema cuyo trabajo entero es que esas cifras vivan en datos
+ *      versionados, firmados a dos manos (ADR-0007) y sellados por ejercicio. La misma linea
+ *      —`export const alicuotaPredial = '0.006';`— es el ejemplo de codigo CORRECTO de `rentas` y
+ *      aqui es roja, y esa es exactamente la diferencia entre consumir una cifra y publicarla.
+ *   2. **Donde cae la excepcion de `fetch`**, que aqui es NINGUN sitio: ver
+ *      {@link DONDE_SE_LLAMA_A_FETCH}.
+ *
+ * Ni un `selector`, ni un `message`, ni un nombre de cifra. Los nombres tampoco son un parametro:
+ * `kamayuk-lib`#58 los resolvio como **union** y no por sistema, porque dos listas en verde
+ * midiendo cosas distintas es el defecto que `rentas`#137 cerro un piso mas abajo.
+ *
+ * <h2>Lo que este arbol PIERDE respecto de su V6, dicho y no callado: `tramos`</h2>
+ *
+ * El `reduce` de `aritmetica-con-importes` vigilaba aqui `tramos|conceptos|valores|parametros`
+ * (`c01fe9a:…:146`) y en la libreria vigila `cuotas|conceptos|valores|papeletas|parametros`. Gana
+ * `parametros` —lo metio #58 porque un conjunto sellado es una lista de parametros— y **`tramos`
+ * no entra**, con su falso positivo medido: `catastro:src/pantallas/piezas/codigo-por-tramos.tsx:87`
+ * escribe `ajustes.tramos.reduce((suma, t) => suma + t.digitos, 0)`, que suma los digitos de los
+ * ocho tramos del codigo catastral —una longitud, no un importe—.
+ *
+ * **Y aqui se decide NO recuperarlo como prohibicion propia**, con tres medidas y no con una
+ * opinion:
+ *
+ *   · **Este sistema no publica ninguna coleccion llamada `tramos`.** Las cuatro del snapshot son
+ *     `parametros`, `valoresUnitarios`, `depreciaciones` y `valoresReferenciales`
+ *     (`backend/kamayuk-normativa-parametros/…/dominio/SnapshotDelConjunto.java`), y las cuatro
+ *     caen ya en el selector derivado, que casa por PREFIJO: `parametros` y `valores` estan en la
+ *     lista de colecciones, y `depreciacion` en la de campos de dinero. Una prohibicion sobre un
+ *     nombre que no existe en el arbol no tiene nada que senalar.
+ *   · **La forma peligrosa de verdad ya sale roja por otro lado.** Sumar un tramo es sumar su
+ *     alicuota o su insoluto —`t.alicuota`, `t.insoluto`—, y eso es una `BinaryExpression` sobre
+ *     un `MemberExpression` cuyo nombre SI esta en la lista de campos, que es la primera mitad del
+ *     mismo selector.
+ *   · **Y clavar el tramo del predial en el codigo lo caza la opcional**, que este sistema
+ *     enciende y que lleva `tramo` en sus nombres de cifra.
+ *
+ * Recuperarlo costaria una clave nueva, su muestra, y un tercer tipo de prohibicion —«propia»—
+ * que es justo la forma del fork que este issue cierra. Si algun dia este arbol publica una
+ * coleccion `tramos`, entra en `kamayuk-lib` con su medida, no aqui.
+ *
+ * <h2>Que sigue siendo verdad de este archivo</h2>
+ *
+ * Que no esta escrito dentro de `eslint.config.js` a proposito. Lo leen dos consumidores y tienen
+ * que leer lo mismo:
  *
  *   1. `eslint.config.js`, que las convierte en opciones de `no-restricted-syntax`, y
  *   2. `verificaciones/reglas-de-eslint.test.ts`, que exige de cada una su muestra.
  *
- * Si la prueba tuviera su propia lista, seria una copia: se anade una regla al config, la
- * lista de la prueba no se toca, y la regla nueva queda sin muestra **en verde**. Que es
- * exactamente el modo de fallo que la prueba existe para impedir. Derivadas de aqui las
+ * Si la prueba tuviera su propia lista, seria una copia: se anade una regla al config, la lista de
+ * la prueba no se toca, y la regla nueva queda sin muestra **en verde**. Derivadas de aqui las
  * dos, una prohibicion sin muestra sale roja sola.
  *
- * El `clave` no es decorativo: **es el nombre de su muestra**. La prueba no tiene un mapa
- * de «regla -> archivo» que alguien pueda dejar desactualizado; compone la ruta.
+ * El `clave` no es decorativo: **es el nombre de su muestra**. La prueba no tiene un mapa de
+ * «regla -> archivo» que alguien pueda dejar desactualizado; compone la ruta.
  *
- * **Es la lista PROPIA de `normativa`, y a proposito, hasta #62.** Desde `rentas`#137, el
- * `eslint.prohibiciones.mjs` de `rentas` y el de `catastro` derivan las nueve del producto de
- * `@kamayuk/verificaciones`. Aqui no, todavia: la lista de la libreria lleva los nombres de
- * importe de `rentas` y no tiene `cifra-tributaria-literal`, asi que adoptarla hoy debilitaria
- * el lint (epica #47). Lo unico que #50 le cambia es la FORMA de `salvo`, que pasa a lista para
- * que el `eslint.config.js` calcado de `rentas` la lea por lo que es.
+ * Y que esta derivacion siga siendo una derivacion —y no vuelva a ser un fork— lo vigila
+ * `verificaciones/las-prohibiciones-son-las-de-la-libreria.test.ts`.
  */
 
-/**
- * @typedef {object} Prohibicion
- * @property {string} clave     Identificador estable. Tambien el nombre del archivo de su
- *                              muestra en `verificaciones/muestras/`, sin extension.
- * @property {string} regla     La fila de la tabla de reglas del producto a la que sirve.
- *                              Varias prohibiciones pueden servir a la misma regla.
- * @property {string} selector  Selector ESQuery que la detecta. Admite varios separados
- *                              por coma, que es como una regla se hace de varias formas.
- * @property {string} message   Lo que se le dice a quien la incumple. La prueba compara
- *                              contra ESTE texto, no contra una copia suya.
- * @property {readonly string[]} [salvo]  Prefijos de ruta donde la prohibicion NO aplica.
- *                              Una LISTA, como en `rentas` y en `@kamayuk/verificaciones`
- *                              (#50): ver `DONDE_SE_LLAMA_A_FETCH`.
- */
+import { remedioDelEnlace } from './verificaciones/remedio.mjs';
 
 /**
- * Nombres de campo que llevan una cifra decimal del dominio. Sobre ellos no se hace
- * aritmetica ni se declara un `number`.
+ * La lista del producto, o un rojo que nombra el `git clone`.
  *
- * La lista es la de `rentas` **adaptada a lo que este sistema publica**: aqui no hay
- * saldos ni vueltos —no se cobra nada— y si hay UIT, alicuotas, aranceles y los valores
- * de los tres cuadros de valuacion. Todas son `NUMERIC` en la base y `BigDecimal` en el
- * backend, y el ultimo tramo tiene que respetarlas igual (regla 1, RNF-055).
+ * **El `import` va dinamico y envuelto, y es el hallazgo de `rentas`#113 otra vez.** Este archivo
+ * lo carga `eslint.config.js`, o sea el PRIMER paso de `yarn verificar`, antes que `tsc` y antes
+ * que `enlace-con-kamayuk-lib.test.ts` —que es la guarda que sabe explicar que falta el clon
+ * hermano y que vive dos pasos mas tarde—. Con un `import` estatico, lo que se lee al clonar
+ * `normativa` a secas es
  *
- * **`total` lleva una excepcion, y es de verdad la unica.** `totalElementos` y
- * `totalPaginas` son los dos contadores del envoltorio de paginacion del backend, y son
- * cuentas de cosas, no cifras del dominio: llegan como entero y tienen que declararse
- * `number`. Sin la excepcion, toda pantalla con una tabla paginada arrancaria con dos
- * `eslint-disable`, y una regla que se desactiva por costumbre deja de proteger a la
- * tercera vez.
+ *     Error: Cannot find package '@kamayuk/verificaciones' imported from …/eslint.prohibiciones.mjs
  *
- * Y `valor` no entra a secas sino con su apellido —`valorUnitario`, `valorArancelario`,
- * `valorReferencial`—: los tres cuadros de ADR-0017 se llaman asi, mientras que `valor` a
- * secas es el nombre generico de cualquier campo de un formulario.
+ * que habla de un modulo y no de un repositorio que falta. Envuelto, dice el `git clone`.
  */
-const CAMPOS_DE_CIFRA =
-  'monto|importe|uit|alicuota|arancel|valorUnitario|valorArancelario|valorReferencial|insoluto|interes|deduccion|depreciacion|total(?!Elementos|Paginas)';
+async function delProducto() {
+  const declarada = '../../kamayuk-lib/paquetes/verificaciones';
+  try {
+    return await import('@kamayuk/verificaciones/prohibiciones');
+  } catch (causa) {
+    throw new Error(
+      'No se pudo cargar «@kamayuk/verificaciones/prohibiciones», de donde salen las nueve\n' +
+        'prohibiciones de ESLint de todo el producto y la opcional que enciende este sistema\n' +
+        `(kamayuk-lib#4, kamayuk-lib#58, normativa#62).\n  ${remedioDelEnlace('@kamayuk/verificaciones', declarada)}`,
+      { cause: causa },
+    );
+  }
+}
+
+const {
+  PROHIBICIONES: DEL_PRODUCTO,
+  PROHIBICIONES_OPCIONALES: OPCIONALES_DEL_PRODUCTO,
+  REGLAS_EXIGIDAS: EXIGIDAS,
+  REGLAS_OPCIONALES: OPCIONALES,
+} = await delProducto();
 
 /**
- * Tildes y enie: prohibidas en identificadores (idioma del repositorio).
- * Copiada de `infrastructure/infra/eslint.config.mjs`, donde ya estaba escrita: la misma
- * regla en dos sitios distintos es dos reglas que divergen.
- */
-const LETRAS_ACENTUADAS = 'áéíóúÁÉÍÓÚñÑüÜ';
-
-/**
- * El unico directorio que puede llamar a `fetch`.
+ * **Donde `fetch` es legitimo AQUI: en ningun sitio.**
  *
- * Es la excepcion que da sentido a la regla: mientras toda peticion pase por `solicitar()`,
- * enchufar el token, el `ETag` del snapshot y el formato de error se hace en un sitio. Un
- * `fetch` suelto en una pantalla no se salta una convencion: se salta las tres.
- */
-export const CLIENTE_DE_API = 'src/api/';
-
-/**
- * Donde `fetch` es legitimo AQUI, y en ningun otro sitio. **Una lista, y desde #50.**
+ * Es la lista VACIA, y es un dato medido, no una omision. Este frontend **no tiene cliente de API
+ * propio**: lo pone `@kamayuk/api`, enlazado desde el clon hermano (#55), y la excepcion la lleva
+ * la libreria en su propio arbol —`paquetes/api/` y `paquetes/sesion/`—. Medido sobre `src/` en el
+ * dia de #62: **cero llamadas a `fetch`**, y `src/api/` ni existe como directorio. #57 lo deja asi
+ * por contrato —toda peticion pasa por `solicitar()` de `@kamayuk/api`—, y
+ * `las-prohibiciones-son-las-de-la-libreria.test.ts` vuelve a medirlo en cada corrida.
  *
- * Hasta `c01fe9a` el `salvo` de abajo era la cadena `CLIENTE_DE_API` a secas, y el
- * `eslint.config.js` de `rentas` —que este frontend calca desde #50— lo trata como lista:
- * `PROHIBICIONES.flatMap((p) => p.salvo ?? [])` y `(p.salvo ?? []).includes(directorio)`. Con
- * una cadena las dos lineas funcionan **por accidente**: `'src/api/'.includes('src/api/')` es
- * una busqueda de subcadena y no de pertenencia: `'src/api/'.includes('src/')` tambien es
- * `true`, asi que el dia que otra prohibicion exceptuara `src/`, el bloque de ese directorio
- * dejaria de prohibir `fetch` en `src/` entero, y en verde. Es la diferencia semantica que
- * `rentas`#137 midio.
- *
- * Es uno y en la libreria son dos (`paquetes/api/` y `paquetes/sesion/`): el dia que este arbol
- * separe la puerta de identidad del cliente, lo que cambia es este dato y no la prohibicion.
+ * El dia que aparezca un `fetch` en `src/`, sale rojo por los dos lados: la guarda que lo mide, y
+ * `yarn lint`, que ya no exceptua ningun directorio. La lista vacia es ademas la salida que el
+ * propio mensaje de `rentas` nombra: «o la lista vacia, si aqui no hay ninguno».
  *
  * @type {readonly string[]}
  */
-export const DONDE_SE_LLAMA_A_FETCH = [CLIENTE_DE_API];
+export const DONDE_SE_LLAMA_A_FETCH = [];
 
 /**
- * Los nombres que en ESTE sistema nombran una cifra que fija una norma.
+ * Lo UNICO que este arbol pone de su parte: donde cae cada excepcion.
  *
- * No es la misma lista que `CAMPOS_DE_CIFRA` aunque se solapen, y la diferencia importa:
- * alli se prohibe el TIPO —un importe es texto—, aqui se prohibe el LITERAL —la cifra no
- * se escribe, se pide—. `monto` esta en la primera y no en la segunda porque un monto lo
- * calcula alguien; `uit` esta en las dos porque la UIT es texto decimal *y* la fija un
- * decreto supremo.
+ * Va por **clave de prohibicion** y no por ruta de la libreria. Traducir `paquetes/api/` a un
+ * directorio de aqui seria un mapa de directorios de otro repositorio, que se queda viejo el dia
+ * que alla muevan uno; la clave, en cambio, es el identificador estable de la regla y es lo que la
+ * libreria promete no cambiar.
  *
- * **Ni `tim` ni `tope` estan, y se probo por que**: con coincidencia por prefijo, `tim`
- * caza `timeout` y `timer`, y `tope` caza cualquier limite de la interfaz. Una prohibicion
- * que senala codigo correcto se desactiva, y una regla desactivada no protege nada.
+ * Una prohibicion con `salvo` que no este aqui **para el proceso**: dejarla pasar tendria dos
+ * salidas y las dos malas —aplicarle la ruta de otra, o quitarle la excepcion y llenar de falsos
+ * positivos un directorio entero—.
+ *
+ * @type {Readonly<Record<string, readonly string[]>>}
  */
-const CIFRAS_NORMATIVAS =
-  'uit|alicuota|tramo|arancel|valorUnitario|valorArancelario|valorReferencial|depreciacion|deduccion|minimoImponible|factorDeActualizacion|porcentajeDeActualizacion';
+export const SALVO_EN_ESTE_ARBOL = {
+  'fetch-fuera-del-cliente': DONDE_SE_LLAMA_A_FETCH,
+};
+
+/** Las nueve del producto y la opcional que este sistema enciende, antes de situarles las rutas. */
+const TODAS_LAS_DEL_PRODUCTO = [...DEL_PRODUCTO, ...OPCIONALES_DEL_PRODUCTO];
+
+const sinTraducir = TODAS_LAS_DEL_PRODUCTO.filter(
+  (p) => p.salvo !== undefined && SALVO_EN_ESTE_ARBOL[p.clave] === undefined,
+).map((p) => `  · ${p.clave}, exceptuada en la libreria de: ${[...(p.salvo ?? [])].join(', ')}`);
+
+if (sinTraducir.length > 0) {
+  throw new Error(
+    '`@kamayuk/verificaciones` trae prohibiciones con excepcion que este arbol no ha situado:\n' +
+      `${sinTraducir.join('\n')}\n` +
+      'Anade su entrada a SALVO_EN_ESTE_ARBOL en `frontend/eslint.prohibiciones.mjs`, diciendo\n' +
+      'que directorio de ESTE arbol hace lo que alli hace el suyo — o la lista vacia, si aqui no\n' +
+      'hay ninguno.',
+  );
+}
+
+const huerfanas = Object.keys(SALVO_EN_ESTE_ARBOL).filter(
+  (clave) => !TODAS_LAS_DEL_PRODUCTO.some((p) => p.clave === clave && p.salvo !== undefined),
+);
+
+if (huerfanas.length > 0) {
+  throw new Error(
+    `SALVO_EN_ESTE_ARBOL situa excepciones que ya nadie pide: ${huerfanas.join(', ')}.\n` +
+      'O la prohibicion dejo de exceptuar nada, o cambio de clave. Una excepcion que no cuelga de\n' +
+      'ninguna regla no exceptua: solo se queda ahi pareciendo que si.',
+  );
+}
 
 /**
- * Un literal que es una cifra, la escriba quien la escriba como numero o como texto.
+ * **Las DIEZ que este frontend enciende**: las nueve del producto y la opcional de este sistema,
+ * cada una con la ruta que le toca en este arbol.
  *
- * Las dos formas, y hacen falta las dos: en esta interfaz **un importe es `string`**
- * (regla 1), asi que quien clave la alicuota predial no escribira `0.006` sino
- * `'0.006'` — y una prohibicion que solo mirase los numeros dejaria pasar precisamente
- * la forma que las otras reglas de este mismo archivo obligan a usar.
+ * Que sean diez y no nueve es lo unico que distingue este lint del de `rentas`, y no es un extra:
+ * es la regla 5 del producto —«ningun literal numerico tributario en el codigo»— aplicada al
+ * repositorio que PUBLICA esas cifras.
+ *
+ * @type {readonly {
+ *   clave: string;
+ *   regla: string;
+ *   selector: string;
+ *   message: string;
+ *   salvo?: readonly string[];
+ * }[]}
  */
-const LITERAL_DE_CIFRA =
-  ':matches(Literal[value=type(number)], Literal[value=/^-?[0-9]+([.][0-9]+)?$/])';
-
-/** Los sitios donde un literal queda ATADO a un nombre, que es lo que lo hace una cifra. */
-const ATADURAS_DE_CIFRA = [
-  `VariableDeclarator[id.name=/^(${CIFRAS_NORMATIVAS})/i]`,
-  `Property[key.name=/^(${CIFRAS_NORMATIVAS})/i]`,
-  `PropertyDefinition[key.name=/^(${CIFRAS_NORMATIVAS})/i]`,
-  `AssignmentPattern[left.name=/^(${CIFRAS_NORMATIVAS})/i]`,
-];
-
-/** @type {readonly Prohibicion[]} */
-export const PROHIBICIONES = [
-  {
-    clave: 'identificador-con-tilde',
-    regla: 'sin tildes ni enie en identificadores',
-    selector: `Identifier[name=/[${LETRAS_ACENTUADAS}]/]`,
-    message: 'Sin tildes ni enie en identificadores. El texto con tildes va en las cadenas.',
-  },
-  {
-    clave: 'fetch-fuera-del-cliente',
-    regla: 'fetch prohibido fuera del cliente de API',
-    selector: "CallExpression[callee.name='fetch']",
-    message:
-      'Las peticiones pasan por «solicitar» de src/api: ahi viven el token, el ETag del snapshot y el formato de error (ADR-0030 §3).',
-    salvo: DONDE_SE_LLAMA_A_FETCH,
-  },
-  {
-    clave: 'importe-declarado-number',
-    regla: 'un importe es string, nunca number',
-    selector:
-      `TSPropertySignature[key.name=/^(${CAMPOS_DE_CIFRA})/i] > TSTypeAnnotation > TSNumberKeyword, ` +
-      `Identifier[name=/^(${CAMPOS_DE_CIFRA})/i] > TSTypeAnnotation > TSNumberKeyword`,
-    message:
-      'Un importe se declara «string», nunca «number»: en coma flotante 0.1 + 0.2 no es 0.30 y el centimo se pierde antes de mostrarse (regla 1, RNF-055).',
-  },
-  {
-    clave: 'importe-convertido-a-number',
-    regla: 'un importe es string, nunca number',
-    selector:
-      `CallExpression[callee.name=/^(Number|parseFloat|parseInt)$/] > MemberExpression[property.name=/^(${CAMPOS_DE_CIFRA})/i], ` +
-      `CallExpression[callee.name=/^(Number|parseFloat|parseInt)$/] > Identifier[name=/^(${CAMPOS_DE_CIFRA})/i]`,
-    message:
-      'Un importe es texto y pierde centimos como number. No lo conviertas: formatealo (regla 1, RNF-055).',
-  },
-  {
-    clave: 'aritmetica-con-importes',
-    regla: 'sin aritmetica sobre importes',
-    selector:
-      `BinaryExpression[operator=/^[-+*/%]$/] > MemberExpression[property.name=/^(${CAMPOS_DE_CIFRA})/i], ` +
-      `CallExpression[callee.property.name='reduce'][callee.object.property.name=/^(${CAMPOS_DE_CIFRA}|tramos|conceptos|valores|parametros)/i]`,
-    message:
-      'Aritmetica con una cifra del dominio. Este sistema PUBLICA cifras selladas y no las opera: quien calcula es el motor de reglas, con su redondeo sellado (regla 1, ADR-0018).',
-  },
-  {
-    clave: 'importe-sin-fecha',
-    regla: 'un importe se muestra con su fecha de calculo',
-    // `:not(:has(...))`: el elemento de apertura que NO tiene entre sus atributos
-    // uno llamado `fechaCalculo`. Un `<Importe {...props} />` tambien cae, y esta
-    // bien que caiga: desde el JSX no hay forma de saber si ese objeto la trae.
-    selector:
-      "JSXOpeningElement[name.name='Importe']:not(:has(JSXAttribute[name.name='fechaCalculo']))",
-    message:
-      'Un importe se muestra con la fecha a la que esta calculado: no existe «la deuda», existe la deuda a una fecha (regla 9, RNF-075).',
-  },
-  {
-    clave: 'municipalidad-en-el-cliente',
-    regla: 'municipalidadId no se manda nunca',
-    selector: "Identifier[name='municipalidadId']",
-    message:
-      'El frontend jamas envia municipalidadId: el backend lo toma del token (regla 2, ADR-0028 §2).',
-  },
-  {
-    clave: 'token-en-almacenamiento',
-    regla: 'el token no toca localStorage ni sessionStorage',
-    // La prohibicion es guardar CREDENCIALES en el navegador, no usar el almacenamiento:
-    // una preferencia de la ventanilla ahi esta en su sitio. Por eso mira la clave.
-    selector:
-      'CallExpression[callee.object.name=/^(localStorage|sessionStorage)$/][callee.property.name=/^(setItem|getItem|removeItem)$/][arguments.0.value=/token|jwt|bearer|credencial|contrasena|acceso|sesion/i]',
-    message:
-      'El token vive en memoria, nunca en localStorage ni sessionStorage: en una PC de ventanilla compartida entre turnos, un token persistido sobrevive al cierre del navegador (ADR-0030 §3).',
-  },
-  {
-    clave: 'tasa-en-vez-de-alicuota',
-    regla: 'alicuota, nunca tasa',
-    selector: 'Identifier[name=/^tasa(De)?(Interes|Descuento|Porcentaje|Depreciacion|Moratori)/i]',
-    message: 'Un porcentaje se llama «alicuota» (regla 8). «tasa» es un tipo de tributo del manual.',
-  },
-  {
-    // LA NOVENA, Y ES DE ESTE REPOSITORIO. No esta en `rentas`, ni en `caja`, ni en
-    // `catastro`, y aqui muerde mas que en ninguno de los tres: `normativa` es el sistema
-    // cuyo trabajo entero es que las cifras vivan en datos versionados y firmados a dos
-    // manos. Un `0.006` escrito en una pantalla de ESTE sistema es una cifra normativa
-    // fuera del corpus, publicada por el repositorio que existe para que no las haya, y
-    // sin las dos firmas de ADR-0007 que toda cifra del corpus lleva.
-    clave: 'cifra-tributaria-literal',
-    regla: 'ninguna cifra tributaria literal en el codigo',
-    selector: ATADURAS_DE_CIFRA.map((atadura) => `${atadura} > ${LITERAL_DE_CIFRA}`).join(', '),
-    message:
-      'Ninguna cifra tributaria literal en el codigo: la UIT, los tramos, las alicuotas, los valores unitarios y los aranceles viven en el conjunto sellado del ejercicio y se PIDEN (regla 5, RNF-053). Escribirla aqui la publica sin las dos firmas de ADR-0007.',
-  },
-];
+export const PROHIBICIONES = TODAS_LAS_DEL_PRODUCTO.map((prohibicion) =>
+  prohibicion.salvo === undefined
+    ? prohibicion
+    : { ...prohibicion, salvo: SALVO_EN_ESTE_ARBOL[prohibicion.clave] },
+);
 
 /**
- * Las reglas del producto que el frontend expresa como verificacion, tal como las nombra
- * el issue F-1. La prueba exige que cada una tenga al menos una prohibicion que la sirva.
+ * Las reglas que ESTE frontend expresa como verificacion: las ocho que el producto exige y la
+ * novena que este sistema se exige a si mismo. **Nueve, y las nueve escritas alla.**
  *
- * ES LA LISTA ESCRITA A MANO, y es deliberado que sea la unica. `PROHIBICIONES` se deriva
- * hacia la prueba, asi que **borrar una prohibicion borraria tambien su prueba**, en
- * silencio. Esta lista es lo que se pone rojo cuando eso pasa.
+ * ES LA LISTA ESCRITA A MANO —en `kamayuk-lib`, en dos trozos—, y es deliberado que sea la unica.
+ * `PROHIBICIONES` se deriva hacia la prueba, asi que **borrar una prohibicion borraria tambien su
+ * prueba**, en silencio. Esta lista es lo que se pone rojo cuando eso pasa.
+ *
+ * Los dos trozos van separados alla y eso importa: `REGLAS_EXIGIDAS` de la libreria es lo que se
+ * le exige a los CINCO sistemas, y meter la opcional ahi pondria rojo a `rentas` sin tocar nada
+ * suyo. Aqui, en cambio, la suma es la lista correcta: son las nueve que este frontend aplica.
  *
  * @type {readonly string[]}
  */
-export const REGLAS_EXIGIDAS = [
-  'sin tildes ni enie en identificadores',
-  'fetch prohibido fuera del cliente de API',
-  'un importe es string, nunca number',
-  'un importe se muestra con su fecha de calculo',
-  'sin aritmetica sobre importes',
-  'municipalidadId no se manda nunca',
-  'el token no toca localStorage ni sessionStorage',
-  'alicuota, nunca tasa',
-  'ninguna cifra tributaria literal en el codigo',
-];
+export const REGLAS_EXIGIDAS = [...EXIGIDAS, ...OPCIONALES];

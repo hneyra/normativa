@@ -76,8 +76,8 @@ export interface Requeridor {
  *
  * <h2>Por que el paquete se nombra, y no «uno de ellos»</h2>
  *
- * Son cinco enlaces —`rentas` y `catastro` tienen seis, con `@kamayuk/verificaciones`, que aqui
- * no entra hasta #62—. Un rojo que dijera «algun `@kamayuk/*` no resolvio» obliga a
+ * Son seis enlaces desde #62 —los cinco de ejecucion y `@kamayuk/verificaciones`, los mismos que
+ * `rentas` y `catastro`—. Un rojo que dijera «algun `@kamayuk/*` no resolvio» obliga a
  * probarlos a mano, y los dos remedios son distintos: si el destino no esta, falta el
  * `git clone`; si esta, lo que falta es el `yarn install` que escribe el symlink.
  */
