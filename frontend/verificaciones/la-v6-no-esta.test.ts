@@ -99,7 +99,62 @@ const ESTA: readonly string[] = [
   'index.html',
   'public/configuracion.js',
   'diseno/NormativaV6.dc.html',
+  // Lo que #55 puso en su sitio: el `Armazon` montado y vacio, su hoja de estilos y las OCHO
+  // costuras. Cada costura tiene dueño en la epica #47, y ninguna se puede borrar «porque no hace
+  // nada»: la que no este obliga a su issue a tocar `src/aplicacion.tsx`, que es de #55 y de nadie
+  // mas. Quien la llene cambia su cuerpo, no esta lista.
+  'src/aplicacion.tsx',
+  'src/estilos.css',
+  'src/acciones.ts',
+  'src/arranque.ts',
+  'src/catalogo.ts',
+  'src/datos/proveedor.tsx',
+  'src/i18n/armazon.ts',
+  'src/marca.ts',
+  'src/pantallas/index.ts',
+  'src/sesion.ts',
 ];
+
+/**
+ * La hoja propia de esta aplicacion. Los dos casos que `rentas` tiene en ESTE archivo (#55, AC 4).
+ *
+ * Aqui no comprueban lo mismo que en `tailwind-esta-conectado.test.ts`, que mira que los `@source`
+ * apunten a algo y que la hoja importe la de la libreria: lo que se exige aqui es lo que la V6
+ * hacia y ya no se puede hacer — declarar la paleta. `src/estilos/tokens/colors.css` salio con la
+ * V6, y su contraste lo mide ahora la libreria.
+ */
+const HOJA_PROPIA = 'src/estilos.css';
+
+describe('la hoja de la aplicacion no vuelve a declarar la paleta', () => {
+  const sinComentarios = () =>
+    readFileSync(join(RAIZ, HOJA_PROPIA), 'utf8').replace(/\/\*[\s\S]*?\*\//g, ' ');
+
+  it('no declara ni un color', () => {
+    // La paleta la publica `@kamayuk/ui` y la vendoriza el artboard. Un valor escrito aqui seria
+    // una segunda fuente de verdad, y cual gana depende del orden en que el empaquetador resuelva
+    // los modulos — o sea que el sintoma no es un color mal: es un color mal A VECES.
+    const colores = [...sinComentarios().matchAll(/#[0-9a-f]{3,8}\b|rgba?\(|hsla?\(|oklch\(/gi)].map(
+      ([c]) => c,
+    );
+    expect(colores, `«${HOJA_PROPIA}» escribe colores propios`).toEqual([]);
+  });
+
+  it('y cada `@source` apunta a algo que existe', () => {
+    // Un `@source` a un directorio que no existe NO es un error para Tailwind: no mira ahi y calla.
+    // Que las clases de esos directorios lleguen al CSS lo mide `tailwind-emite-las-clases`; que el
+    // camino exista, esto.
+    const fuentes = [...sinComentarios().matchAll(/@source\s+["']([^"']+)["']/g)].map(
+      ([, ruta]) => ruta ?? '',
+    );
+    expect(fuentes.length, 'la hoja ya no declara ningun `@source`').toBeGreaterThan(0);
+    for (const declarada of fuentes) {
+      expect(
+        existsSync(join(RAIZ, 'src', declarada)),
+        `«@source "${declarada}"» no apunta a nada: Tailwind no mirara ahi y nadie lo dira`,
+      ).toBe(true);
+    }
+  });
+});
 
 describe('la V6 no esta', () => {
   it('EL CENTINELA: la lista dice algo y el arbol se puede leer', () => {

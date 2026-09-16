@@ -36,8 +36,31 @@ dist
 # que estar en el contexto.
 diseno
 
-# Lo que no construye nada: las barreras y sus muestras, que ya corrieron en `frontend.yml`.
-verificaciones
+# `verificaciones/` YA NO SE EXCLUYE, y su exclusion es lo que rompia la imagen (#55).
+#
+# Hasta #50 decia aqui «lo que no construye nada: las barreras y sus muestras, que ya corrieron en
+# `frontend.yml`», y era cierto. Desde #55 no lo es: `vite.config.ts` carga `resolucion.ts`, y
+# `resolucion.ts` importa `./verificaciones/enlace.ts` —la funcion que resuelve cada `link:` o dice
+# el `git clone` que falta—. Es el hallazgo de `catastro`#118, medido con
+# `docker build --build-context kamayuk-lib=../../kamayuk-lib --target interfaz .`:
+#
+#     failed to load config from /obra/<sistema>/frontend/vite.config.ts
+#     resolucion.ts:5:53: ERROR: Could not resolve "./verificaciones/enlace.ts"
+#
+# `rentas` no la excluye por lo mismo. Y no entra en el paquete: Vite solo la lee al cargar su
+# configuracion, y lo que se SIRVE lo comprueba la negativa de la ultima etapa del `Dockerfile`.
 
+# Lo que deja el arnes de navegador, calcado de `rentas`: `e2e/.estado/` guarda cookies de sesion
+# de Keycloak VIVAS —credenciales de la instalacion de quien corrio `yarn e2e`—, y los informes
+# llevan capturas de pantalla con datos. Una credencial dentro de una imagen que se publica en un
+# registro es la peor forma de este defecto. El arnes llega con #61; las lineas llegan antes para
+# que no haya un solo commit en que falten.
+e2e
+playwright-report
+test-results
+
+# Residuos locales que no empaqueta nadie.
+*.tsbuildinfo
+.capturas
 .idea
 .claude

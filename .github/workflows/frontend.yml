@@ -1,14 +1,17 @@
 name: Frontend
 
-# La CI de `normativa-web`. Corre `yarn verificar` —lint, tipos y pruebas— y `yarn build`, y
-# nada mas: aqui no se construye imagen ni se despliega.
+# La CI de `normativa-web`. Corre `yarn verificar` —lint, tipos y pruebas—, `yarn build` y, desde
+# #55, CONSTRUYE LA IMAGEN de verdad. Nada mas: aqui no se publica imagen ni se despliega.
 #
-# QUE HAY QUE VERIFICAR, DESDE #50
-# La V6 salio entera (su fuente es `c01fe9a`) y en `frontend/` queda la cadena de herramientas de
-# `rentas@ac379ac`, version a version, con una raiz vacia. Lo que corre aqui son las barreras:
-# las diez prohibiciones de ESLint con sus muestras, que el stack siga siendo el de `rentas`, que
-# la V6 no vuelva, y lo que la imagen y el despliegue dan por puesto. Las pantallas llegan con la
-# epica #47, y con ellas sus pruebas; este archivo no cambia por eso.
+# QUE HAY QUE VERIFICAR, DESDE #55
+# La V6 salio entera en #50 (su fuente es `c01fe9a`) y en `frontend/` queda la cadena de
+# herramientas de `rentas@ac379ac`, version a version y ya ENTERA: desde #55 con los cinco
+# `@kamayuk/*` de ejecucion por `link:` y el `Armazon` montado y vacio. Lo que corre aqui son las
+# barreras: las diez prohibiciones de ESLint con sus muestras, que el stack siga siendo el de
+# `rentas`, que la V6 no vuelva, que el enlace con el clon hermano este puesto y resuelva, que
+# Tailwind emita las clases de la libreria, que `src/aplicacion.tsx` siga siendo una costura, y lo
+# que la imagen y el despliegue dan por puesto. Las cuatro hojas llegan con #58, y con ellas sus
+# pruebas; este archivo no cambia por eso.
 #
 # POR QUE SI LLEVA FILTRO `paths`, AL REVES QUE `publicar-imagenes.yml`
 # Alli el filtro seria un defecto: la guarda de `infrastructure` necesita que TODO commit de
@@ -17,23 +20,48 @@ name: Frontend
 # etiqueta, asi que la equivalencia no hace falta y el filtro solo evita gastar una
 # instalacion de yarn en cada cambio del backend o del corpus.
 #
-# Y el filtro ya no esconde nada del backend: hasta `c01fe9a`, pruebas de la V6 leian Java y
-# `docs/50-api/` —exigian que NO hubiera ningun `@PostMapping` ni `formas-de-la-api.json`—, asi
-# que un PR de backend podia romperlas sin que esta CI se disparara. Salieron con la V6 (#50), y
-# ninguna prueba de `frontend/` lee hoy `backend/` ni `docs/50-api/`. Lo que si queda fuera del
-# filtro, y dicho: `imagen-y-despliegue.test.ts` lee `despliegue/compose.yaml`,
-# `infrastructure/src/descriptor.ts` y `publicar-imagenes.yml`, asi que un PR que solo toque esos
-# tres puede dejarla roja sin que esta CI lo vea. Es anterior a #50 y no se cierra aqui.
+# Y DESDE #55 EL FILTRO NO DEJA FUERA LO QUE LAS GUARDAS LEEN. `imagen-y-despliegue.test.ts` lee
+# `despliegue/compose.yaml`, `infrastructure/src/descriptor.ts` y `publicar-imagenes.yml`, y hasta
+# #50 un PR que solo tocara esos tres la dejaba roja sin que esta CI lo viera. Ahora los tres estan
+# en el filtro. Se anaden tambien `backend/**` y `docs/50-api/**`: hoy ninguna prueba de
+# `frontend/` los lee —las de la V6 que exigian que NO hubiera `@PostMapping` ni
+# `formas-de-la-api.json` salieron con ella—, pero la interfaz mide sus rutas contra
+# `docs/50-api/formas-de-la-api.json` desde #49, y el AC 5 de #55 los pide para que un PR que los
+# toque verifique tambien la interfaz.
 #
 # El workflow se incluye en su propio filtro: un cambio en este archivo tiene que verificarse
 # a si mismo. Sin eso, romper la CI del frontend es el unico cambio que la CI del frontend no
 # revisa.
 #
-# NO NECESITA EL CLON HERMANO, TODAVIA. El backend si —`settings.gradle.kts` consume
-# `infrastructure` como *composite build*—. El frontend no declara aun ningun `@kamayuk/*`: los
-# cinco de ejecucion entran con #55 y `@kamayuk/verificaciones` con #62, y ese dia este archivo
-# gana el checkout de `kamayuk-lib` al lado, como el de `rentas`. Hasta entonces se clona donde
-# toca y ya.
+# SI NECESITA UN CLON HERMANO, DESDE #55. Este comentario decia lo contrario —«el frontend no
+# declara aun ningun `@kamayuk/*` […] ese dia este archivo gana el checkout de `kamayuk-lib` al
+# lado»— y ese dia llego: `frontend/package.json` declara
+# `@kamayuk/{api,formato,sesion,shell,ui}` como `link:../../kamayuk-lib/paquetes/*`, que yarn
+# resuelve contra el DISCO y ninguna variable de entorno redirige. Asi que la disposicion de
+# clones hermanos no es una preferencia: esta escrita en el `package.json`.
+#
+# Por eso el anfitrion baja a `path: normativa` y `kamayuk-lib` se clona a su lado. `actions/
+# checkout` se niega a escribir fuera de `GITHUB_WORKSPACE`, asi que no se puede clonar hacia
+# arriba: lo que se mueve es este repositorio, y el espacio de trabajo pasa a hacer de padre. Es
+# el mismo patron que `infraestructura.yml` usa para `@kamayuk/infra-contrato`, con una
+# diferencia: alli `path: infrastructure` a secas no valdria —choca con el directorio
+# `infrastructure/` que este repositorio tiene dentro—, y `kamayuk-lib` no tiene esa colision.
+#
+# LO QUE EL FILTRO `paths` NO PUEDE VER, y hay que saberlo: un cambio en `kamayuk-lib` no dispara
+# ninguna corrida aqui. La CI de `normativa` se pondra roja en el siguiente PR que toque
+# `frontend/**` por algo que no cambio en `normativa`, y el `git log` de este repositorio no lo
+# explicara. Es el coste que ADR-0038 §3 conto: «+1 clon, que hoy no tienen ninguno».
+#
+# Y DESDE #55 LA IMAGEN SE CONSTRUYE EN CADA PR
+#
+# `publicar-imagenes.yml` solo corre al integrar en `main`, asi que hasta aqui un
+# `frontend/Dockerfile` roto se descubria DESPUES del merge. Con los cinco `@kamayuk/*` de
+# ejecucion el `Dockerfile` pasa a depender de un contexto con nombre y de la PROFUNDIDAD del
+# `WORKDIR`, que es exactamente la clase de cosa que se rompe sin tocar `src/`: `catastro`#118
+# midio que su `.dockerignore` excluia `verificaciones/`, que es de donde `resolucion.ts` importa,
+# y que ningun flujo de PR lo habria visto. `rentas` lo cerro en su #75 construyendo en
+# `publicar-imagenes.yml` con `push: false`; aqui se construye en ESTE flujo, que ya tiene el clon
+# hermano y el filtro de `frontend/**`, y `publicar-imagenes.yml` sigue publicando solo en `main`.
 #
 # QUE SE EJECUTA, Y EN QUE ORDEN
 # `yarn verificar` encadena lint, tipos y pruebas —las tres, y en ese orden, porque el error
@@ -45,9 +73,29 @@ name: Frontend
 on:
   push:
     branches: [main]
-    paths: ["frontend/**", ".github/workflows/frontend.yml"]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend.yml"
+      # Lo que `imagen-y-despliegue.test.ts` lee y no vive en `frontend/`.
+      - "despliegue/compose.yaml"
+      - "infrastructure/src/descriptor.ts"
+      - ".github/workflows/publicar-imagenes.yml"
+      # Y lo que la interfaz da por publicado (AC 5 de #55).
+      - "backend/**"
+      - "docs/50-api/**"
   pull_request:
-    paths: ["frontend/**", ".github/workflows/frontend.yml"]
+    # La MISMA lista, escrita otra vez: GitHub Actions no resuelve anclas de YAML en un workflow,
+    # asi que un `&lo_suyo` / `*lo_suyo` aqui no filtra nada — y no falla, que es lo peor.
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend.yml"
+      # Lo que `imagen-y-despliegue.test.ts` lee y no vive en `frontend/`.
+      - "despliegue/compose.yaml"
+      - "infrastructure/src/descriptor.ts"
+      - ".github/workflows/publicar-imagenes.yml"
+      # Y lo que la interfaz da por publicado (AC 5 de #55).
+      - "backend/**"
+      - "docs/50-api/**"
 
 # Sin permisos de escritura: este trabajo lee y verifica, no publica nada.
 permissions:
@@ -63,33 +111,82 @@ jobs:
   verificar:
     name: normativa-web verifica y construye
     runs-on: ubuntu-latest
-    # Un colgado no consume cuota sin limite: la leccion de `observabilidad-alertas`.
-    timeout-minutes: 10
+    # Un colgado no consume cuota sin limite: la leccion de `observabilidad-alertas`. Veinte y no
+    # diez desde #55: la imagen repite la instalacion y el `vite build` dentro de Docker, sin la
+    # cache de `setup-node`.
+    timeout-minutes: 20
     defaults:
       run:
-        working-directory: frontend
+        working-directory: normativa/frontend
 
     steps:
-      - uses: actions/checkout@v4
+      # El anfitrion BAJA UN NIVEL para que el hermano quepa a su lado. Ver la cabecera.
+      - name: Este repositorio
+        uses: actions/checkout@v4
+        with:
+          path: normativa
+
+      # El clon hermano del que cuelgan los cinco `link:` de `frontend/package.json`.
+      #
+      # El repliegue `|| github.token` es el que llevan los workflows de los seis clones que ya
+      # clonan un hermano: `GH_CLONE_KEY` puede ser un PAT de alcance fino que enumera los
+      # repositorios del producto, y `kamayuk-lib` puede no estar en el. Si el checkout muere con
+      # «Repository not found», es eso.
+      - name: Las librerias comunes
+        uses: actions/checkout@v4
+        with:
+          repository: hneyra/kamayuk-lib
+          path: kamayuk-lib
+          token: ${{ secrets.GH_CLONE_KEY || github.token }}
 
       # La version sale de `frontend/.nvmrc` y no de un literal aqui: con el literal, la CI y
       # quien clona el repositorio son dos numeros que pueden separarse sin que nada lo diga.
+      #
+      # Las dos rutas siguen al anfitrion. Si `cache-dependency-path` se olvida, `setup-node` NO
+      # se salta la cache: FALLA el paso, antes de instalar nada y con un mensaje que habla de
+      # cache y no de rutas —«Some specified paths were not resolved, unable to cache
+      # dependencies»—. En local el concepto no existe.
       - uses: actions/setup-node@v4
         with:
-          node-version-file: frontend/.nvmrc
+          node-version-file: normativa/frontend/.nvmrc
           cache: yarn
-          cache-dependency-path: frontend/yarn.lock
+          cache-dependency-path: normativa/frontend/yarn.lock
 
       # `--frozen-lockfile` y no `yarn install` a secas: sin el, una version nueva de
       # cualquier dependencia entra en la CI sin pasar por ningun PR, y el dia que rompa algo
       # el diff no lo explica.
+      #
+      # Y ojo con lo que este paso NO garantiza: con el clon hermano ausente, `yarn install
+      # --frozen-lockfile` sale con **codigo 0** y no enlaza nada —medido; `--check-files`
+      # tampoco lo caza—. Quien lo detecta es `verificaciones/enlace-con-kamayuk-lib.test.ts`,
+      # dentro de `yarn verificar`, y lo dice nombrando el `git clone`.
       - name: Instalar
         run: yarn install --frozen-lockfile
 
       - name: Lint, tipos y pruebas
         run: yarn verificar
 
-      # Se construye aunque la raiz este vacia: un `tsc` en verde no demuestra que Vite sepa
+      # Se construye aunque no haya ninguna hoja: un `tsc` en verde no demuestra que Vite sepa
       # empaquetar esto, y la imagen que publica `main` sale de este mismo `yarn build`.
       - name: Construir el bundle
         run: yarn build
+
+      # LA IMAGEN, CONSTRUIDA Y NO PUBLICADA (#55).
+      #
+      # La misma orden que se teclea en local, con el clon hermano por su contexto con nombre: el
+      # `../../kamayuk-lib` es el `link:` de `package.json` visto desde aqui, y de ahi el
+      # `Dockerfile` copia `paquetes/`. Sin `--build-context`, BuildKit resuelve
+      # `--from=kamayuk-lib` como una imagen de Docker Hub y el rojo habla de un registro
+      # —«pull access denied»—, no de un contexto.
+      #
+      # Construir no es solo compilar: la etapa `interfaz` se niega a terminar si lo servido lleva
+      # un `.ts`, un `.tsx` o una de las cinco cadenas del corpus, asi que ese rojo tambien sale
+      # aqui y no en `main`. No se etiqueta con el `sha` ni se sube a ningun sitio: lo que se
+      # publica lo decide `publicar-imagenes.yml`.
+      - name: La imagen se construye con el clon hermano
+        run: >-
+          docker build
+          --build-context kamayuk-lib=../../kamayuk-lib
+          --target interfaz
+          -t kamayuk-normativa-interfaz:pr
+          .

@@ -35,11 +35,14 @@ import { describe, expect, it } from 'vitest';
  *
  * <h2>Lo que queda fuera, y hasta cuando</h2>
  *
- * Los cinco `@kamayuk/*` de ejecucion entran con #55, que enchufa la libreria junto con
- * `preserveSymlinks`, `resolucion.ts` y el contexto de la imagen. `@kamayuk/verificaciones` entra
- * con #62, que es cuando las prohibiciones dejan de ser las diez propias. Los seis estan en
- * {@link ENTRAN_DESPUES} con su issue, y **tambien son parte de la guarda**: el dia que uno entre,
- * esto se pone rojo y ese PR lo mueve a la lista.
+ * **Los cinco `@kamayuk/*` de ejecucion ya estan**: los enchufo #55, junto con `preserveSymlinks`,
+ * `resolucion.ts`, los `@source` de `src/estilos.css` y el contexto con nombre de la imagen. Ese
+ * dia esta prueba salio roja —«@kamayuk/api entra con #55»— y ese PR los movio de
+ * {@link ENTRAN_DESPUES} a la lista, que es exactamente lo que esta guarda existe para obligar.
+ *
+ * El que queda es `@kamayuk/verificaciones`, y entra con #62: es cuando las prohibiciones dejan de
+ * ser las diez propias. Sigue en {@link ENTRAN_DESPUES} con su issue, y **tambien es parte de la
+ * guarda**: el dia que entre, esto se pone rojo y ese PR lo mueve.
  */
 
 /** De donde se copio la lista. Cambiarlo es cambiar la lista, en el mismo PR. */
@@ -49,11 +52,19 @@ type Seccion = 'dependencies' | 'devDependencies';
 
 /**
  * `rentas/frontend/package.json` en {@link RENTAS_EN}, seccion a seccion y rango a rango, **menos**
- * los seis de {@link ENTRAN_DESPUES}.
+ * el de {@link ENTRAN_DESPUES}.
  */
 const EL_STACK_DE_RENTAS: Readonly<Record<Seccion, Readonly<Record<string, string>>>> = {
   dependencies: {
     '@hookform/resolvers': '^5.2.0',
+    // Los cinco de ejecucion, enchufados en #55: son el `link:` al clon hermano, con la ruta
+    // letra por letra la de `rentas`. Tres rutas a tres sitios distintos serian tres
+    // dependencias que mantener y no una, y eso lo vigila `enlace-con-kamayuk-lib`.
+    '@kamayuk/api': 'link:../../kamayuk-lib/paquetes/api',
+    '@kamayuk/formato': 'link:../../kamayuk-lib/paquetes/formato',
+    '@kamayuk/sesion': 'link:../../kamayuk-lib/paquetes/sesion',
+    '@kamayuk/shell': 'link:../../kamayuk-lib/paquetes/shell',
+    '@kamayuk/ui': 'link:../../kamayuk-lib/paquetes/ui',
     '@tanstack/react-query': '^5.102.8',
     'class-variance-authority': '^0.7.1',
     clsx: '^2.1.1',
@@ -100,11 +111,10 @@ const EL_STACK_DE_RENTAS: Readonly<Record<Seccion, Readonly<Record<string, strin
 const ENTRAN_DESPUES: Readonly<
   Record<string, { readonly seccion: Seccion; readonly rango: string; readonly issue: string }>
 > = {
-  '@kamayuk/api': { seccion: 'dependencies', rango: 'link:../../kamayuk-lib/paquetes/api', issue: '#55' },
-  '@kamayuk/formato': { seccion: 'dependencies', rango: 'link:../../kamayuk-lib/paquetes/formato', issue: '#55' },
-  '@kamayuk/sesion': { seccion: 'dependencies', rango: 'link:../../kamayuk-lib/paquetes/sesion', issue: '#55' },
-  '@kamayuk/shell': { seccion: 'dependencies', rango: 'link:../../kamayuk-lib/paquetes/shell', issue: '#55' },
-  '@kamayuk/ui': { seccion: 'dependencies', rango: 'link:../../kamayuk-lib/paquetes/ui', issue: '#55' },
+  // Uno solo desde #55, y es el que NO entra en el paquete: trae las prohibiciones de ESLint, que
+  // aqui siguen siendo las DIEZ propias. La lista de la libreria lleva los nombres de importe de
+  // `rentas` y no tiene `cifra-tributaria-literal` —la novena, que es de este repositorio—, asi
+  // que adoptarla hoy debilitaria el lint. Es la diferencia deliberada de la epica #47.
   '@kamayuk/verificaciones': {
     seccion: 'devDependencies',
     rango: 'link:../../kamayuk-lib/paquetes/verificaciones',
@@ -162,7 +172,7 @@ describe(`el stack es el de rentas@${RENTAS_EN.slice(0, 7)}, version a version`,
     const entradas =
       Object.keys(EL_STACK_DE_RENTAS.dependencies).length +
       Object.keys(EL_STACK_DE_RENTAS.devDependencies).length;
-    expect(entradas, 'la lista de rentas tiene 38 entradas; con 30 o menos alguien la vacio').toBeGreaterThan(30);
+    expect(entradas, 'la lista de rentas tiene 43 entradas; con 35 o menos alguien la vacio').toBeGreaterThan(35);
     // Un `sha` completo: uno corto se vuelve ambiguo con el tiempo, y entonces ya no dice de donde.
     expect(RENTAS_EN).toMatch(/^[0-9a-f]{40}$/);
     // Y el manifiesto se leyo de verdad, aqui dentro: un objeto vacio haria que la comparacion de
@@ -195,7 +205,7 @@ describe(`el stack es el de rentas@${RENTAS_EN.slice(0, 7)}, version a version`,
     ).toEqual([]);
   });
 
-  it('y ninguno de los seis @kamayuk/* entra antes de su issue', () => {
+  it('y el @kamayuk/* que falta no entra antes de su issue', () => {
     // Es la misma guarda que la de arriba —uno de estos anadido sale alli como «+»—, pero con el
     // remedio que le toca: no es un desvio de rentas sino el trabajo de otro issue empezado aqui.
     const manifiesto = elManifiesto();
@@ -210,10 +220,9 @@ describe(`el stack es el de rentas@${RENTAS_EN.slice(0, 7)}, version a version`,
       adelantados,
       'Un @kamayuk/* llego antes que el issue que lo enchufa:\n' +
         `${adelantados.join('\n')}\n\n` +
-        '  Los cinco de ejecucion necesitan `preserveSymlinks`, `resolucion.ts` y el contexto\n' +
-        '  `kamayuk-lib` de la imagen (#55); sin ellos el enlace rompe la imagen y duplica React.\n' +
-        '  `@kamayuk/verificaciones` cambia de donde salen las prohibiciones (#62). Ese PR lo mueve\n' +
-        '  de ENTRAN_DESPUES a la lista.',
+        '  `@kamayuk/verificaciones` cambia de donde salen las prohibiciones: las diez propias\n' +
+        '  pasan a derivarse de la libreria (#62), y su lista no tiene `cifra-tributaria-literal`.\n' +
+        '  Ese PR lo mueve de ENTRAN_DESPUES a la lista, como #55 hizo con los cinco de ejecucion.',
     ).toEqual([]);
   });
 

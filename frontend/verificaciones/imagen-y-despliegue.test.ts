@@ -28,6 +28,21 @@ import { describe, expect, it } from 'vitest';
  * esta suite corre sin demonio de Docker. Las mediciones estan en el PR de #39 y en la fila del
  * registro; aqui se sujeta que los archivos que las producen no se deshagan.
  *
+ * <h2>Lo que cambio con #55</h2>
+ *
+ * Entra el CUARTO sitio que tiene que decir lo mismo: el clon hermano `kamayuk-lib`. Son cuatro
+ * archivos que se escriben por separado y que, si dejan de coincidir, no rompen nada donde se
+ * miran:
+ *
+ *   · el `link:` de `frontend/package.json` fija la PROFUNDIDAD —`../../`— y de ahi sale el
+ *     `WORKDIR` de la imagen. Acortarlo no da un error de rutas: da
+ *     «Your lockfile needs to be updated», que manda a mirar el candado.
+ *   · el `COPY --from=kamayuk-lib` del `Dockerfile` no es una etapa: sin un contexto declarado,
+ *     BuildKit lo resuelve como NOMBRE DE IMAGEN y se va a Docker Hub.
+ *   · quien declara ese contexto son tres: `frontend.yml` (el PR), `publicar-imagenes.yml` (`main`)
+ *     y el compose. Los tres tienen que decir el mismo nombre, y ninguno de los tres se ejecuta
+ *     cuando se edita otro.
+ *
  * <h2>Lo que cambio con #50</h2>
  *
  * Salio el `describe` del proxy de datos —su bandera ya no existe—, la negativa de las cinco
@@ -64,6 +79,8 @@ const COMPOSE = () => leer('despliegue/compose.yaml');
 const DESCRIPTOR = () => leer('infrastructure/src/descriptor.ts');
 const PUBLICAR = () => leer('.github/workflows/publicar-imagenes.yml');
 const INDEX = () => leer('frontend/index.html');
+const FRONTEND_YML = () => leer('.github/workflows/frontend.yml');
+const PAQUETE = () => leer('frontend/package.json');
 
 /** Las lineas de una configuracion, sin comentarios: `#` a final de linea no es una directiva. */
 const sinComentarios = (texto: string) =>
@@ -91,15 +108,21 @@ describe('la imagen existe, y quien la publica sabe de donde sale', () => {
       ...PUBLICAR().matchAll(/- destino: (\S+)\n\s+imagen: (\S+)\n\s+archivo: (\S+)\n\s+contexto: (\S+)/g),
     ].map((m) => ({ destino: m[1], imagen: m[2], archivo: m[3], contexto: m[4] }));
 
+    // Las tres con `normativa/` delante desde #55: el anfitrion se clona en `path: normativa`
+    // para que `kamayuk-lib` quepa a su lado, y las rutas de la matriz siguen al anfitrion. El
+    // `.dockerignore` que aplica a cada imagen no cambia por eso —`normativa` es lo que era `.`—.
     expect(entradas).toEqual([
-      { destino: 'aplicacion', imagen: 'kamayuk-normativa', archivo: 'backend/Dockerfile', contexto: '.' },
-      { destino: 'migrador', imagen: 'kamayuk-normativa-migrador', archivo: 'backend/Dockerfile', contexto: '.' },
-      { destino: 'interfaz', imagen: 'kamayuk-normativa-interfaz', archivo: 'frontend/Dockerfile', contexto: 'frontend' },
+      { destino: 'aplicacion', imagen: 'kamayuk-normativa', archivo: 'normativa/backend/Dockerfile', contexto: 'normativa' },
+      { destino: 'migrador', imagen: 'kamayuk-normativa-migrador', archivo: 'normativa/backend/Dockerfile', contexto: 'normativa' },
+      { destino: 'interfaz', imagen: 'kamayuk-normativa-interfaz', archivo: 'normativa/frontend/Dockerfile', contexto: 'normativa/frontend' },
     ]);
 
     // Y el paso las TOMA de la matriz. Con `context: .` fijo, la matriz seria decorativa.
     expect(PUBLICAR()).toContain('context: ${{ matrix.contexto }}');
     expect(PUBLICAR()).toContain('file: ${{ matrix.archivo }}');
+    // Y el anfitrion baja de verdad: si el checkout siguiera en la raiz, el prefijo de arriba
+    // apuntaria a un directorio que no existe y las tres imagenes fallarian a la vez.
+    expect(PUBLICAR()).toContain('path: normativa');
   });
 
   /**
@@ -135,6 +158,114 @@ describe('la imagen existe, y quien la publica sabe de donde sale', () => {
     // es una guarda que alguien acaba apagando borrando el comentario en vez del defecto.
     expect(sinComentarios(PUBLICAR())).not.toContain('kamayuk-normativa-web');
     expect(sinComentarios(COMPOSE())).not.toContain('kamayuk-normativa-web');
+  });
+});
+
+/**
+ * **Los cuatro sitios que tienen que decir «kamayuk-lib»** (#55).
+ *
+ * Lo que los ata no es un nombre elegido: es el `link:` de `frontend/package.json`, que es lo
+ * unico que yarn obedece. De ahi sale la PROFUNDIDAD del `WORKDIR` y de ahi sale que haga falta
+ * un contexto con nombre, porque el destino del `link:` vive dos niveles por encima del contexto
+ * de esta imagen.
+ */
+describe('el clon hermano llega a la imagen, y los cuatro sitios dicen lo mismo (#55)', () => {
+  /** El nombre del contexto de BuildKit. Uno solo, y lo tienen que escribir los cuatro. */
+  const CONTEXTO = 'kamayuk-lib';
+
+  /** La ruta que el `link:` declara, leida del manifiesto y no escrita aqui. */
+  const declaradaEnElLink = (): string => {
+    const manifiesto = JSON.parse(PAQUETE()) as { dependencies?: Record<string, string> };
+    const enlaces = Object.values(manifiesto.dependencies ?? {}).filter((v) =>
+      v.startsWith('link:'),
+    );
+    return enlaces[0]?.slice('link:'.length) ?? '';
+  };
+
+  it('EL CENTINELA: hay un `link:` del que derivar todo lo demas', () => {
+    // Sin esto, un `package.json` sin enlaces dejaria `declaradaEnElLink()` en la cadena vacia y
+    // las comprobaciones de abajo pasarian sobre la nada — que es como una guarda se queda sin
+    // sujeto sin que nadie la borre.
+    const declarada = declaradaEnElLink();
+    expect(declarada, 'ningun `link:` en `dependencies`').not.toBe('');
+    expect(declarada).toContain(CONTEXTO);
+    expect(declarada.startsWith('../../'), `el link: ya no sube dos niveles: «${declarada}»`).toBe(
+      true,
+    );
+  });
+
+  it('el `WORKDIR` reproduce la profundidad que el `link:` exige', () => {
+    // La profundidad NO se escribe aqui: se cuenta de la ruta declarada. Un `WORKDIR /origen`
+    // —el de antes de #55— deja `../../kamayuk-lib` aplastado contra `/`, yarn reescribe la ruta y
+    // el rojo es «Your lockfile needs to be updated», que manda a mirar el candado.
+    const sube = (declaradaEnElLink().match(/\.\.\//g) ?? []).length;
+    const workdir = DOCKERFILE().match(/^WORKDIR\s+(\S+)/m)?.[1] ?? '';
+    const niveles = workdir.replace(/^\/|\/$/g, '').split('/').filter((x) => x !== '');
+
+    expect(
+      niveles.length,
+      `«WORKDIR ${workdir}» tiene ${String(niveles.length)} niveles y el link: sube ${String(sube)}:\n` +
+        '  con menos, `../../kamayuk-lib` se aplasta contra la raiz y `yarn install` falla\n' +
+        '  diciendo que el candado esta viejo — que no habla de rutas ni de clones hermanos.',
+    ).toBeGreaterThanOrEqual(sube + 1);
+    // Y el nombre de este repositorio esta dentro, que es lo que hace que el hermano caiga AL LADO
+    // y no encima.
+    expect(workdir).toContain('/normativa/');
+  });
+
+  it('el Dockerfile copia el hermano por un contexto con nombre, y solo `paquetes/`', () => {
+    const copia = DOCKERFILE().match(/^COPY --from=(\S+)\s+(\S+)\s+(\S+)/m);
+    expect(copia?.[1], `el Dockerfile ya no copia del contexto «${CONTEXTO}»`).toBe(CONTEXTO);
+    // `paquetes/` y no `.`: un contexto con nombre entra por su propia raiz y NINGUN
+    // `.dockerignore` lo acota — el de `frontend/` solo filtra el contexto principal. Con `.` se
+    // llevaria dentro el `node_modules` del hermano, su `.git` y cualquier `.env`.
+    expect(copia?.[2], 'un `COPY --from=kamayuk-lib .` se lleva el node_modules y el .git del hermano').toBe(
+      'paquetes/',
+    );
+    // Y va ANTES del `yarn install`, o el enlace no existe cuando yarn lo busca.
+    expect(DOCKERFILE().indexOf('--from=kamayuk-lib')).toBeLessThan(
+      DOCKERFILE().indexOf('yarn install'),
+    );
+  });
+
+  it('y lo copiado se sirve desde ESA profundidad: el COPY de la ultima etapa la repite', () => {
+    // Si el `WORKDIR` cambia y este `COPY` no, la etapa `interfaz` copia de un directorio que no
+    // existe — y `COPY` de un directorio vacio NO falla: deja la imagen sirviendo nada, `healthy`.
+    const workdir = DOCKERFILE().match(/^WORKDIR\s+(\S+)/m)?.[1] ?? '';
+    expect(DOCKERFILE()).toContain(`COPY --from=construccion ${workdir}/dist/`);
+  });
+
+  it('los TRES que declaran el contexto lo nombran igual: PR, publicacion y compose', () => {
+    // Ninguno de los tres se ejecuta cuando se edita otro, asi que la unica forma de que digan lo
+    // mismo es esta.
+    expect(
+      FRONTEND_YML(),
+      'el flujo del PR no construye la imagen con el contexto con nombre: un Dockerfile roto se\n' +
+        'descubriria despues del merge, porque `publicar-imagenes.yml` solo corre en `main`',
+    ).toContain(`--build-context ${CONTEXTO}=`);
+    expect(
+      PUBLICAR(),
+      `«${CONTEXTO}» no lo declara la matriz de publicar-imagenes.yml`,
+    ).toContain(`${CONTEXTO}=`);
+    expect(
+      PUBLICAR(),
+      'la matriz lo declara y el paso no lo pasa: `build-contexts` falta',
+    ).toContain('build-contexts: ${{ matrix.contextos }}');
+    expect(
+      sinComentarios(COMPOSE()),
+      'sin `additional_contexts`, `docker compose build` se va a buscar\n' +
+        '`docker.io/library/kamayuk-lib:latest` y el rojo habla de un registro',
+    ).toMatch(new RegExp(`additional_contexts:\\s*\\n\\s*${CONTEXTO}:\\s*\\.\\./\\.\\./${CONTEXTO}`));
+  });
+
+  it('y los tres apuntan a la MISMA ruta que el `link:` declara', () => {
+    // El compose y el `docker build` del flujo resuelven la ruta desde sitios distintos
+    // —`despliegue/` y `frontend/`— y dan el mismo directorio: `despliegue/../../kamayuk-lib` y
+    // `frontend/../../kamayuk-lib`. Que coincida con el `link:` es lo que hace que la imagen
+    // instale lo mismo que instala quien construye en su maquina.
+    const declarada = declaradaEnElLink().split('/paquetes/')[0] ?? '';
+    expect(sinComentarios(COMPOSE())).toContain(`${CONTEXTO}: ${declarada}`);
+    expect(FRONTEND_YML()).toContain(`--build-context ${CONTEXTO}=${declarada}`);
   });
 });
 
@@ -202,6 +333,26 @@ describe('la imagen no lleva dentro nada que no deba', () => {
       .split('\n')
       .map((l) => l.trim());
     expect(reglas).toContain('diseno');
+  });
+
+  /**
+   * Y **`verificaciones/` NO se excluye**, que es lo contrario de lo que decia hasta #55.
+   *
+   * `vite.config.ts` carga `resolucion.ts`, y `resolucion.ts` importa `./verificaciones/enlace.ts`.
+   * Con el directorio fuera del contexto, el `docker build` muere al cargar la configuracion de
+   * Vite —«Could not resolve "./verificaciones/enlace.ts"»— y ningun flujo de PR lo veia antes de
+   * #55, porque `publicar-imagenes.yml` solo corre en `main`. Es el hallazgo de `catastro`#118.
+   */
+  it('el .dockerignore NO deja fuera `verificaciones`, de donde `resolucion.ts` importa', () => {
+    const reglas = sinComentarios(DOCKERIGNORE())
+      .split('\n')
+      .map((l) => l.trim());
+    expect(
+      reglas,
+      'Excluir `verificaciones/` rompe el `docker build`: `vite.config.ts` carga `resolucion.ts`,\n' +
+        'que importa `./verificaciones/enlace.ts`. No entra en el paquete — Vite solo la lee al\n' +
+        'cargar su configuracion.',
+    ).not.toContain('verificaciones');
   });
 
   /** Que no quede fuente dentro del `dist/`, comprobado por la propia imagen al construirse. */
