@@ -2,13 +2,14 @@
 //
 // Compila CSS de verdad y lee archivos del disco. No es un DOM lo que necesita.
 
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
+import { artboardDeclarado, rutaDe } from './artboards.ts';
 import {
   RAIZ_DE_UI,
   clasesDe,
@@ -43,13 +44,18 @@ import {
  * pregunta si cada clase que la libreria escribe tiene su regla en ESE CSS. Quitar un `@source`
  * pone esto rojo nombrando las clases que se quedan sin regla.
  *
- * <h2>2. No hay artboard contra el que medir la paleta</h2>
+ * <h2>2. Los dos casos que medían contra el artboard, y que ya se pueden medir (`normativa`#58)</h2>
  *
- * `rentas` comprueba ademas que los 38 colores de `diseno/rentas-tokens.css` salen con su valor. Ese
- * artboard es de `rentas`, y `normativa` no tiene artboard V8 (epica `normativa`#114): la paleta es de
- * `@kamayuk/ui` y la mide `rentas` contra el suyo. Lo que se queda es lo que no depende de un
- * artboard: el lector de reglas (`rentas`#139), el radio que no es el de shadcn y que toda clase que
- * las piezas usan produzca una regla.
+ * `rentas` comprueba ademas dos cosas contra `diseno/rentas-tokens.css`: que **cada** color declarado
+ * genera su utilidad con su valor, y que el radio emitido es el del artboard. Cuando `normativa`#55
+ * escribio este archivo, aqui ponia que `normativa` no tenia artboard V8 y que esos dos casos no
+ * tenian contra que medir. **Ya lo tiene**: `diseno/normativa-tokens.css` llego con `normativa`#52
+ * —la hoja de `rentas` byte a byte, comprobada por su `sha256` en
+ * `la-paleta-cuadra-con-el-artboard`—, asi que los dos casos entran, calcados.
+ *
+ * Que la hoja sea la misma que la de `rentas` no los hace redundantes: lo que miden no es la hoja
+ * sino **el camino** —que de `--x` salga `bg-x` con el valor de `--x`—, y ese camino pasa por el
+ * `@theme` de `@kamayuk/ui` y por la compilacion de ESTE frontend, que son otros.
  */
 
 const requerir = createRequire(import.meta.url);
@@ -74,6 +80,52 @@ const FUENTES = [
   ...fuentesDe(join(FRONTEND, 'src')),
 ];
 const CLASES = [...new Set(FUENTES.flatMap((f) => clasesDe(readFileSync(f, 'utf8'))))].sort();
+
+/**
+ * `--azul: #005284;` -> `{ azul, #005284 }`. Los VALORES, que es lo que tiene que salir en el CSS.
+ *
+ * Se cogen los opacos y los translucidos —hexadecimales y `rgba()`—: buscar solo `#rrggbb` deja
+ * fuera los velos y los realces de la barra, y pareceria que faltan cinco.
+ *
+ * Se lee **al llamar** y no en el cuerpo del modulo: la hoja del artboard puede faltar, y entonces
+ * lo que tiene que salir es un rojo que la nombre y no una recoleccion muerta (`rentas`#78).
+ */
+function coloresDelArtboard(): readonly { readonly nombre: string; readonly valor: string }[] {
+  const hoja = artboardDeclarado('normativa-tokens.css');
+  const ruta = rutaDe(hoja);
+  if (!existsSync(ruta)) {
+    throw new Error(`FALTA ${hoja.archivo}\n  De donde se trae: ${hoja.deDonde}`);
+  }
+  return [
+    ...readFileSync(ruta, 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, ' ')
+      .matchAll(/--([a-z0-9-]+)\s*:\s*(#[0-9a-f]{6}|rgba\([^)]*\))\s*;/gi),
+  ].map(([, nombre, valor]) => ({
+    nombre: nombre ?? '',
+    valor: (valor ?? '').replace(/\s+/g, ' '),
+  }));
+}
+
+/** El valor de `--radio` del artboard: el que shadcn tiene que acabar leyendo en `--radius`. */
+function radioDelArtboard(): string {
+  const ruta = rutaDe(artboardDeclarado('normativa-tokens.css'));
+  const valores = [
+    ...new Set(
+      [
+        ...readFileSync(ruta, 'utf8')
+          .replace(/\/\*[\s\S]*?\*\//g, ' ')
+          .matchAll(/--radio[a-z0-9-]*\s*:\s*([^;]+);/gi),
+      ].map(([, valor]) => (valor ?? '').trim()),
+    ),
+  ];
+  if (valores.length !== 1) {
+    throw new Error(
+      `El artboard declara ${String(valores.length)} radios distintos —${valores.join(', ')}—, y ` +
+        'esta guarda compara contra UNO. Si el cambio es deliberado, aqui hay que decir cual manda.',
+    );
+  }
+  return valores[0] ?? '';
+}
 
 describe('Tailwind emite lo que las piezas piden', () => {
   it('EL CENTINELA: hay fuentes y clases que comprobar', async () => {
@@ -128,14 +180,77 @@ describe('Tailwind emite lo que las piezas piden', () => {
     ).toBe('#ffffff');
   });
 
-  it('el RADIO emitido es el de la libreria, y no el `0.625rem` de shadcn', async () => {
+  it('CADA color del artboard genera su utilidad, con su valor', async () => {
+    // Se pide `bg-<token>` de TODOS a proposito. Tailwind v4 **solo emite lo que se usa**, asi que
+    // preguntar por las clases que hoy se escriben mediria que tokens estan en uso, no que la paleta
+    // funcione. Pidiendolos todos se mide el CAMINO: que de `--color-x` salga `bg-x` y que lleve el
+    // valor que el artboard dibuja.
+    //
+    // Es el modo de fallo de `kamayuk-lib`#8 en su forma general: un token bien escrito con el
+    // prefijo equivocado deja la paleta «puesta» y las utilidades sin generar.
+    const colores = coloresDelArtboard();
+    expect(colores.length, 'el artboard no declaro ni un color').toBeGreaterThan(30);
+
+    const reglas = reglasDe(await compilar(colores.map((c) => `bg-${c.nombre}`)));
+    // La paleta del `@theme`, que es la que la utilidad apunta con su `var(--color-x)`. Las de
+    // `temas.css` quedan fuera a proposito: ver `paletaDelTema` y `rentas`#139.
+    const paleta = paletaDelTema(reglas);
+
+    const mudos = colores
+      .filter((c) => utilidadDesnuda(reglas, `bg-${c.nombre}`) === undefined)
+      .map((c) => `  --${c.nombre}: no genera «bg-${c.nombre}»`);
+
+    const torcidos = colores.flatMap((c) => {
+      const utilidad = utilidadDesnuda(reglas, `bg-${c.nombre}`);
+      if (utilidad === undefined) return [];
+      // Lo que la REGLA declara, con su `var(--color-x)` resuelto. Una utilidad de color no lleva el
+      // hexadecimal dentro: lleva el token, y sin seguirlo no hay valor que comparar.
+      const declarado = utilidad.declaraciones.get('background-color') ?? '(sin background-color)';
+      const emitido = resolver(declarado, paleta);
+      if (emitido === c.valor.toLowerCase()) return [];
+      return [`  --${c.nombre}: «bg-${c.nombre}» pinta «${emitido}» y el artboard dice «${c.valor}»`];
+    });
+
+    expect(
+      [...mudos, ...torcidos],
+      'La paleta del artboard no llega entera al CSS:\n' +
+        `${[...mudos, ...torcidos].join('\n')}\n\n` +
+        '  Un token declarado cuya utilidad no se genera deja al elemento sin estilo, y eso no lo\n' +
+        '  ve ninguna prueba que compare `className` como texto. Y una utilidad que se genera con\n' +
+        '  otro valor pinta la pantalla de un color que nadie dibujo: lo que se compara es lo que\n' +
+        '  declara la REGLA `.bg-<nombre>`, no que el hexadecimal ande suelto por el CSS.',
+    ).toEqual([]);
+  });
+
+  it('el RADIO emitido es el del ARTBOARD, y no el `0.625rem` de shadcn', async () => {
     const css = await compilar(['rounded-sm', 'rounded-md', 'rounded-lg']);
     // Es la mitad que falta de `kamayuk-lib`#8: alli se comprobo que el token se declara.
     expect(css).not.toContain('0.625rem');
     for (const clase of ['rounded-sm', 'rounded-md', 'rounded-lg']) {
       expect(css, `no se emitio .${clase}`).toContain(`.${clase}`);
     }
-    expect(css).toMatch(/border-radius:\s*(?:var\(--radius-(?:sm|md|lg)\)|3px)/);
+
+    // Y el valor sale del artboard y no de un literal escrito aqui: lo que se compara es la regla
+    // `.rounded-*` con su `var(--radius-*)` resuelto contra el `@theme`.
+    const esperado = radioDelArtboard();
+    expect(esperado, 'el artboard no declara ningun radio').not.toBe('');
+    const reglas = reglasDe(css);
+    const paleta = paletaDelTema(reglas);
+    const torcidos = ['rounded-sm', 'rounded-md', 'rounded-lg'].flatMap((clase) => {
+      const utilidad = utilidadDesnuda(reglas, clase);
+      if (utilidad === undefined) return [`  .${clase}: no se emitio su regla`];
+      const emitido = resolver(utilidad.declaraciones.get('border-radius') ?? '', paleta);
+      return emitido === esperado
+        ? []
+        : [`  .${clase}: emite «${emitido}» y el artboard dice «${esperado}»`];
+    });
+    expect(
+      torcidos,
+      'El radio emitido se aparto del que dibuja el artboard:\n' +
+        `${torcidos.join('\n')}\n\n` +
+        '  Sin `--radius` los componentes de shadcn caen en su `0.625rem` por omision, y la pantalla\n' +
+        '  sale con las esquinas de otro sistema de diseño sin que nada falle.',
+    ).toEqual([]);
   });
 
   it('TODA clase que las piezas usan produce una regla EN LA HOJA DE LA APLICACION', async () => {

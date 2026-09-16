@@ -44,9 +44,16 @@ export const TITULO = 'Sistema de Gestión de Rentas y Tributos Municipales';
 export const ESCUDO: ReactNode = undefined;
 
 /**
- * La linea del pie del carril de modulos. Vacia hasta #58, que decide si dice algo.
+ * La linea del pie del carril de modulos, **la del artboard V8** (#58).
  *
- * `undefined` y no `''`: el armazon distingue «no hay pie» de «hay un pie sin texto», y lo segundo
- * deja un filo dibujado bajo el arbol.
+ * Sale de `pieArbol` de `NormativaV8.dc.html`, literal. La V6 no tenia pie en el arbol: lo propuso
+ * #52 y G2 lo acepto, y dice lo unico que un carril con **un solo modulo** tiene que explicar — que
+ * no falta nada, que los demas modulos son de otros sistemas (ADR-0029). Sin esa linea, un arbol de
+ * un modulo se lee como un arbol a medio cargar.
+ *
+ * `undefined` seguiria siendo legitimo —el armazon distingue «no hay pie» de «hay un pie sin
+ * texto», y lo segundo deja un filo dibujado bajo el arbol—, pero aqui hay algo que decir.
  */
-export const PIE_DEL_CARRIL: string | undefined = undefined;
+export const PIE_DEL_CARRIL: string | undefined =
+  'El módulo de este sistema y sus submódulos, de src/pantallas/arbol.ts. Los demás módulos son ' +
+  'de otros sistemas (ADR-0029).';

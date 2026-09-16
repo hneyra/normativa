@@ -7,6 +7,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 
 /**
@@ -18,8 +19,12 @@ import { describe, expect, it } from 'vitest';
  * Quien la prueba no sabe si el fallo es suyo, de la red o del backend, y no hay ningun sitio donde
  * mirarlo: no hay error, no hay traza, no hay 401. Es peor que no ofrecerla, que al menos se ve.
  *
- * Es la misma razon por la que `src/acciones.ts` esta vacio y no lleno de funciones que no hacen
- * nada: «lo que no se pasa, no se puede pulsar».
+ * Es la misma razon por la que `src/acciones.ts` NO lleva funciones que no hacen nada. Cuando #57
+ * escribio esto, aquel archivo estaba **vacio** y el criterio era «lo que no se pasa, no se puede
+ * pulsar». **#58 lo lleno, y por un motivo medido**: lo que no se pasa `@kamayuk/shell` lo dibuja
+ * **deshabilitado** (`paquetes/shell/AccionesAlPie.tsx:48`), y deshabilitado sin motivo es tan mudo
+ * como vacio — es el hueco H08 de `diseno/HUECOS.md`. Asi que hoy las cuatro estan atendidas:
+ * `imprimir` imprime, y las otras tres dicen que todavia no y por que.
  *
  * <h2>Barre las COSTURAS, y no solo `src/aplicacion.tsx`</h2>
  *
@@ -204,5 +209,117 @@ describe('las dos primeras opciones van al emisor porque el backend no las publi
       'El backend publica una operacion de perfil o de contrasena. Si de verdad existe, el menu\n' +
         'de sesion tiene que dejar de mandar a la consola de Keycloak; si no, sobra del contrato.',
     ).toEqual([]);
+  });
+});
+
+/* ── La otra mitad, la de las acciones al pie (#58, AC 7) ──────────────────────────────── */
+
+/**
+ * **Ninguna funcion de la costura se queda muda** (#58).
+ *
+ * Es la mitad que el AC 6 de #57 dejaba escrita —«la otra mitad, las acciones al pie de cada hoja,
+ * es de #58 y entra aqui cuando exista»—, y esta es.
+ *
+ * <h2>Que barre, y por que no lo puede ver el extractor de arriba</h2>
+ *
+ * El de arriba busca `{ rotulo: '…', al: … }`, que es la forma de una opcion del menu. Una accion
+ * del pie no tiene rotulo: es `imprimir: () => {…}` dentro de `AccionesDelSistema`, y lo mismo pasa
+ * con cualquier otra devolucion de llamada que las costuras le pasen al armazon. Asi que esta mitad
+ * mira el ARBOL DE SINTAXIS de los cuatro archivos y busca **cualquier funcion de cuerpo vacio**.
+ *
+ * `() => undefined` y `() => null` **no** cuentan, por lo mismo que arriba: tampoco hacen nada, pero
+ * nadie las escribe por descuido, y `PuertaCaida` y `CajonDePreferencias` de `src/sesion.ts` —que
+ * devuelven `null`— son legitimas.
+ */
+
+/** Las cuatro costuras cuyas funciones acaban pulsandose. `src/sesion.ts` ya lo mira la mitad de #57. */
+const LAS_CUATRO_COSTURAS = [
+  'src/aplicacion.tsx',
+  'src/acciones.ts',
+  'src/marca.ts',
+  'src/pantallas/index.ts',
+] as const;
+
+function arbolDe(ruta: string, fuente: string): ts.SourceFile {
+  return ts.createSourceFile(ruta, fuente, ts.ScriptTarget.ESNext, true, ts.ScriptKind.TSX);
+}
+
+function recorrer(nodo: ts.Node, visita: (n: ts.Node) => void): void {
+  visita(nodo);
+  nodo.forEachChild((hijo) => {
+    recorrer(hijo, visita);
+  });
+}
+
+/** Una funcion que no hace nada: `() => {}`, `function () {}` y sus parientes con cuerpo vacio. */
+function noHaceNada(nodo: ts.Node): boolean {
+  if (!ts.isArrowFunction(nodo) && !ts.isFunctionExpression(nodo)) return false;
+  return ts.isBlock(nodo.body) && nodo.body.statements.length === 0;
+}
+
+/** Las funciones de cuerpo vacio de un archivo, con su linea y su texto. */
+function vaciasDe(ruta: string): readonly string[] {
+  const arbol = arbolDe(ruta, leer(ruta));
+  const vacias: string[] = [];
+  recorrer(arbol, (nodo) => {
+    if (!noHaceNada(nodo)) return;
+    const { line } = arbol.getLineAndCharacterOfPosition(nodo.getStart());
+    vacias.push(`  ${ruta}:${String(line + 1)} — ${nodo.getText()}`);
+  });
+  return vacias;
+}
+
+describe('ninguna funcion de la costura se queda muda', () => {
+  it('EL CENTINELA: los cuatro archivos se leen AQUI DENTRO, y el lector discrimina', () => {
+    // 1) `leer` ya pone rojo nombrando el archivo que falte, y se llama dentro del `it`: con un
+    //    archivo movido de sitio, leerlo en el cuerpo del modulo reventaria la RECOLECCION y este
+    //    archivo saldria como «Failed Suites» sin una sola prueba — o sea, la guarda se callaria
+    //    justo cuando hay que mirarla.
+    for (const ruta of LAS_CUATRO_COSTURAS) {
+      expect(leer(ruta).length, `«${ruta}» esta vacio`).toBeGreaterThan(200);
+    }
+
+    // 2) Y LA MUESTRA: el lector tiene que ver lo que se prohibe y dejar pasar lo que no.
+    const mala = [
+      'export const ACCIONES = {',
+      '  imprimir: () => {},',
+      '  exportar: () => { avisar("no todavia"); },',
+      '  limpiar: () => null,',
+      '};',
+    ].join('\n');
+    const arbol = arbolDe('muestra.ts', mala);
+    const halladas: string[] = [];
+    recorrer(arbol, (nodo) => {
+      if (noHaceNada(nodo)) halladas.push(nodo.getText());
+    });
+    expect(halladas, 'el lector no vio la funcion vacia, o vio de mas').toEqual(['() => {}']);
+  });
+
+  it.each(LAS_CUATRO_COSTURAS.map((ruta) => [ruta] as const))(
+    '«%s» no tiene ni una funcion vacia',
+    (ruta) => {
+      const vacias = vaciasDe(ruta);
+      expect(
+        vacias,
+        'Hay funciones vacias en la costura del armazon:\n' +
+          `${vacias.join('\n')}\n\n` +
+          '  Lo que se le pasa al armazon se PULSA. Una devolucion de llamada vacia es un control\n' +
+          '  que no responde, y eso no se ve como «todavia no»: se ve como una averia. O hace lo\n' +
+          '  suyo, o dice que todavia no y por que — como `exportar` en `src/acciones.ts`.',
+      ).toEqual([]);
+    },
+  );
+
+  it('y las cuatro acciones del pie estan atendidas: deshabilitado tambien es mudo', () => {
+    // La otra mitad de la decision, y la que este barrido no podria ver mirando solo cuerpos
+    // vacios: `@kamayuk/shell` dibuja **deshabilitada** la accion que el sistema no atiende
+    // (`AccionesAlPie.tsx:48`), y deshabilitado sin motivo es igual de mudo que vacio. Es el hueco
+    // H08 de `diseno/HUECOS.md`; mientras no llegue, lo que se puede hacer es atenderlas todas.
+    const fuente = leer('src/acciones.ts');
+    for (const acto of ['imprimir', 'exportar', 'guardar', 'limpiar']) {
+      expect(fuente, `«${acto}» no esta atendida en \`src/acciones.ts\``).toMatch(
+        new RegExp(`\\b${acto}:`),
+      );
+    }
   });
 });
