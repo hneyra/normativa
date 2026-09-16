@@ -12,11 +12,11 @@ import org.springframework.transaction.annotation.Transactional;
  * Resuelve el permiso contra {@code acceso}, {@code grupo}, {@code miembro}, {@code permiso} y
  * {@code usuario} <b>de la base de este sistema</b> (D-N5, que contesta D-19).
  *
- * <p>Es la misma consulta que {@code rentas}, letra por letra, y eso es a proposito: son dos copias
- * del <b>mismo</b> modelo del manual sobre dos copias de las <b>mismas</b> cinco tablas (ADR-0032
- * las replica en los cuatro baselines). Escribir aqui otra precedencia produciria un sistema donde
- * el mismo usuario puede una cosa en una pantalla y no en la de al lado, y el sintoma —un 403 en un
- * sitio y no en otro— no se parece a su causa.
+ * <p>Es la consulta de {@code rentas} con <b>una diferencia, y esta declarada abajo</b>: son dos
+ * copias del <b>mismo</b> modelo del manual sobre dos copias de las <b>mismas</b> cinco tablas
+ * (ADR-0032 las replica en los cuatro baselines). Escribir aqui otra precedencia produciria un
+ * sistema donde el mismo usuario puede una cosa en una pantalla y no en la de al lado, y el sintoma
+ * —un 403 en un sitio y no en otro— no se parece a su causa.
  *
  * <h2>La precedencia, que es la decision que hay que conocer</h2>
  *
@@ -28,6 +28,21 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>La vigencia se comprueba en los tres sitios (RF-123) —usuario, grupo y pertenencia—, porque
  * comprobar solo una deja abierta la puerta mas comoda: dar de baja al usuario y que siga entrando
  * por un grupo vigente.
+ *
+ * <h2>La diferencia con {@code rentas}: las DOS ramas miran {@code a.activo} (#54, AC-4)</h2>
+ *
+ * <p>Hasta #54 la rama de la excepcion del usuario <b>no</b> filtraba {@code a.activo} y la de los
+ * grupos si —es lo que {@code rentas} y {@code catastro} tienen hoy, y los dos lo dejan escrito—.
+ * La consecuencia se midio al escribir {@code LecturaDeLaCopiaLocalJdbc}: sobre una <b>opcion
+ * retirada</b> con una excepcion de usuario que otorga, el guardia dejaba pasar y la matriz de
+ * {@code GET /seguridad/sesion/permisos} —que solo recorre accesos activos— no la dibujaba. Una
+ * pantalla que no se ofrece y a la que se entra tecleando la ruta es el peor de los dos sentidos.
+ *
+ * <p>Se cierra <b>aqui</b> y no en la matriz: quitarle el filtro a la matriz dibujaria en el menu
+ * lo que la municipalidad retiro. Que las dos ramas lo miren es el sentido que no abre nada, y
+ * retirar una opcion vuelve a significar lo que dice. Lo ata {@code
+ * LecturaDeLaCopiaLocalJdbcTest.LaMatrizYElGuardia}, que compara las dos respuestas para cada
+ * cuenta, opcion y privilegio del escenario.
  *
  * <p>La consulta no filtra por municipalidad: lo hace la politica RLS con el contexto de la
  * transaccion (regla 2). Un usuario de otra municipalidad, sencillamente, no existe desde aqui.
@@ -62,7 +77,8 @@ public class ComprobadorDeAccesoJdbc extends RepositorioJdbc implements Comproba
                         + "  (SELECT p."
                         + columna
                         + "     FROM permiso p"
-                        + "     JOIN acceso a ON a.id = p.acceso_id AND a.codigo = :acceso"
+                        + "     JOIN acceso a ON a.id = p.acceso_id"
+                        + "                  AND a.codigo = :acceso AND a.activo"
                         + "     JOIN usuario u ON u.id = p.usuario_id"
                         + "    WHERE u.cuenta = :usuario),"
                         // 2. Si no la hay: la union de los grupos vigentes.

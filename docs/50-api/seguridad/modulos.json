@@ -1,0 +1,14 @@
+{
+  "contenido" : [ {
+    "id" : 1,
+    "codigo" : "SEGURIDAD",
+    "nombre" : "Seguridad",
+    "orden" : 0,
+    "activo" : true
+  } ],
+  "pagina" : 0,
+  "tamano" : 20,
+  "totalElementos" : 1,
+  "totalPaginas" : 1,
+  "hayMas" : false
+}

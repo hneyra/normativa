@@ -23,7 +23,9 @@ import kamayuk.comun.verificaciones.contrato.EndpointsPublicados;
 import kamayuk.normativa.compartido.Paginacion;
 import kamayuk.normativa.parametros.infraestructura.ParametrosRepositoryJdbc;
 import kamayuk.normativa.persistencia.OrdenSeguro;
+import kamayuk.normativa.seguridad.infraestructura.LecturaDeLaCopiaLocalJdbc;
 import kamayuk.normativa.web.ParametrosDePaginacion;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.annotation.AnnotatedElementUtils;
@@ -143,7 +145,14 @@ class ParametrosDeLaApiTest {
                     // `id`: sin el, las cinco filas `UIT` de `parametros-2026.csv` empatan y dos
                     // paginas consecutivas pueden repetir una y omitir otra.
                     "GET /parametros",
-                    new OrigenDelOrden(ParametrosRepositoryJdbc.class, "ORDEN_PARAMETRO"));
+                    new OrigenDelOrden(ParametrosRepositoryJdbc.class, "ORDEN_PARAMETRO"),
+                    // Las dos lecturas del catalogo de #54, que la interfaz usa para componer su
+                    // menu. Su lista blanca es la misma que la de `rentas`: el dialecto de
+                    // paginacion es uno solo.
+                    "GET /seguridad/modulos",
+                    new OrigenDelOrden(LecturaDeLaCopiaLocalJdbc.class, "ORDEN_MODULO"),
+                    "GET /seguridad/accesos",
+                    new OrigenDelOrden(LecturaDeLaCopiaLocalJdbc.class, "ORDEN_ACCESO"));
 
     // ------------------------------------------------------------------
 
@@ -235,19 +244,36 @@ class ParametrosDeLaApiTest {
         // `aPaginacion("ejercicio")` es lo que se usa cuando la peticion no dice `ordenarPor`. Si
         // no estuviera en la lista blanca, TODA peticion sin orden contestaria 422: el defecto no
         // lo veria la comparacion de archivos, porque el literal no sale de ninguna firma.
-        Pattern porOmision = Pattern.compile("aPaginacion\\(\"([^\"]+)\"\\)");
+        //
+        // EL RECORRIDO VA POR EL CUERPO DEL METODO Y NO POR EL ARCHIVO ENTERO (#54). Hasta este
+        // issue cada controlador servia UN listado, asi que leer el fuente entero y compararlo
+        // contra la unica lista blanca daba lo mismo. `SeguridadController` sirve dos —los modulos
+        // por `orden` y los accesos por `codigo`, dos tablas distintas—, y con el recorrido viejo
+        // el `orden` de los modulos se comparaba tambien contra la lista de los accesos, que no
+        // tiene esa columna: rojo por leer de mas. El cuerpo de cada metodo se aisla cerrando
+        // llaves desde su declaracion.
         int encontrados = 0;
+        Set<String> cubiertos = new TreeSet<>();
         for (Map.Entry<String, OrigenDelOrden> listado : ORDEN_DE_CADA_LISTADO.entrySet()) {
             Method metodo = EndpointsPublicados.porOperacion().get(listado.getKey());
+            assertThat(metodo).as("«%s» no esta publicada", listado.getKey()).isNotNull();
             Path fuente = fuenteDe(metodo.getDeclaringClass());
             assertThat(fuente).as("no se encontro el fuente de %s", metodo).isNotNull();
-            Matcher literal = porOmision.matcher(Files.readString(fuente, StandardCharsets.UTF_8));
+            String cuerpo =
+                    cuerpoDe(Files.readString(fuente, StandardCharsets.UTF_8), metodo.getName());
+            assertThat(cuerpo)
+                    .as("no se pudo aislar el cuerpo de %s.%s", fuente, metodo.getName())
+                    .isNotNull();
+
+            Matcher literal = POR_OMISION.matcher(cuerpo);
             while (literal.find()) {
                 encontrados++;
+                cubiertos.add(literal.group(1));
                 assertThat(camposAdmitidos(listado.getValue()))
                         .as(
-                                "%s ordena por omision por «%s», y %s.%s no lo admite",
+                                "%s.%s ordena por omision por «%s», y %s.%s no lo admite",
                                 metodo.getDeclaringClass().getSimpleName(),
+                                metodo.getName(),
                                 literal.group(1),
                                 listado.getValue().repositorio().getSimpleName(),
                                 listado.getValue().campo())
@@ -257,6 +283,78 @@ class ParametrosDeLaApiTest {
         assertThat(encontrados)
                 .as("el patron no encuentra ningun aPaginacion(\"…\"): esta ciego")
                 .isPositive();
+
+        // Y ninguno se queda fuera: un `aPaginacion("…")` en un controlador cuyo listado no este
+        // declarado arriba no se compararia contra ninguna lista blanca, y ese es justo el defecto
+        // —toda peticion sin orden en 422— que esta guarda existe para ver.
+        Set<String> enTodosLosControladores = new TreeSet<>();
+        for (Method publicado : EndpointsPublicados.porOperacion().values()) {
+            Path fuente = fuenteDe(publicado.getDeclaringClass());
+            if (fuente == null) {
+                continue;
+            }
+            Matcher literal = POR_OMISION.matcher(Files.readString(fuente, StandardCharsets.UTF_8));
+            while (literal.find()) {
+                enTodosLosControladores.add(literal.group(1));
+            }
+        }
+        assertThat(cubiertos)
+                .as(
+                        "estos ordenes por omision no se comprobaron contra ninguna lista blanca:"
+                                + " falta declarar su listado en ORDEN_DE_CADA_LISTADO")
+                .isEqualTo(enTodosLosControladores);
+    }
+
+    /** {@code aPaginacion("campo")}: el orden que se usa cuando la peticion no dice ninguno. */
+    private static final Pattern POR_OMISION = Pattern.compile("aPaginacion\\(\"([^\"]+)\"\\)");
+
+    /**
+     * El cuerpo del metodo {@code nombre}, aislado del resto del archivo cerrando llaves.
+     *
+     * <p>Se busca {@code nombre(} cuyo parentesis de cierre lleve detras —tras los espacios— una
+     * llave de apertura: eso descarta las llamadas, como {@code catalogo.modulos(…)}, y las
+     * referencias de javadoc, que son lo unico que se parece a una declaracion.
+     *
+     * @return el cuerpo, o {@code null} si no se encontro la declaracion
+     */
+    private static @Nullable String cuerpoDe(String fuente, String nombre) {
+        Matcher candidato =
+                Pattern.compile("\\b" + Pattern.quote(nombre) + "\\s*\\(").matcher(fuente);
+        while (candidato.find()) {
+            int cierre = cerrar(fuente, candidato.end() - 1, '(', ')');
+            if (cierre < 0) {
+                continue;
+            }
+            int siguiente = cierre + 1;
+            while (siguiente < fuente.length()
+                    && Character.isWhitespace(fuente.charAt(siguiente))) {
+                siguiente++;
+            }
+            if (siguiente < fuente.length() && fuente.charAt(siguiente) == '{') {
+                int fin = cerrar(fuente, siguiente, '{', '}');
+                if (fin > 0) {
+                    return fuente.substring(siguiente, fin + 1);
+                }
+            }
+        }
+        return null;
+    }
+
+    /** El indice del delimitador que cierra el que esta en {@code desde}, o -1. */
+    private static int cerrar(String texto, int desde, char abre, char cierra) {
+        int nivel = 0;
+        for (int i = desde; i < texto.length(); i++) {
+            char caracter = texto.charAt(i);
+            if (caracter == abre) {
+                nivel++;
+            } else if (caracter == cierra) {
+                nivel--;
+                if (nivel == 0) {
+                    return i;
+                }
+            }
+        }
+        return -1;
     }
 
     @Test
