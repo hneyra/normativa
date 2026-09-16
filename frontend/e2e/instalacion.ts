@@ -1,3 +1,7 @@
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { expect, type Page } from '@playwright/test';
 
 /**
@@ -16,7 +20,7 @@ import { expect, type Page } from '@playwright/test';
  *
  * `rentas` contesta `/seguridad/modulos`, `/seguridad/accesos` y `/seguridad/sesion/permisos` con
  * respuestas medidas de su instalacion (`seguridadMedida.ts`). **Esta interfaz no pide nada**:
- * `src/datos/proveedor.tsx` no monta ni un `QueryClient` —no hay una sola lectura hasta #63— y el
+ * Hasta #63 `src/datos/proveedor.tsx` no montaba ni un `QueryClient` —no habia una sola lectura— y el
  * catalogo del carril es `src/catalogo.ts`, un dato de este repositorio. Asi que lo que hay que
  * contestar es exactamente cero, y lo que se deja preparado es el 404 de abajo: el dia que #63
  * encienda la primera lectura, una peticion sin contestar tiene que verse **como el error que
@@ -57,6 +61,67 @@ export async function conLaPuertaAgotada(pagina: Page): Promise<void> {
   // Ver el javadoc: hoy no hay ni una lectura, y lo que llegue no se inventa.
   await pagina.route('**/normativa/api/v1/**', (ruta) =>
     ruta.fulfill({ status: 404, contentType: 'application/json', body: '{}' }),
+  );
+}
+
+/** La lectura del LISTADO de conjuntos. Expresion y no globo: lleva consulta, y `?` es un comodin. */
+export const LECTURA_DEL_LISTADO = /\/normativa\/api\/v1\/seguridad\/parametros\?/;
+
+/** La lectura del ESTADO de un ejercicio. */
+export const LECTURA_DEL_ESTADO = /\/normativa\/api\/v1\/seguridad\/parametros\/ejercicios\//;
+
+/**
+ * **El 200 del estado del ejercicio, con los campos que el CONTRATO publica y ninguno mas** (#63).
+ *
+ * `YA_SERVIDAS` esta vacia —nadie ha ejercido ninguna ruta de este backend con un token de esta
+ * interfaz—, asi que no hay una captura de verdad que reproducir. Lo que si hay es la **forma
+ * publicada**, que `FormasDeLaApiTest` genera del tipo de retorno del controlador, y este cuerpo se
+ * comprueba **campo a campo** contra ella: uno de mas o de menos pone rojo el arnes en vez de
+ * pasar en silencio. Es lo mas cerca de «capturado del backend» que se puede estar sin backend, y
+ * se dice asi en vez de escribir un cuerpo a mano y llamarlo medido.
+ *
+ * `sellado: false` a proposito: es el caso que el AC 2 obliga a no confundir con un error. Llega
+ * como **200** con los dos nulos dentro.
+ */
+export function elEstadoDelEjercicio(): Record<string, unknown> {
+  const formas = JSON.parse(
+    readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../../docs/50-api/formas-de-la-api.json'), 'utf8'),
+  ) as Record<string, unknown>;
+  const forma = formas['GET /seguridad/parametros/ejercicios/{ejercicio}'];
+  if (typeof forma !== 'object' || forma === null) {
+    throw new Error(
+      'El contrato no publica una forma para `GET /seguridad/parametros/ejercicios/{ejercicio}`. ' +
+        'Sin ella, el cuerpo que este arnes dobla no lo comprueba nada.',
+    );
+  }
+  const cuerpo = {
+    ejercicio: new Date().getFullYear(),
+    sellado: false,
+    conjuntoId: null,
+    version: null,
+  };
+  expect(
+    Object.keys(cuerpo).sort(),
+    'El cuerpo doblado dejo de cuadrar con la forma publicada de la operacion.',
+  ).toEqual(Object.keys(forma).sort());
+  return cuerpo;
+}
+
+/**
+ * Deja contestada la lectura del ESTADO del ejercicio, con un 200 y sin sellar.
+ *
+ * Hace falta en toda prueba que mire el PRIMER bloque del Panel: desde #63 ese bloque declara
+ * `lectura`, asi que sin respuesta su cuerpo —los cinco campos y la tabla— lo sustituye el estado
+ * de la lectura, y lo que se mediria seria un aviso de fallo. Se registra DESPUES de
+ * {@link conLaPuertaAgotada}: en Playwright gana la ruta declarada mas tarde.
+ */
+export async function conElEstadoDelEjercicio(pagina: Page): Promise<void> {
+  await pagina.route(LECTURA_DEL_ESTADO, (ruta) =>
+    ruta.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(elEstadoDelEjercicio()),
+    }),
   );
 }
 

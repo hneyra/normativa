@@ -1,6 +1,12 @@
 import { expect, test } from '@playwright/test';
 
-import { abrir, conLaPuertaAgotada, erroresDeConsola, laConsolaQuedoLimpia } from './instalacion.ts';
+import {
+  abrir,
+  conElEstadoDelEjercicio,
+  conLaPuertaAgotada,
+  erroresDeConsola,
+  laConsolaQuedoLimpia,
+} from './instalacion.ts';
 
 /**
  * **Que la interfaz se VE** (#61, AC 3).
@@ -95,6 +101,11 @@ test('la tipografia no carga NINGUNA webfont: es la pila del sistema', async ({ 
 });
 
 test('la rejilla SE REACOMODA: varias columnas anchas, una sola estrecha', async ({ page }) => {
+  // **Desde #63 hay que contestar a la lectura del estado del ejercicio.** El primer bloque del
+  // Panel declara `lectura`, asi que sin respuesta su cuerpo —los CINCO campos que esta prueba
+  // cuenta— lo sustituye el aviso del fallo, y quedan solo los cuatro del segundo bloque. Medido:
+  // «a 400 px los campos no bajaron a una columna — Expected: >= 8, Received: 4».
+  await conElEstadoDelEjercicio(page);
   await page.setViewportSize({ width: 1400, height: 900 });
   await abrir(page, 'panel');
   const campos = page.locator('[data-slot="tarjeta-campos"] > [data-slot="etiqueta"]');

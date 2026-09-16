@@ -29,8 +29,12 @@ import { artboardDeclarado } from './artboards.ts';
  * todavia**: es #64, y `src/sesion.ts` no tiene sesion que consultar. Cuando llegue, esa mitad se
  * anade aqui.
  *
- * Tampoco se dobla ningun `fetch`: ninguna hoja pide nada hasta #63, asi que no hay respuesta que
- * dar y montar la aplicacion no hace ni una peticion.
+ * **Y desde #63 las hojas SI piden**, asi que aqui hay que decir lo que esta prueba NO dobla: el
+ * `fetch`. Las dos lecturas del Panel salen, fallan —no hay backend— y su bloque dibuja el fallo en
+ * el sitio de su cuerpo. Lo que esta prueba mide sigue intacto: el `h1`, la instruccion y el `h2` de
+ * todos los bloques, que son la CABECERA de cada tarjeta y se quedan con el fallo puesto — a
+ * proposito, porque una tarjeta que pierde su titulo al fallar deja un fallo sin sujeto. Doblar aqui
+ * las respuestas mediria otra cosa; quien las dobla es `e2e/errores.spec.ts`.
  */
 
 const DESTINOS = CATALOGO.flatMap((modulo) =>

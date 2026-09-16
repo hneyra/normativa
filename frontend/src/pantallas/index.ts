@@ -1,11 +1,13 @@
 import type { HojaDelCatalogo } from '@kamayuk/shell';
-import { Pantalla, type Ausencia, type TonoDeInsignia } from '@kamayuk/ui';
+import { Pantalla, type DatosDeLaPantalla } from '@kamayuk/ui';
 import { createElement, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useDatosDeLaHoja } from '../datos/useDatosDeLaHoja.ts';
 import { TEXTOS_DEL_INTERPRETE } from '../i18n/textosDelInterprete.ts';
 import type { ClaveDeHoja } from './arbol.ts';
 import { pantallaDe as definicionDe } from './definiciones/index.ts';
+import { tonoDeLaInsignia } from './insignias.ts';
 import type { Pantalla as DefinicionDeUnaPantalla } from './tipos.ts';
 
 /**
@@ -23,66 +25,18 @@ import type { Pantalla as DefinicionDeUnaPantalla } from './tipos.ts';
  * dejaria ese `import` sin resolver. Es **una** llamada, y partir el archivo en dos para escribir
  * `<Pantalla …>` dejaria la costura repartida en dos sitios por una cuestion de sintaxis.
  *
- * <h2>Lo que NO hace, dicho aqui y no descubierto luego</h2>
+ * <h2>Lo que hace desde #63, y lo que sigue sin hacer</h2>
  *
- * · **No pide nada.** El interprete no puede pedir datos, y este sistema todavia no los pide: es
- *   #63. Lo unico que se le pasa es la ausencia, que es lo que se dibuja en cada hueco.
+ * · **Ya pide.** `useDatosDeLaHoja(clave)` es el unico sitio de este sistema desde el que sale una
+ *   peticion de una pantalla; el interprete no puede pedir y no debe. La `AUSENCIA_SIN_CONECTAR`
+ *   que este archivo declaraba —una sola frase para las cuatro hojas— se fue con ella: la redacta
+ *   ahora `src/porQueNoHayDato.ts`, que distingue **tres** casos que no son el mismo.
  * · **Ya traduce, desde #60.** `traducir` y `textos` se le pasan desde {@link CuerpoDeLaHoja}, y
  *   entraron por aqui sin tocar `aplicacion.tsx`, que es lo que este archivo prometia.
  * · **No atiende ningun acto.** `actos`, `alHacer` y `navegacion` son de #66, #67 y #68: hasta
  *   entonces ninguna definicion declara uno, y un boton que nadie atiende sale impedido con su
  *   motivo — nunca mudo.
  */
-
-/**
- * **Por que no hay dato**, y en las dos formas que el interprete necesita.
- *
- * Se declaro en #55 como la mitad de la costura que este issue no debia inventar, y ahora la usan
- * las cuatro hojas. El texto se calca de `rentas/frontend/src/porQueNoHayDato.ts@ac379ac`
- * —`NADA_SERVIDO`—, que es donde se redacto: una pantalla sin conectar dice que lo que se ve es su
- * FORMA, no sus datos.
- *
- * Tono `info` y no `atencion` porque no es una averia: es el estado esperado hasta la ola 5.
- */
-export const AUSENCIA_SIN_CONECTAR: Ausencia = {
-  enElCampo: 'sin conectar',
-  explicacion:
-    'Esta pantalla todavia no esta conectada: ninguna de las operaciones que declara la sirve el ' +
-    'backend. Lo que se ve es su forma —que campos tiene y que columnas llevan sus listas—, no ' +
-    'sus datos.',
-  tono: 'info',
-};
-
-/**
- * **El tono de una celda de situacion**, deducido de lo que dice.
- *
- * El interprete lo exige y **no tiene valor por omision**, a proposito: uno que pintara todo de
- * `ok` dibujaria «Abierta» en verde sin que nada lo delatara. Es vocabulario de cada sistema, asi
- * que vive aqui y no en la libreria.
- *
- * La tabla es la de `const TONOS` del artboard V8 —su `porTexto` y su `resto`—, y que lo siga
- * siendo lo comprueba `verificaciones/pantallas-del-artboard.test.ts` contra esa constante.
- *
- * <h2>Lo que esta funcion NO puede decir, y su hueco</h2>
- *
- * El artboard tiene ademas un `porFila`: `D-03d` dice «Abierta» y se pinta en `atencion`, porque no
- * bloquea el sello sino el cierre de caja. **Aqui no cabe**: el interprete pasa el TEXTO de la
- * celda y nada mas, asi que las dos filas que dicen «Abierta» salen del mismo color. Es el hueco
- * H18 de `frontend/diseno/HUECOS.md` —el tono como dato de la fila—, que `kamayuk-lib`#65 ya
- * publica como `ReglaDeLaInsignia` y que usara la definicion de #65.
- */
-export function tonoDeLaInsignia(texto: string): TonoDeInsignia {
-  switch (texto.toLowerCase()) {
-    case 'abierta':
-      return 'mal';
-    case 'abierto':
-      return 'atencion';
-    case 'vigente':
-      return 'info';
-    default:
-      return 'ok';
-  }
-}
 
 /**
  * **La funcion que el `Armazon` llama, hecha con las definiciones que se le den** (#58, AC 5).
@@ -115,11 +69,15 @@ export function tonoDeLaInsignia(texto: string): TonoDeInsignia {
  */
 export function crearPantalla(
   definicion: (clave: ClaveDeHoja) => DefinicionDeUnaPantalla,
+  usarLosDatos: (clave: ClaveDeHoja) => DatosDeLaPantalla = useDatosDeLaHoja,
 ): (hoja: HojaDelCatalogo) => ReactNode {
   return function pantalla(hoja: HojaDelCatalogo): ReactNode {
+    const clave = hoja.destino.clave as ClaveDeHoja;
     return createElement(CuerpoDeLaHoja, {
-      key: hoja.destino.clave,
-      definicion: definicion(hoja.destino.clave as ClaveDeHoja),
+      key: clave,
+      clave,
+      definicion: definicion(clave),
+      usarLosDatos,
     });
   };
 }
@@ -143,13 +101,40 @@ export function crearPantalla(
  * · **`textos`** — las palabras que el interprete dice por su cuenta. Ver `i18n/textosDelInterprete.ts`.
  * · **Los datos no pasan por `traducir`**, y eso lo garantiza el interprete y no esto: traducir un
  *   importe seria absurdo.
+ *
+ * <h2>Y desde #63, los DATOS: aqui es donde la hoja pide</h2>
+ *
+ * `useDatosDeLaHoja(clave)` es el unico sitio de este sistema desde el que sale una peticion de una
+ * pantalla. Esta aqui y no en el interprete porque el interprete **no puede pedir** —no sabe que
+ * sistema lo monta, y `@kamayuk/ui` no nombra ninguno—, y no esta en `src/aplicacion.tsx` porque ese
+ * archivo es la costura de #55.
+ *
+ * La `clave` entra como `prop` y no se deduce de la definicion: dos hojas pueden tener la misma
+ * forma —eso es justo lo que ejercita `la-hoja-no-hereda-lo-tecleado`— y lo que decide que se pide
+ * es de que hoja se trata, no como esta dibujada.
+ *
+ * Y el gancho entra por `crearPantalla` **con su valor por omision**, por el mismo motivo por el
+ * que las definiciones entran por ahi: el arnes de esa prueba inyecta dos hojas que NO estan en el
+ * arbol, y `useDatosDeLaHoja` las cruzaria contra `hojaDe()`, que revienta a proposito con una
+ * clave que no existe. Lo que esa prueba mide es la `key`, no de donde salen los datos.
  */
-function CuerpoDeLaHoja({ definicion }: { readonly definicion: DefinicionDeUnaPantalla }) {
+function CuerpoDeLaHoja({
+  clave,
+  definicion,
+  usarLosDatos,
+}: {
+  readonly clave: ClaveDeHoja;
+  readonly definicion: DefinicionDeUnaPantalla;
+  readonly usarLosDatos: (clave: ClaveDeHoja) => DatosDeLaPantalla;
+}) {
   const { t } = useTranslation();
+  // Se llama incondicionalmente y en el mismo sitio de cada pintada: es un gancho, y la `key` por
+  // destino hace que cambiar de hoja desmonte en vez de reconciliar.
+  const datos = usarLosDatos(clave);
 
   return createElement(Pantalla, {
     definicion,
-    datos: { ausencia: AUSENCIA_SIN_CONECTAR },
+    datos,
     tonoDeLaInsignia,
     traducir: (texto: string) => t(texto),
     textos: TEXTOS_DEL_INTERPRETE,

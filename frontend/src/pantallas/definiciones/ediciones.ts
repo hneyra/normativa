@@ -19,8 +19,10 @@ import type { Pantalla } from '../tipos.ts';
  * viven **solo** en el artboard, que no esta bajo `src/` y no lo importa una linea de produccion
  * (`rentas`#97). Lo que se conserva es la FORMA. Lo vigila `verificaciones/sin-cifras-inventadas`.
  *
- * Y **nada se rellena**: mientras ninguna operacion este conectada (#63), cada campo y cada tabla
- * dicen su ausencia con el motivo de `AUSENCIA_SIN_CONECTAR` (`src/pantallas/index.ts`).
+ * Y **nada se rellena**: esta hoja todavia no tiene conector —su `src/datos/<hoja>.ts` esta puesto y
+ * vacio, y lo llena su issue de la ola 5—, asi que cada campo y cada tabla dicen su ausencia con el
+ * motivo que redacta `src/porQueNoHayDato.ts`: «publicado y sin pedir», que no es lo mismo que
+ * «sin conectar».
  *
  * <h2>Lo que esta hoja NO dibuja todavia, dicho aqui y no descubierto luego</h2>
  *

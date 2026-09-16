@@ -1,14 +1,19 @@
-import { TEXTOS_DE_LA_UI, type TextosDelInterprete } from '@kamayuk/ui';
+import {
+  TEXTOS_DE_LA_UI,
+  type TextosDeLaPantalla,
+  type TextosDeLasPiezas,
+  type TextosDelInterprete,
+} from '@kamayuk/ui';
 
 import { t } from './i18n.ts';
 
 /**
- * **Las tres palabras que el INTERPRETE dice por su cuenta** (#60, AC 3).
+ * **Las palabras que el INTERPRETE dice por su cuenta** (#60, AC 3; dos mas en #63).
  *
  * <h2>Por que este saco existe aparte del marco</h2>
  *
  * Porque son otro destinatario. Las treinta y dos de `textosDelMarco.ts` se las pasa
- * `src/aplicacion.tsx` al `<Armazon>`; estas tres se las pasa `src/pantallas/index.ts` a
+ * `src/aplicacion.tsx` al `<Armazon>`; estas se las pasa `src/pantallas/index.ts` a
  * `<Pantalla>`, que es quien dibuja el cuerpo. Fundirlos en un archivo obligaria a que una costura
  * importara el saco de la otra para descartarlo.
  *
@@ -18,17 +23,18 @@ import { t } from './i18n.ts';
  * los cuatro sistemas a montarlo para dibujar un campo (`kamayuk-lib`#19, AC3)—, asi que las
  * palabras entran como dato. Es el mismo reparto que el del armazon, un nivel mas abajo.
  *
- * <h2>Las tres, y por que se pasan aunque hoy no se dibuje NINGUNA</h2>
+ * <h2>Cuales se dibujan hoy, y por que se pasan tambien las que no</h2>
  *
  * Medido sobre las cuatro definiciones de este sistema: sus campos son de tipo `r`, `r1`, `s` y
- * `a1`, ninguno declara `opcional` y ninguna tabla trae filas todavia (#63). O sea que hoy el
- * interprete no dice ninguna de las tres, y `verificaciones/todo-el-texto-se-traduce.test.tsx` lo
- * comprueba en la otra direccion — con el idioma marcado, las cuatro hojas no ensenan una sola
+ * `a1` y ninguno declara `opcional`. Asi que de las TRES de #60 el interprete sigue sin decir
+ * ninguna —`registros` solo saldria si una tabla llegara sin conteo, y el Panel siempre da el
+ * suyo—, y las dos que #63 anade SI se dibujan. `verificaciones/todo-el-texto-se-traduce.test.tsx`
+ * lo comprueba en la otra direccion: con el idioma marcado, las cuatro hojas no ensenan una sola
  * cadena sin marca.
  *
- * Se pasan igualmente porque **la que falta no avisa**: el dia que #63 llene una tabla, el conteo
- * sale de `registros`; el dia que una hoja gane un campo de fecha, su marcador sale de
- * `marcadorDeFecha`. Sin este saco saldrian en castellano con la guarda en verde hasta que alguien
+ * Las que no se dibujan se pasan igualmente porque **la que falta no avisa**: el dia que una tabla
+ * llegue sin conteo, el suyo sale de `registros`; el dia que una hoja gane un campo de fecha, su
+ * marcador sale de `marcadorDeFecha`. Sin este saco saldrian en castellano con la guarda en verde hasta que alguien
  * pidiera un segundo idioma — que es exactamente como llegaron en INGLES `Notifications alt+T` de
  * `sonner` y `Suggestions` de `cmdk` (`kamayuk-lib`#13 y #19).
  */
@@ -51,7 +57,26 @@ export const FRASES_DEL_INTERPRETE = {
   opcional: TEXTOS_DE_LA_UI.opcional,
   marcadorDeFecha: 'dd/mm/aaaa',
   registros: '{{count}} registro',
-} as const satisfies Record<keyof TextosDelInterprete, string>;
+  // ── Las de las PIEZAS, desde #63 ─────────────────────────────────────────────────────────────
+  //
+  // `@kamayuk/ui` publica ademas `TextosDeLasPiezas`, que son las palabras que el interprete dice
+  // cuando una pieza depende de una LECTURA. Hasta #63 no se dibujaba ninguna —ninguna hoja pedia—
+  // y por eso este saco eran tres. Ahora el Panel pide, y estas DOS llegan al DOM:
+  //
+  //   · `pidiendo` — bajo las barras, mientras la lectura esta en vuelo;
+  //   · `reintentar` — el rotulo del boton, que sale solo donde es una averia.
+  //
+  // Las demas de `TextosDeLasPiezas` **no se declaran**, y es deliberado. `celdaSinDato` es una
+  // raya, y traducir una raya no significa nada —lo dice `NO_ES_TEXTO` de
+  // `todo-el-texto-se-traduce`, que la exime—; el POR QUE de una celda nula lo pone la celda misma
+  // (`{ texto: null, nota }`), que es texto de este sistema y pasa por `t()` donde se compone. Y
+  // `enEspera`, `tablaSinMotivo`, `datoAusente`, las de los actos y las de la paginacion no las
+  // dibuja hoy ninguna hoja: una entrada que nadie ejercita es una traduccion que nadie comprueba.
+  // La que haga falta entra con la hoja que la dibuje, que es cuando se puede medir que sale.
+  pidiendo: 'Pidiendo al servidor…',
+  reintentar: 'Reintentar',
+} as const satisfies Record<keyof TextosDelInterprete, string> &
+  Partial<Record<keyof TextosDeLasPiezas, string>>;
 
 /** Todo lo que este archivo aporta al inventario del locale. Ver `catalogo-de-claves.ts`. */
 export function clavesDelInterprete(): readonly string[] {
@@ -59,12 +84,17 @@ export function clavesDelInterprete(): readonly string[] {
 }
 
 /**
- * El saco que `<Pantalla>` recibe, con las tres ya pasadas por `t()`.
+ * El saco que `<Pantalla>` recibe, con las cinco ya pasadas por `t()`.
  *
  * Captadores por lo mismo que en `textosDelMarco.ts`: `t()` corre cuando el interprete lee la
  * propiedad. `registros` ya es una funcion y se evalua al llamarla.
+ *
+ * `Partial<TextosDeLaPantalla>` y no `TextosDelInterprete` desde #63: el saco cubre ahora tambien
+ * dos palabras de `TextosDeLasPiezas`, y `<Pantalla textos>` acepta justo eso. Las que no se
+ * declaran las pone la libreria con su castellano por omision — que es lo correcto mientras no se
+ * dibujen, y lo que la guarda del DOM diria en cuanto alguna se dibujara.
  */
-export const TEXTOS_DEL_INTERPRETE: TextosDelInterprete = {
+export const TEXTOS_DEL_INTERPRETE: Partial<TextosDeLaPantalla> = {
   get opcional() {
     return t(FRASES_DEL_INTERPRETE.opcional);
   },
@@ -72,4 +102,10 @@ export const TEXTOS_DEL_INTERPRETE: TextosDelInterprete = {
     return t(FRASES_DEL_INTERPRETE.marcadorDeFecha);
   },
   registros: (cuantos: number) => t(FRASES_DEL_INTERPRETE.registros, { count: cuantos }),
+  get pidiendo() {
+    return t(FRASES_DEL_INTERPRETE.pidiendo);
+  },
+  get reintentar() {
+    return t(FRASES_DEL_INTERPRETE.reintentar);
+  },
 };
