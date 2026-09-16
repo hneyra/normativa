@@ -16,13 +16,19 @@ import org.jspecify.annotations.Nullable;
  *       porque habla de otro sistema ({@link Aplicacion#IGNORADO_POR_AJENO}: un permiso sobre una
  *       opcion de {@code rentas} no es de esta copia). Los tres se acusan.
  *   <li><b>No se puede aplicar NUNCA</b> ({@link NoSePuedeAplicar}): el cuerpo no es JSON, el tipo
- *       no existe en este sistema, la opcion no esta en este catalogo. Se aparta con su motivo, se
- *       acusa y se avisa. Se arregla mirando el hecho.
+ *       no existe en este sistema, la opcion no la declara {@code CatalogoDelSistema}. Se aparta
+ *       con su motivo, se acusa y se avisa. Se arregla mirando el hecho.
  *   <li><b>No se puede aplicar HOY</b> ({@link DependenciaQueNoLlego}): el grupo o la cuenta que el
- *       hecho nombra no estan todavia en esta copia. NO se acusa y NO se aparta: se reintenta en la
- *       vuelta siguiente, cuando lo que falta haya llegado. Se arregla esperando —o mirando por que
- *       lo que iba delante no llego—.
+ *       hecho nombra no estan todavia en esta copia, o el permiso es sobre una opcion que este
+ *       sistema SI declara y la copia todavia no tiene sembrada (ADR-0043 §10 (a)). NO se acusa y
+ *       NO se aparta: se reintenta en la vuelta siguiente, cuando lo que falta haya llegado. Se
+ *       arregla esperando —o mirando por que lo que iba delante no llego—.
  * </ul>
+ *
+ * <p><b>Que la opcion la declare o no este sistema es lo que separa los dos ultimos</b>, y no es un
+ * detalle: apartar siempre pierde el permiso de una opcion nueva que el {@code Job} de implantacion
+ * de la misma imagen todavia no ha sembrado, y posponer siempre es lo que atasco 20 horas la
+ * replica de {@code rentas} en {@code identidad}#21.
  *
  * <p>Lo que no se puede aplicar hoy por la BASE —caida, sin privilegio— no es de este puerto: es la
  * excepcion de acceso a datos de quien lo implemente, y corta la vuelta sin acusar nada.

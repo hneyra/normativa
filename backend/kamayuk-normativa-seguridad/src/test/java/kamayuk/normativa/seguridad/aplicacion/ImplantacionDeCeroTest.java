@@ -8,6 +8,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -63,9 +64,10 @@ import tools.jackson.databind.json.JsonMapper;
  * lo sirve {@link BuzonDeMentira} por HTTP, con la forma de {@code EventosController}, y el cliente
  * que lo lee es el de produccion. Lo que se le publica es <b>lo que su implantacion emite</b>, en
  * su orden: el grupo de administracion, el administrador, su afiliacion, sus permisos sobre los
- * CINCO catalogos —de los que solo uno es de este sistema—, el grupo de consumidores del buzon con
- * su unica opcion, y las cuatro cuentas de servicio con sus afiliaciones. Los cuerpos se copian
- * campo a campo de {@code HechoDeIdentidad}: ver {@link CuerposComoLosPublicaIdentidad}.
+ * CINCO catalogos —uno por opcion, y solo los de {@code normativa} son de este sistema—, el grupo
+ * de consumidores del buzon con su unica opcion, y las cuatro cuentas de servicio con sus
+ * afiliaciones. Los cuerpos se copian campo a campo de {@code HechoDeIdentidad}: ver {@link
+ * CuerposComoLosPublicaIdentidad}.
  *
  * <p>Lo que esto NO demuestra, y se dice: que {@code identidad} conteste eso <b>por HTTP de
  * verdad</b>. Lo que se ejerce de verdad es de HTTP a PostgreSQL de este lado.
@@ -76,8 +78,28 @@ class ImplantacionDeCeroTest {
 
     private static final Instant AHORA = Instant.parse("2026-09-10T12:00:00Z");
 
-    /** La unica opcion de este sistema, y la unica sobre la que se puede fijar un permiso aqui. */
-    private static final String OPCION = CatalogoDelSistema.opciones().get(0).codigo();
+    /**
+     * Las opciones de este sistema: las unicas sobre las que se puede fijar un permiso aqui.
+     *
+     * <p>Hasta #53 era <b>una</b>, y esta prueba la nombraba «la unica». Desde ADR-0043 §2 son dos
+     * —{@code SEGURIDAD/parametros} y {@code NORMATIVA/conjuntos}—, y lo que se recorre es el
+     * catalogo entero: escribir aqui una lista a mano dejaria esta prueba verde el dia que el
+     * sembrador se saltara una opcion, que es justo lo que tiene que salir rojo.
+     */
+    private static final List<String> OPCIONES =
+            CatalogoDelSistema.opciones().stream().map(CatalogoDelSistema.Opcion::codigo).toList();
+
+    /** Los modulos de esas opciones, sin repetir y en el orden del catalogo. */
+    private static final List<String> MODULOS =
+            CatalogoDelSistema.opciones().stream()
+                    .map(CatalogoDelSistema.Opcion::moduloCodigo)
+                    .distinct()
+                    .toList();
+
+    /**
+     * La primera del catalogo. Solo para los hechos de OTROS sistemas, donde el codigo da igual.
+     */
+    private static final String OPCION = OPCIONES.get(0);
 
     private static final String ADMINISTRADOR = "administrador";
     private static final String GRUPO_DE_ADMINISTRACION = "Administracion del sistema";
@@ -185,20 +207,21 @@ class ImplantacionDeCeroTest {
 
             assertThat(privilegiosDelAdministrador(id))
                     .as(
-                            "[AC-2] los SIETE sobre «%s», que es la unica opcion de `normativa`."
-                                    + " Sin esto la cuenta entra y el guardia le niega todo: el 403"
-                                    + " que ADR-0039 §«Lo que cuesta» pone como precio de equivocarse"
-                                    + " de orden",
-                            OPCION)
-                    .containsExactly("true|true|true|true|true|true|true");
+                            "[AC-2] los SIETE sobre CADA opcion de `normativa` (%s). Sin esto la"
+                                    + " cuenta entra y el guardia le niega todo: el 403 que ADR-0039"
+                                    + " §«Lo que cuesta» pone como precio de equivocarse de orden",
+                            OPCIONES)
+                    .hasSize(OPCIONES.size())
+                    .containsOnly("true|true|true|true|true|true|true");
 
             assertThat(cuantas("permiso", id))
                     .as(
-                            "UNA fila de permiso y no una por cada opcion de los cinco catalogos:"
-                                    + " los permisos de los otros cuatro sistemas se ignoran, porque"
-                                    + " esta copia solo guarda a quien se concede cada opcion de"
-                                    + " `normativa`")
-                    .isEqualTo(1);
+                            "una fila de permiso POR OPCION DE ESTE SISTEMA (%d) y no una por cada"
+                                    + " opcion de los cinco catalogos: los permisos de los otros"
+                                    + " cuatro sistemas se ignoran, porque esta copia solo guarda a"
+                                    + " quien se concede cada opcion de `normativa`",
+                            OPCIONES.size())
+                    .isEqualTo(OPCIONES.size());
 
             assertThat(cuantas("grupo", id))
                     .as("los dos grupos que `identidad` publica: administracion y consumidores")
@@ -207,11 +230,13 @@ class ImplantacionDeCeroTest {
 
             assertThat(filas("SELECT codigo FROM acceso WHERE municipalidad_id = " + id))
                     .as(
-                            "y el catalogo lo sigue sembrando ESTE sistema: es lo unico que le"
-                                    + " queda al sembrador (ADR-0039 §«Lo que cuesta» punto 5)")
-                    .containsExactly(OPCION);
+                            "y el catalogo lo sigue sembrando ESTE sistema, ENTERO: es lo unico que"
+                                    + " le queda al sembrador (ADR-0039 §«Lo que cuesta» punto 5)."
+                                    + " Filtrar una opcion aqui deja al administrador sin permiso"
+                                    + " sobre ella, y el hecho del buzon se queda esperandola")
+                    .containsExactlyInAnyOrderElementsOf(OPCIONES);
             assertThat(filas("SELECT codigo FROM modulo_sistema WHERE municipalidad_id = " + id))
-                    .containsExactly("SEGURIDAD");
+                    .containsExactlyInAnyOrderElementsOf(MODULOS);
 
             assertThat(buzon.pendientes())
                     .as("y todo lo que se resolvio se acuso: el buzon del emisor queda vacio")
@@ -236,8 +261,86 @@ class ImplantacionDeCeroTest {
                                     + " hechos aplicados: con «al menos un evento aplicado» todo"
                                     + " segundo despliegue saldria rojo por hacer lo correcto")
                     .isEqualTo(5);
-            assertThat(cuantas("permiso", id)).isEqualTo(1);
+            assertThat(cuantas("permiso", id)).isEqualTo(OPCIONES.size());
             assertThat(cuantas("miembro", id)).isEqualTo(5);
+        }
+
+        /**
+         * AC-7 de #53: el estado de {@code prod} reimplantado con el catalogo nuevo.
+         *
+         * <p>Lo que hay hoy en cada instalacion es <b>el catalogo de antes</b> —solo {@code
+         * SEGURIDAD/parametros}, con su permiso colgando—, y la version con #53 lo reimplanta. Ese
+         * estado se recrea quitando de una implantacion completa lo que #53 anade, que es mas fiel
+         * que sembrar a mano: la fila de {@code parametros} que queda es la que escribio el
+         * sembrador de verdad, con su {@code id} de verdad.
+         *
+         * <p>La afirmacion no es «se sembro el catalogo»: es que la fila vieja queda <b>intacta</b>
+         * —mismo {@code id}, mismo {@code modulo_id}, mismo nombre—, su permiso sigue colgando de
+         * ella, y una tercera pasada no crea nada. Esa ultima es la que muerde: {@code
+         * crearAccesoSiFalta} cuenta las filas que el {@code INSERT} afecta, asi que cambiar su
+         * {@code DO NOTHING} por un {@code DO UPDATE} pone {@code creados} a dos en cada despliegue
+         * —una fila de auditoria por reinicio, que es lo contrario de lo que ADR-0008 quiere que se
+         * pueda leer ahi— y ademas reescribe el {@code modulo_id} de toda base existente, que es
+         * como se mueve una opcion sin querer.
+         */
+        @Test
+        @DisplayName(
+                "[AC-7] una base con el catalogo de ANTES se reimplanta: `parametros` queda"
+                        + " intacto —mismo id, mismo modulo, mismo permiso— y lo nuevo se anade")
+        void elSembradorSoloAgrega() throws Exception {
+            BuzonDeMentira buzon = buzonConLoQueIdentidadPublica();
+            implantar(buzon).run(null);
+            long id = municipalidad();
+
+            // El estado de `prod`: el catalogo de ANTES de #53 y nada mas.
+            dejarSoloElCatalogoDeAntes(id);
+            String parametrosAntes = laFilaDe(id, "parametros");
+            List<String> permisoAntes = elPermisoSobre(id, "parametros");
+            assertThat(parametrosAntes)
+                    .as("el estado de partida tiene que existir, o lo de abajo no compara nada")
+                    .isNotEmpty();
+
+            implantar(buzon).run(null);
+
+            assertThat(laFilaDe(id, "parametros"))
+                    .as(
+                            "[AC-7] misma fila: mismo id, mismo modulo_id y mismo nombre. El"
+                                    + " sembrador siembra con ON CONFLICT DO NOTHING, asi que mover"
+                                    + " `parametros` de modulo NO llega a una base ya sembrada;"
+                                    + " cambiarlo por un DO UPDATE si, y en todas a la vez")
+                    .isEqualTo(parametrosAntes);
+            assertThat(elPermisoSobre(id, "parametros"))
+                    .as("y el permiso que colgaba de ella sigue colgando de ella")
+                    .isEqualTo(permisoAntes);
+            assertThat(filas("SELECT codigo FROM acceso WHERE municipalidad_id = " + id))
+                    .as("las opciones nuevas se anaden; ninguna sale")
+                    .containsExactlyInAnyOrderElementsOf(OPCIONES);
+
+            long asientos = cuantasDelCatalogo(id);
+            implantar(buzon).run(null);
+            assertThat(cuantasDelCatalogo(id))
+                    .as(
+                            "y una pasada que no cambia el catalogo no asienta NADA: `creados` es"
+                                    + " cero porque el INSERT no afecta ninguna fila. Con un DO"
+                                    + " UPDATE serian dos en cada despliegue, y la bitacora pasaria a"
+                                    + " ser un registro de reinicios")
+                    .isEqualTo(asientos);
+        }
+
+        /** Deja la municipalidad como estaba antes de #53: solo `SEGURIDAD/parametros`. */
+        private void dejarSoloElCatalogoDeAntes(long municipalidad) throws SQLException {
+            ejecutarComoAdmin(
+                    "DELETE FROM permiso WHERE municipalidad_id = "
+                            + municipalidad
+                            + " AND acceso_id IN (SELECT id FROM acceso WHERE municipalidad_id = "
+                            + municipalidad
+                            + " AND codigo <> 'parametros')",
+                    "DELETE FROM acceso WHERE municipalidad_id = "
+                            + municipalidad
+                            + " AND codigo <> 'parametros'",
+                    "DELETE FROM modulo_sistema WHERE municipalidad_id = "
+                            + municipalidad
+                            + " AND codigo <> 'SEGURIDAD'");
         }
     }
 
@@ -319,7 +422,7 @@ class ImplantacionDeCeroTest {
                                     + " municipalidad esta dada de alta y su catalogo sembrado. Los"
                                     + " dos pasos confirmaron antes, y repetir la implantacion —que es"
                                     + " el remedio— es idempotente sobre ellos")
-                    .containsExactly(OPCION);
+                    .containsExactlyInAnyOrderElementsOf(OPCIONES);
         }
     }
 
@@ -417,16 +520,20 @@ class ImplantacionDeCeroTest {
                             OPCION,
                             CuerposComoLosPublicaIdentidad.LOS_SIETE));
         }
-        buzon.publicar(
-                ++secuencia,
-                "PERMISO_FIJADO",
-                grupoAdministracion,
-                CuerposComoLosPublicaIdentidad.permiso(
-                        grupoAdministracion,
-                        GRUPO_DE_ADMINISTRACION,
-                        "normativa",
-                        OPCION,
-                        CuerposComoLosPublicaIdentidad.LOS_SIETE));
+        // Y los de ESTE sistema: `identidad` emite UNO POR OPCION del catalogo unido, asi que con
+        // dos opciones son dos hechos. Ese es el numero que tiene que llegar a `permiso`.
+        for (String opcion : OPCIONES) {
+            buzon.publicar(
+                    ++secuencia,
+                    "PERMISO_FIJADO",
+                    grupoAdministracion,
+                    CuerposComoLosPublicaIdentidad.permiso(
+                            grupoAdministracion,
+                            GRUPO_DE_ADMINISTRACION,
+                            "normativa",
+                            opcion,
+                            CuerposComoLosPublicaIdentidad.LOS_SIETE));
+        }
 
         long grupoConsumidores = 2;
         buzon.publicar(
@@ -594,6 +701,7 @@ class ImplantacionDeCeroTest {
                         .get(0));
     }
 
+    /** Los siete privilegios del grupo de administracion sobre CADA opcion de este sistema. */
     private static List<String> privilegiosDelAdministrador(long municipalidad) {
         return filas(
                 "SELECT p.ejecucion || '|' || p.lectura || '|' || p.registro || '|' ||"
@@ -607,9 +715,52 @@ class ImplantacionDeCeroTest {
                         + municipalidad
                         + " AND g.nombre = '"
                         + GRUPO_DE_ADMINISTRACION
-                        + "' AND a.codigo = '"
-                        + OPCION
+                        + "' ORDER BY a.codigo");
+    }
+
+    /** La fila de una opcion, con lo que un {@code DO UPDATE} le cambiaria sin decirlo. */
+    private static String laFilaDe(long municipalidad, String codigo) {
+        List<String> filas =
+                filas(
+                        "SELECT a.id || '|' || a.modulo_id || '|' || a.nombre FROM acceso a"
+                                + " WHERE a.municipalidad_id = "
+                                + municipalidad
+                                + " AND a.codigo = '"
+                                + codigo
+                                + "'");
+        return filas.isEmpty() ? "" : filas.get(0);
+    }
+
+    /** El permiso del grupo de administracion sobre una opcion, con su fila y sus siete. */
+    private static List<String> elPermisoSobre(long municipalidad, String codigo) {
+        return filas(
+                "SELECT p.acceso_id || '|' || p.lectura || '|' || p.especial FROM permiso p"
+                        + " JOIN acceso a ON a.id = p.acceso_id"
+                        + "   AND a.municipalidad_id = p.municipalidad_id"
+                        + " WHERE p.municipalidad_id = "
+                        + municipalidad
+                        + " AND a.codigo = '"
+                        + codigo
                         + "'");
+    }
+
+    /** Los asientos que el sembrador dejo: uno por pasada que CREO algo, y ninguno mas. */
+    private static long cuantasDelCatalogo(long municipalidad) {
+        return Long.parseLong(
+                filas(
+                                "SELECT count(*) FROM auditoria WHERE municipalidad_id = "
+                                        + municipalidad
+                                        + " AND tabla = 'acceso' AND clave = 'catalogo'")
+                        .get(0));
+    }
+
+    private static void ejecutarComoAdmin(String... sentencias) throws SQLException {
+        try (Connection admin = base.conexionAdmin();
+                Statement sentencia = admin.createStatement()) {
+            for (String sql : sentencias) {
+                sentencia.execute(sql);
+            }
+        }
     }
 
     /** Se lee como superusuario, que es lo que dice DONDE quedo cada fila y no solo si se ve. */
