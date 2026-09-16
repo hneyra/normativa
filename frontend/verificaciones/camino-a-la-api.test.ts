@@ -124,13 +124,20 @@ function admitidos(operacion: string): readonly string[] {
 /* ── 1 y 6 — las operaciones existen, y su forma es una FORMA ──────────────────────────────── */
 
 describe('AC 3 — lo que se pide es una operacion del contrato', () => {
-  it('EL CENTINELA: los dos JSON estan, y publican las cuatro operaciones que #49 midio', () => {
+  it('EL CENTINELA: los dos JSON estan, y publican las SEIS operaciones de hoy', () => {
     // Sin esto, un archivo vacio o con solo la nota dejaria todo lo de abajo pasando sobre el
     // conjunto vacio: cero operaciones comparadas, en verde.
+    //
+    // **SEIS desde #56, y no las cuatro que #49 midio**: se anaden `GET /conjuntos/{id}/parametros`
+    // —el contenido de un conjunto, ABIERTO o sellado— y `GET /parametros` —los publicados que se
+    // le pueden agregar—, las filas 4 y 5 de ADR-0043 §1. La hoja de Ediciones (#65) las lee; esta
+    // lista sube con el backend, no con la hoja.
     const publicadas = [...operacionesDelContrato()].sort();
     expect(publicadas).toEqual([
       'GET /conjuntos',
+      'GET /conjuntos/{id}/parametros',
       'GET /conjuntos/{id}/snapshot',
+      'GET /parametros',
       'GET /seguridad/parametros',
       'GET /seguridad/parametros/ejercicios/{ejercicio}',
     ]);
@@ -401,8 +408,16 @@ describe('AC 3 — el arbol, y lo que el Java exige para cada operacion', () => 
       [...accesos.keys()].sort(),
       'No se pudo leer ningun `@RequiereAcceso` de los controladores.',
     ).toEqual([
+      // Las dos primeras las anade #56: `GET /conjuntos/{id}/parametros` —el contenido de un
+      // conjunto, ABIERTO o sellado, que es lo que el snapshot se niega a servir— y
+      // `GET /parametros` —los publicados que se le pueden agregar—, las filas 4 y 5 de ADR-0043
+      // §1. Las sirve un controlador nuevo, `ContenidoDelConjuntoController.java`, y esta lista es
+      // de rutas y no de archivos: si no se actualizara, el centinela diria que el Java no se
+      // pudo leer cuando lo que paso es que publica dos operaciones mas.
       '/conjuntos',
+      '/conjuntos/{id}/parametros',
       '/conjuntos/{id}/snapshot',
+      '/parametros',
       '/seguridad/parametros',
       '/seguridad/parametros/ejercicios/{ejercicio}',
     ]);

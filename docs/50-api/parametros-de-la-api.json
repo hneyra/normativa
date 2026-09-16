@@ -7,12 +7,28 @@
     "opcionales": [],
     "enElCuerpo": []
   },
+  "GET /conjuntos/{id}/parametros": {
+    "obligatorios": [],
+    "algunoDeEstos": [],
+    "condicionales": [],
+    "opcionales": [],
+    "enElCuerpo": []
+  },
   "GET /conjuntos/{id}/snapshot": {
     "obligatorios": ["ambito"],
     "algunoDeEstos": [],
     "condicionales": [],
     "opcionales": [],
     "enElCuerpo": []
+  },
+  "GET /parametros": {
+    "obligatorios": [],
+    "algunoDeEstos": [],
+    "condicionales": [],
+    "opcionales": ["direccion", "ordenarPor", "pagina", "tamano"],
+    "enElCuerpo": [],
+    "ordenarPorAdmitidos": ["clave", "id", "tipo", "vigenciaDesde", "vigencia_desde"],
+    "tamanoMaximo": 500
   },
   "GET /seguridad/parametros": {
     "obligatorios": [],

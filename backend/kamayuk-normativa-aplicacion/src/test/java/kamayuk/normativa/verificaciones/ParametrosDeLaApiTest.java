@@ -137,7 +137,13 @@ class ParametrosDeLaApiTest {
     private static final Map<String, OrigenDelOrden> ORDEN_DE_CADA_LISTADO =
             Map.of(
                     "GET /seguridad/parametros",
-                    new OrigenDelOrden(ParametrosRepositoryJdbc.class, "ORDEN_CONJUNTO"));
+                    new OrigenDelOrden(ParametrosRepositoryJdbc.class, "ORDEN_CONJUNTO"),
+                    // #56: el listado de parametros publicados, el segundo que pagina. Su lista
+                    // blanca es la otra del mismo repositorio, y desde #56 lleva desempate por
+                    // `id`: sin el, las cinco filas `UIT` de `parametros-2026.csv` empatan y dos
+                    // paginas consecutivas pueden repetir una y omitir otra.
+                    "GET /parametros",
+                    new OrigenDelOrden(ParametrosRepositoryJdbc.class, "ORDEN_PARAMETRO"));
 
     // ------------------------------------------------------------------
 

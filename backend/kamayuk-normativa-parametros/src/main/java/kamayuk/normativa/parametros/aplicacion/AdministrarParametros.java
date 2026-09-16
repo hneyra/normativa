@@ -3,6 +3,8 @@ package kamayuk.normativa.parametros.aplicacion;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import kamayuk.normativa.auditoria.Auditoria;
@@ -61,6 +63,94 @@ public class AdministrarParametros {
     @Transactional(readOnly = true)
     public Pagina<ParametroTributario> parametros(Paginacion paginacion) {
         return repositorio.parametros(paginacion);
+    }
+
+    /**
+     * Que lleva dentro un conjunto, <b>este abierto o sellado</b> (#56).
+     *
+     * <h2>Por que no basta {@link #parametrosDe(long)}, que ya existia</h2>
+     *
+     * <p>Por dos cosas, y las dos se miden:
+     *
+     * <ul>
+     *   <li><b>Un conjunto que no existe devuelve una lista vacia</b>, no un error: el {@code JOIN}
+     *       de {@code ParametrosRepositoryJdbc.parametrosDe} no encuentra detalle y contesta cero
+     *       filas. Servido tal cual por HTTP, {@code GET /conjuntos/999/parametros} seria un 200
+     *       con la lista vacia, que se lee «el conjunto existe y esta vacio». Aqui se resuelve
+     *       <b>primero</b> el conjunto, con {@link #conjunto(long)}, que traduce su ausencia a
+     *       {@code NO_ENCONTRADO}. Y con RLS, un conjunto <b>de otra municipalidad</b> tampoco
+     *       existe desde aqui: la politica {@code conjunto_parametros_tenant} lo esconde, asi que
+     *       los dos casos salen con el <b>mismo</b> mensaje porque son el mismo hecho.
+     *   <li><b>La pantalla tiene que poder decir de que conjunto habla</b> —su ejercicio, su
+     *       version y su estado— sin una segunda peticion, y por eso lo que vuelve es el conjunto
+     *       junto a su contenido y no una lista suelta.
+     * </ul>
+     *
+     * <h2>El orden se pone AQUI, y no en la consulta</h2>
+     *
+     * <p>{@code parametrosDe} ordena por {@code p.tipo, p.clave}, que <b>no es un orden total</b>:
+     * {@code parametros-2026.csv} publica cinco filas {@code UIT} con la misma clave vacia, y entre
+     * esas cinco el orden lo decide el plan de PostgreSQL. Lo corriente seria arreglarlo en el
+     * {@code ORDER BY}, y <b>no se hace</b>: esa misma lista es la que serializa {@code
+     * ComponerSnapshot}, cuyo {@code ETag} es el {@code sha256} de los bytes servidos, de modo que
+     * tocarla cambiaria la huella de <b>todo</b> conjunto ya sellado que {@code rentas} y {@code
+     * catastro} tengan en cache — y ADR-0025 §Consecuencias llama a eso un defecto del servidor.
+     *
+     * <p>Asi que esta lectura ordena en memoria, con un orden <b>total</b> —tipo, clave, vigencia y
+     * por ultimo el identificador, que es unico—, y el snapshot se queda exactamente como estaba.
+     * Un orden total sin desempate da dos respuestas distintas a la misma pregunta, que es lo que
+     * una pantalla que pagina o compara no puede tolerar.
+     *
+     * <p><b>No deja fila en la bitacora</b>, y es la regla de la casa y no una excepcion: {@code
+     * Operacion.ACCESO} es «entrada o salida del sistema» y ningun caso de uso de este repositorio
+     * audita una lectura. Lo que la bitacora registra son los actos que cambian el conjunto —{@link
+     * #abrirVersion}, {@link #agregarParametro} y {@link #sellar}—, que es lo que ADR-0008 pide
+     * poder reconstruir.
+     *
+     * @throws ProblemaDeNegocio {@code NO_ENCONTRADO} si el conjunto no existe o es de otra
+     *     municipalidad
+     */
+    @Transactional(readOnly = true)
+    public ContenidoDelConjunto contenidoDe(long conjuntoId) {
+        ConjuntoDeParametros conjunto = conjunto(conjuntoId);
+        List<ParametroTributario> dentro = new ArrayList<>(repositorio.parametrosDe(conjuntoId));
+        dentro.sort(ORDEN_DE_LA_LECTURA);
+        return new ContenidoDelConjunto(conjunto, List.copyOf(dentro));
+    }
+
+    /**
+     * El orden <b>total</b> de la lectura del contenido de un conjunto.
+     *
+     * <p>El identificador va al final y es lo que lo hace total: los tres primeros campos empatan
+     * —cinco filas {@code UIT} sin clave— y el identificador no empata nunca. Los nulos van
+     * primero, que es lo mismo que hace {@code ORDER BY} ascendente de PostgreSQL con {@code NULLS
+     * FIRST} explicito: da igual cual se elija mientras la eleccion sea una sola y este escrita.
+     */
+    private static final Comparator<ParametroTributario> ORDEN_DE_LA_LECTURA =
+            Comparator.comparing(ParametroTributario::tipo)
+                    .thenComparing(
+                            ParametroTributario::clave,
+                            Comparator.nullsFirst(Comparator.naturalOrder()))
+                    .thenComparing(
+                            p -> p.vigencia().desde(),
+                            Comparator.nullsFirst(Comparator.naturalOrder()))
+                    .thenComparing(
+                            ParametroTributario::id,
+                            Comparator.nullsFirst(Comparator.naturalOrder()));
+
+    /**
+     * Un conjunto y lo que lleva dentro.
+     *
+     * @param conjunto el conjunto, con su ejercicio, su version y su estado
+     * @param parametros lo que se le incorporo, en orden total
+     */
+    public record ContenidoDelConjunto(
+            ConjuntoDeParametros conjunto, List<ParametroTributario> parametros) {
+
+        public ContenidoDelConjunto {
+            Objects.requireNonNull(conjunto, "El contenido es el de un conjunto concreto");
+            parametros = List.copyOf(parametros);
+        }
     }
 
     /**
