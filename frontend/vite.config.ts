@@ -1,7 +1,10 @@
 import process from 'node:process';
 
+import tailwind from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
+
+import { LO_QUE_PONE_EL_CONSUMIDOR } from './resolucion.ts';
 
 /**
  * El empaquetado de `normativa-web`.
@@ -16,8 +19,8 @@ import { defineConfig } from 'vite';
  * salio con la V6; la nueva llega de `@kamayuk/sesion` en #57—, que es lo que hace que
  * `vitest.config.ts` tenga que declararla tambien.
  *
- * Desde #50 es el `vite.config.ts` de `rentas@ac379ac` con el nombre de este sistema y **sin**
- * Tailwind ni `resolucion.ts`: los dos llegan con el `link:` a `kamayuk-lib`, en #55.
+ * Desde #55 es el `vite.config.ts` de `rentas@ac379ac` con el nombre de este sistema, **entero**:
+ * #50 lo dejo sin Tailwind y sin `resolucion.ts`, y los dos llegan con el `link:` a `kamayuk-lib`.
  */
 
 /**
@@ -38,7 +41,29 @@ const RAIZ_DE_LA_API = '/normativa/api/v1';
 
 export default defineConfig({
   base: '/normativa/',
-  plugins: [react()],
+  /**
+   * Tailwind v4, **desde #55**.
+   *
+   * No estaba antes y no podia estar: su *preflight* normaliza margenes, tipografia y filos de
+   * todo el documento, y la V6 —CSS escrito a mano en `src/estilos/` y `src/ds/`— se apoyaba en
+   * los valores por omision del navegador. La V6 salio en #50, asi que encenderlo aqui ya no le
+   * cambia la cara a nada: lo que dibuja desde hoy es el `Armazon` de `@kamayuk/shell`, cuyas
+   * clases **solo generan CSS con el complemento puesto y con los `@source` de `src/estilos.css`**.
+   *
+   * Va ANTES que el de React, como en `rentas`: el de Tailwind tiene que ver los archivos para
+   * saber que clases se usan. Lo comprueba `verificaciones/tailwind-esta-conectado.test.ts`.
+   */
+  plugins: [tailwind(), react()],
+  /**
+   * **UNA sola copia de lo que los paquetes enlazados dan por puesto.**
+   *
+   * La lista NO se escribe: se deriva de las `peerDependencies` de cada `@kamayuk/*` enlazado.
+   * El porque entero —con los dos rojos que costo en `rentas`, `Cannot read properties of null
+   * (reading 'useId')` en local y `Cannot find module 'react'` en CI— esta en `resolucion.ts`.
+   */
+  resolve: {
+    dedupe: [...LO_QUE_PONE_EL_CONSUMIDOR],
+  },
   /**
    * El camino a la API en desarrollo, y **por que hace falta uno**.
    *

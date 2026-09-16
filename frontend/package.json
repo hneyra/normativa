@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "version": "0.1.0",
-  "description": "normativa — interfaz web. La V6 salio (#50): queda la cadena de herramientas de rentas y ninguna pantalla todavia.",
+  "description": "normativa — interfaz web. El Armazon de @kamayuk/shell, montado y vacio (#55): ninguna hoja todavia.",
   "engines": {
     "node": ">=22"
   },
@@ -19,6 +19,11 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.0",
+    "@kamayuk/api": "link:../../kamayuk-lib/paquetes/api",
+    "@kamayuk/formato": "link:../../kamayuk-lib/paquetes/formato",
+    "@kamayuk/sesion": "link:../../kamayuk-lib/paquetes/sesion",
+    "@kamayuk/shell": "link:../../kamayuk-lib/paquetes/shell",
+    "@kamayuk/ui": "link:../../kamayuk-lib/paquetes/ui",
     "@tanstack/react-query": "^5.102.8",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

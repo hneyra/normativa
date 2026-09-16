@@ -24,7 +24,13 @@ import { describe, expect, it } from 'vitest';
  * **Desde #50 sigue a `rentas/frontend/verificaciones/andamiaje.test.ts` en `ac379ac`**, con lo
  * que aqui es propio y dicho: `.nvmrc` y `.npmrc`, que `rentas` no tiene (su CI fija
  * `node-version: "22"` como literal), la `base` de `vitest.config.ts` y los scripts que todavia
- * no tienen de que colgar. `preserveSymlinks`, que `rentas` exige, entra con el `link:` en #55.
+ * no tienen de que colgar.
+ *
+ * **Y desde #55, lo que el clon hermano obliga**: `preserveSymlinks` —que `rentas` exige y #50
+ * dejo fuera a proposito—, el checkout del anfitrion en `path: normativa` con `kamayuk-lib` al
+ * lado, y el paso que construye la imagen con su contexto con nombre. Las tres cosas se caen en
+ * silencio igual que las de arriba: sin el checkout del hermano, `yarn install` sale en verde y
+ * lo que revienta es `yarn verificar` dos pasos despues.
  */
 
 const AQUI = dirname(fileURLToPath(import.meta.url));
@@ -82,6 +88,18 @@ describe('el compilador es tan estricto como el issue pide', () => {
   const opciones = (comoJsonc(leer(join(RAIZ, 'tsconfig.base.json'))) as {
     compilerOptions: Record<string, unknown>;
   }).compilerOptions;
+
+  it('`preserveSymlinks` esta encendido, que es lo que hace resolver a la libreria (#55)', () => {
+    // Sin el, `tsc` sigue el enlace simbolico hasta el clon hermano y resuelve los `import 'react'`
+    // de DENTRO de la libreria subiendo por SU arbol — que en CI y en la imagen no tiene
+    // dependencias instaladas. El rojo no habla de enlaces ni de clones: dice «Cannot find module
+    // 'react'» veintitantas veces sobre archivos de `@kamayuk/ui`, seguido de errores derivados
+    // que parecen defectos de la libreria y no lo son (`rentas`#88).
+    //
+    // Va aparte de la lista de abajo porque no es una bandera de estrictez: es la unica linea de
+    // `tsconfig.base.json` que existe por el `link:`.
+    expect(opciones['preserveSymlinks']).toBe(true);
+  });
 
   it.each([
     ['strict', 'sin el, el resto de banderas no significan nada'],
@@ -203,10 +221,51 @@ describe('el frontend tiene su propia CI', () => {
 
   it('se dispara solo con lo suyo', () => {
     // El filtro `paths` es lo contrario del criterio de `publicar-imagenes.yml`, y a
-    // proposito: alli todo commit de `main` tiene que tener sus dos imagenes, asi que no
-    // hay filtro. Aqui no se despliega nada, y un cambio del backend no tiene por que
-    // gastar una instalacion de npm.
-    expect(workflow).toMatch(/paths:\s*\[?"?frontend\/\*\*/);
+    // proposito: alli todo commit de `main` tiene que tener sus tres imagenes, asi que no
+    // hay filtro. Aqui no se publica nada, y un cambio que no toque lo que se verifica no
+    // tiene por que gastar una instalacion de yarn.
+    expect(workflow).toContain('frontend/**');
+  });
+
+  it('y el filtro alcanza a lo que las guardas leen fuera de `frontend/` (#55)', () => {
+    // `imagen-y-despliegue.test.ts` lee estos tres, y hasta #50 quedaban FUERA del filtro: un PR
+    // que solo tocara uno dejaba la guarda roja sin que esta CI se disparara. Es un hueco que se
+    // cierra anadiendolos, no razonando sobre el.
+    for (const ruta of [
+      'despliegue/compose.yaml',
+      'infrastructure/src/descriptor.ts',
+      '.github/workflows/publicar-imagenes.yml',
+    ]) {
+      expect(workflow, `el filtro no alcanza a «${ruta}», que una guarda de aqui lee`).toContain(
+        ruta,
+      );
+    }
+    // Y lo que la interfaz da por publicado (AC 5 de #55).
+    expect(workflow).toContain('backend/**');
+    expect(workflow).toContain('docs/50-api/**');
+  });
+
+  it('clona el hermano `kamayuk-lib` al lado, y baja el anfitrion para que quepa (#55)', () => {
+    // `yarn install --frozen-lockfile` con el hermano ausente sale con **codigo 0** y no enlaza
+    // nada (medido). O sea que sin este checkout la CI no falla al instalar: falla dos pasos
+    // despues, en `yarn verificar`, y solo porque una guarda lo dice.
+    expect(workflow).toContain('repository: hneyra/kamayuk-lib');
+    expect(workflow).toContain('path: kamayuk-lib');
+    // `actions/checkout` no escribe fuera de `GITHUB_WORKSPACE`, asi que el que se mueve es este
+    // repositorio. Y con el se mueven las dos rutas de `setup-node`.
+    expect(workflow).toContain('path: normativa');
+    expect(workflow).toContain('working-directory: normativa/frontend');
+  });
+
+  it('y construye la imagen en el PR, con el clon hermano por su contexto con nombre (#55)', () => {
+    // `publicar-imagenes.yml` solo corre en `main`: sin este paso, un `Dockerfile` roto se
+    // descubre DESPUES del merge. Y con el `link:` puesto el `Dockerfile` depende de cosas que se
+    // rompen sin tocar `src/` — la profundidad del `WORKDIR` y el `.dockerignore`.
+    expect(workflow).toContain('docker build');
+    expect(workflow).toContain('--build-context kamayuk-lib=../../kamayuk-lib');
+    expect(workflow).toContain('--target interfaz');
+    // Construida, NO publicada: lo que se publica lo decide el otro flujo.
+    expect(workflow, 'este flujo no publica imagenes').not.toContain('docker push');
   });
 
   it('el workflow es tambien lo suyo: un cambio en el se verifica a si mismo', () => {
@@ -235,7 +294,7 @@ describe('el frontend tiene su propia CI', () => {
       workflow,
       'Con el numero escrito aqui, la CI y quien clona el repositorio son dos versiones\n' +
         'que pueden separarse sin que nada lo diga.',
-    ).toContain('node-version-file: frontend/.nvmrc');
+    ).toContain('node-version-file: normativa/frontend/.nvmrc');
   });
 
   it('no pide permisos de escritura: lee y verifica, no publica', () => {
@@ -243,7 +302,9 @@ describe('el frontend tiene su propia CI', () => {
   });
 
   it('un colgado no consume cuota sin limite', () => {
-    expect(workflow).toContain('timeout-minutes: 10');
+    // Veinte y no diez desde #55: la imagen repite la instalacion y el `vite build` dentro de
+    // Docker, sin la cache de `setup-node`.
+    expect(workflow).toContain('timeout-minutes: 20');
   });
 
   it('un push nuevo cancela la corrida anterior, pero solo en PR', () => {

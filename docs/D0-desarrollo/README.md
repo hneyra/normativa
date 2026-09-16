@@ -20,11 +20,23 @@ cd ..                                                   # el directorio que cont
 git clone https://github.com/hneyra/infrastructure
 ```
 
+**Y el frontend no instala ni compila sin `kamayuk-lib` clonado al lado** (#55).
+`frontend/package.json` enlaza los cinco `@kamayuk/{api,formato,sesion,shell,ui}` por
+`link:../../kamayuk-lib/paquetes/*`, y `yarn install` **sale con código 0 aunque el clon falte**:
+no enlaza nada y no avisa. El primer paso que lo dice es cargar `vite.config.ts` o
+`vitest.config.ts` —`yarn dev`, `yarn build`, `yarn test`—, con el `git clone` en el mensaje.
+
+```bash
+cd ..                                                   # el mismo directorio
+git clone https://github.com/hneyra/kamayuk-lib
+```
+
 Queda así, y las rutas de este documento cuentan con ello:
 
 ```
 IdeaProjects/
 ├── infrastructure/     la plataforma y las barreras comunes
+├── kamayuk-lib/        las librerias comunes del frontend
 ├── normativa/          este repositorio
 └── sgtm/               el archivo historico (opcional, pero se consulta a diario)
 ```

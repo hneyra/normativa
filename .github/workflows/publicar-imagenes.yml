@@ -24,6 +24,13 @@
 # `frontend/Dockerfile` con el contexto en la raiz se llevaria dentro `node_modules`, los `.env`
 # —y con ellos cualquier `VITE_*` que Vite hornee en el paquete— y el artboard entero.
 #
+# ## Y desde #55 el anfitrion se clona en `path: normativa`
+#
+# Porque la interfaz necesita a `kamayuk-lib` al lado: sus cinco `link:` los resuelve yarn contra
+# el DISCO. `actions/checkout` no escribe fuera de `GITHUB_WORKSPACE`, asi que el que se mueve es
+# este repositorio. Consecuencia: **las tres entradas** de la matriz llevan `normativa/` delante,
+# y no solo la de la interfaz.
+#
 # **No se llama `kamayuk-normativa-web`**: ese nombre ya es el del `Deployment` y el `Service` del
 # BACKEND con el perfil `web` de Spring (`infrastructure/src/descriptor.ts`,
 # `despliegueDelPerfil(e, "web", true)`). Es `kamayuk-normativa-interfaz`, como en `rentas` y en
@@ -97,22 +104,52 @@ jobs:
         # con el contexto en la raiz —tiene `COPY` que salen de `backend/`— y la interfaz sale de
         # `frontend/Dockerfile` con el contexto en `frontend/`, que es lo unico que hace que su
         # `.dockerignore` se aplique.
+        #
+        # LAS RUTAS LLEVAN `normativa/` DELANTE DESDE #55: el anfitrion baja a `path: normativa`
+        # para que el clon hermano `kamayuk-lib` quepa a su lado (ver el primer paso).
+        # `contexto: normativa` es la raiz de ESTE repositorio —exactamente lo que era `.`—, asi
+        # que el `.dockerignore` que aplica a cada imagen no cambia. Las tres a la vez, y no solo
+        # la de la interfaz: el anfitrion es uno.
         include:
           - destino: aplicacion
             imagen: kamayuk-normativa
-            archivo: backend/Dockerfile
-            contexto: .
+            archivo: normativa/backend/Dockerfile
+            contexto: normativa
           - destino: migrador
             imagen: kamayuk-normativa-migrador
-            archivo: backend/Dockerfile
-            contexto: .
+            archivo: normativa/backend/Dockerfile
+            contexto: normativa
           - destino: interfaz
             imagen: kamayuk-normativa-interfaz
-            archivo: frontend/Dockerfile
-            contexto: frontend
+            archivo: normativa/frontend/Dockerfile
+            contexto: normativa/frontend
+            # EL CLON HERMANO, POR UN CONTEXTO CON NOMBRE (#55, calcado de `rentas`#75). Desde que
+            # `src/` importa `@kamayuk/shell` y `@kamayuk/ui`, `frontend/Dockerfile` hace
+            # `COPY --from=kamayuk-lib paquetes/ …`, y sin esta columna BuildKit resolveria ese
+            # nombre como una IMAGEN de Docker Hub. Va DESPUES de `contexto:`, como en
+            # `rentas:121`. Solo la interfaz lo lleva: las dos del backend no.
+            contextos: kamayuk-lib=kamayuk-lib
 
     steps:
-      - uses: actions/checkout@v4
+      # El anfitrion BAJA UN NIVEL para que el clon hermano quepa a su lado, igual que en
+      # `frontend.yml` desde #55 y que en `rentas` desde su #75. `actions/checkout` se niega a
+      # escribir fuera de `GITHUB_WORKSPACE`, asi que no se puede clonar hacia arriba: lo que se
+      # mueve es este repositorio, y con el las rutas de la matriz.
+      - name: Este repositorio
+        uses: actions/checkout@v4
+        with:
+          path: normativa
+
+      # De aqui salen los cinco paquetes de ejecucion que `frontend/package.json` declara como
+      # `link:`. La imagen de la interfaz no se construye sin el. El repliegue `|| github.token` es
+      # el mismo que en `frontend.yml`: si el checkout muere con «Repository not found», es que
+      # `GH_CLONE_KEY` no alcanza a `kamayuk-lib`.
+      - name: Las librerias comunes
+        uses: actions/checkout@v4
+        with:
+          repository: hneyra/kamayuk-lib
+          path: kamayuk-lib
+          token: ${{ secrets.GH_CLONE_KEY || github.token }}
 
       - uses: docker/setup-buildx-action@v3
 
@@ -146,12 +183,16 @@ jobs:
       # `yarn build`, no `yarn verificar`. Las pruebas y el lint ya corrieron en `frontend.yml`.
       # Lo que si comprueba esa imagen al construirse es lo que solo se puede comprobar sobre el
       # `dist/` que va a servir: que no lleva codigo fuente dentro y que no lleva ni una cifra del
-      # corpus.
+      # corpus. Lo que SI necesita desde #55 es el clon hermano, por `build-contexts`.
       - uses: docker/build-push-action@v6
         with:
           context: ${{ matrix.contexto }}
           file: ${{ matrix.archivo }}
           target: ${{ matrix.destino }}
+          # El clon hermano, para la interfaz. Vacio en las dos del backend, que no lo necesitan.
+          build-contexts: ${{ matrix.contextos }}
+          # Siempre `true`: este flujo solo corre al integrar en `main` y a mano. La imagen de la
+          # interfaz se CONSTRUYE en cada PR, sin publicarse, en `frontend.yml` (#55).
           push: true
           tags: ghcr.io/${{ steps.registro.outputs.propietario }}/${{ matrix.imagen }}:${{ github.sha }}
           cache-from: type=gha,scope=${{ matrix.imagen }}
