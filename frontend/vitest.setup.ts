@@ -12,6 +12,25 @@ import { afterEach } from 'vitest';
 afterEach(cleanup);
 
 /**
+ * **La instancia de i18next, para TODAS las pruebas** (#60, AC 1).
+ *
+ * `react-i18next` sin proveedor usa la instancia global de `i18next`, que solo existe si alguien la
+ * inicializo. En la aplicacion lo hace `src/main.tsx`; en las pruebas no lo haria nadie, y el
+ * sintoma es pequeno y confuso: `t()` devolveria la clave sin resolver nada —sin elegir forma
+ * plural, y sin el post-procesador que marca—, de modo que
+ * `verificaciones/todo-el-texto-se-traduce.test.tsx` saldria **verde sobre la nada**: nada estaria
+ * marcado y nada se consideraria escapado.
+ *
+ * Importarlo aqui es lo que hace que una prueba de componente vea **lo mismo que la pantalla**.
+ * Ponerlo en cada archivo que lo necesite seria lo contrario: la que se olvidara pasaria en verde
+ * comprobando texto sin traducir.
+ *
+ * Es un `import` estatico —se iza, asi que corre antes que nada de este archivo— y `i18n.ts` tiene
+ * un `await` de nivel superior: cuando el modulo termina de evaluarse, la instancia esta lista.
+ */
+import './src/i18n/i18n.ts';
+
+/**
  * **`:modal` y `:popover-open` contestan `false` sin preguntarle a jsdom** (#57; hallazgo de
  * `catastro`#110, PR `catastro`#138).
  *

@@ -72,20 +72,47 @@ const sinComentarios = (fuente: string): string =>
   fuente.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/^[ \t]*\/\/.*$/gm, ' ');
 
 /**
- * Cada `{ rotulo: '…', … al: <lo que sea> }` de un texto, ya sin comentarios.
+ * Cada `nombre: 'frase'` del texto, por su nombre.
+ *
+ * Existe desde #60: los rotulos ya no se escriben dentro de la opcion sino en
+ * `FRASES_DE_LA_SESION`, que es lo que hace que entren solos en el inventario del locale. Este mapa
+ * es lo que deja resolver un captador de vuelta a la frase que dibuja **sin importar el modulo**,
+ * que es lo que esta guarda no puede hacer (ver abajo).
+ */
+function frasesDe(texto: string): ReadonlyMap<string, string> {
+  return new Map(
+    [...texto.matchAll(/(\w+):\s*'([^'\n]*)'/g)].map(([, nombre, frase]) => [
+      nombre ?? '',
+      frase ?? '',
+    ]),
+  );
+}
+
+/**
+ * Cada `{ rotulo: …, … al: <lo que sea> }` de un texto, ya sin comentarios.
  *
  * Se lee el TEXTO y no se importa el modulo a proposito: importarlo evaluaria `crearIdentidad`, que
  * necesita `window`, y esta guarda corre en Node porque lo que mide es una propiedad del arbol. Y
  * hay una segunda razon, que es la que importa: importando, un `al` cableado a una funcion vacia se
  * ve exactamente igual que uno que hace algo — `typeof f === 'function'` es `true` para los dos.
+ *
+ * **Dos formas de rotulo, y la segunda entro con #60.** Un literal —`rotulo:` con la frase detras—
+ * o un CAPTADOR que la traduce al leerla, que es lo que hace que el menu se traduzca sin abrir
+ * `src/aplicacion.tsx`. La segunda es la que hay hoy: sin esta mitad, esta guarda encontraria
+ * **cero** opciones y saldria roja diciendo que el menu esta vacio — que es exactamente el rojo que
+ * salio al escribir #60, antes de ensenarle la forma nueva.
  */
 function opcionesDe(fuente: string): { readonly rotulo: string; readonly cuerpo: string }[] {
   const texto = sinComentarios(fuente);
+  const frases = frasesDe(texto);
+  const COMO_SE_ESCRIBE =
+    /rotulo:\s*'([^']+)'|get rotulo\(\)\s*\{\s*return\s+t\(\s*[A-Z_]+\.(\w+)\s*\)\s*;?\s*\}/g;
   const salida: { rotulo: string; cuerpo: string }[] = [];
-  for (const casa of texto.matchAll(/rotulo:\s*'([^']+)'/g)) {
+  for (const casa of texto.matchAll(COMO_SE_ESCRIBE)) {
     const objeto = objetoQueContiene(texto, casa.index);
     const conAl = /\bal:\s*([\s\S]*)$/.exec(objeto);
-    salida.push({ rotulo: casa[1] ?? '', cuerpo: conAl?.[1] ?? '' });
+    const porCaptador = casa[2] === undefined ? undefined : frases.get(casa[2]);
+    salida.push({ rotulo: casa[1] ?? porCaptador ?? '', cuerpo: conAl?.[1] ?? '' });
   }
   return salida;
 }
@@ -114,6 +141,7 @@ function objetoQueContiene(texto: string, posicion: number): string {
 describe('las cuatro opciones del menu de sesion estan, y ninguna esta muda', () => {
   it('EL CENTINELA: el extractor encuentra opciones, y distingue un cuerpo vacio de uno que hace algo', () => {
     const muestra = [
+      "const FRASES = { porCaptador: 'La que traduce al leerse' };",
       'export const X = [',
       "  {",
       "    rotulo: 'Hace algo',",
@@ -122,13 +150,29 @@ describe('las cuatro opciones del menu de sesion estan, y ninguna esta muda', ()
       '    },',
       '  },',
       "  { rotulo: 'No hace nada', al: () => {} },",
+      // La forma de #60: el rotulo no esta escrito en la opcion, se traduce al leerlo. Va en la
+      // muestra porque es la unica que hay hoy en `src/sesion.ts`: sin ejercitarla aqui, el dia que
+      // alguien «simplifique» la expresion regular esta guarda se quedaria sin ver ni una opcion.
+      '  {',
+      '    get rotulo() {',
+      '      return t(FRASES.porCaptador);',
+      '    },',
+      '    al: () => {',
+      '      abrirLasPreferencias();',
+      '    },',
+      '  },',
       '];',
     ].join('\n');
 
     const sacadas = opcionesDe(muestra);
-    expect(sacadas.map((o) => o.rotulo)).toEqual(['Hace algo', 'No hace nada']);
+    expect(sacadas.map((o) => o.rotulo)).toEqual([
+      'Hace algo',
+      'No hace nada',
+      'La que traduce al leerse',
+    ]);
     expect(esMuda(sacadas[1] as { rotulo: string; cuerpo: string })).toBe(true);
     expect(esMuda(sacadas[0] as { rotulo: string; cuerpo: string })).toBe(false);
+    expect(esMuda(sacadas[2] as { rotulo: string; cuerpo: string })).toBe(false);
   });
 
   it('las cuatro estan, y en el orden de `rentas`', () => {

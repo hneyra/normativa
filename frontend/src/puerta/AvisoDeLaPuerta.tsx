@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+
 import type { PorQueNoSeEntro } from './falla.ts';
 
 /**
@@ -36,32 +38,75 @@ import type { PorQueNoSeEntro } from './falla.ts';
  * hay ni una lectura que pueda salir mal detras de esta capa —hoy no hay ninguna (#63)—, y el dia
  * que las haya seguiran sin token, que es la misma situacion que si no se hubiera montado.
  *
- * <h2>El texto va en castellano y sin `t()`</h2>
+ * <h2>El texto pasa por `t()` desde #60, y el castellano ES la clave</h2>
  *
- * El i18n es #60. Aqui el castellano es la clave, que es la decision de la epica #47.
+ * Es la decision de la epica #47. Las tres frases viven en {@link FRASES_DE_LA_PUERTA} y no escritas
+ * dentro de cada `t()`: asi entran solas en el inventario del locale
+ * (`src/i18n/catalogo-de-claves.ts`), que es lo unico que impide que se quede corto.
+ *
+ * **Lo que NO se traduce, y por que**: `porQue.motivo` y `porQue.detalle` los dice **el emisor**
+ * —`error` y `error_description` de la vuelta—, y `emisor`, `url` y el motivo de red son datos de la
+ * instalacion. Traducirlos seria falso: no son frases de este sistema. Entran por interpolacion, que
+ * es lo que deja que caigan donde el idioma los ponga.
  */
 
 export interface AvisoDeLaPuertaProps {
   readonly porQue: PorQueNoSeEntro;
 }
 
-/** El titulo y la linea de las senas, segun cual de los dos casos sea. */
-function loQuePaso(porQue: PorQueNoSeEntro): { readonly titulo: string; readonly senas: string } {
+/**
+ * **Lo que esta capa dice, en castellano, que es la clave** (#60).
+ *
+ * Las dos primeras son calcadas de `rentas@ac379ac:src/aplicacion.tsx:275-285`, palabra por palabra.
+ * La tercera es de este sistema: `rentas` no tiene el caso «el emisor no dejo entrar» porque alli un
+ * canje fallido acaba saliendo como un 401 (ver `falla.ts`).
+ */
+export const FRASES_DE_LA_PUERTA = {
+  noContesto: 'No se pudo llegar al emisor de identidad, asi que no se mando a nadie a identificarse.',
+  senasDelEmisor: 'El emisor es {{emisor}}, y la peticion a {{url}} no llego a completarse: {{motivo}}.',
+  noDejoEntrar: '{{motivo}}, asi que no se entro.',
+  queHacer:
+    'Si esto es un puesto de desarrollo, levante la plataforma; si no, avise a quien la ' +
+    'administra. Despues vuelva a cargar la pagina.',
+} as const;
+
+/** Todo lo que este archivo aporta al inventario del locale. Ver `catalogo-de-claves.ts`. */
+export function clavesDeLaPuerta(): readonly string[] {
+  return Object.values(FRASES_DE_LA_PUERTA);
+}
+
+/**
+ * El titulo y la linea de las senas, segun cual de los dos casos sea.
+ *
+ * `traducir` entra por parametro con la firma estrecha —«una clave, y los datos que lleve dentro»—
+ * y no como el `TFunction` de i18next: esto no es un componente y no puede llamar al gancho, y atar
+ * su firma a la de la libreria la ataria a su version. Es la misma decision que `t` en
+ * `src/i18n/i18n.ts`.
+ */
+function loQuePaso(
+  porQue: PorQueNoSeEntro,
+  traducir: (clave: string, datos?: Readonly<Record<string, unknown>>) => string,
+): { readonly titulo: string; readonly senas: string } {
   if (porQue.tipo === 'no-contesto') {
     return {
-      titulo:
-        'No se pudo llegar al emisor de identidad, asi que no se mando a nadie a identificarse.',
-      senas: `El emisor es ${porQue.falla.emisor}, y la peticion a ${porQue.falla.url} no llego a completarse: ${porQue.falla.motivo}.`,
+      titulo: traducir(FRASES_DE_LA_PUERTA.noContesto),
+      senas: traducir(FRASES_DE_LA_PUERTA.senasDelEmisor, {
+        emisor: porQue.falla.emisor,
+        url: porQue.falla.url,
+        motivo: porQue.falla.motivo,
+      }),
     };
   }
   return {
-    titulo: `${porQue.motivo}, asi que no se entro.`,
+    titulo: traducir(FRASES_DE_LA_PUERTA.noDejoEntrar, { motivo: porQue.motivo }),
+    // Lo dice el emisor, no este sistema: ver el javadoc.
     senas: porQue.detalle,
   };
 }
 
 export function AvisoDeLaPuerta({ porQue }: AvisoDeLaPuertaProps) {
-  const { titulo, senas } = loQuePaso(porQue);
+  const { t } = useTranslation();
+  const { titulo, senas } = loQuePaso(porQue, t);
 
   return (
     <div
@@ -78,8 +123,7 @@ export function AvisoDeLaPuerta({ porQue }: AvisoDeLaPuertaProps) {
           {senas}
         </p>
         <p className="mt-[10px] mb-0 text-tinta-2 text-pretty">
-          Si esto es un puesto de desarrollo, levante la plataforma; si no, avise a quien la
-          administra. Despues vuelva a cargar la pagina.
+          {t(FRASES_DE_LA_PUERTA.queHacer)}
         </p>
       </div>
     </div>

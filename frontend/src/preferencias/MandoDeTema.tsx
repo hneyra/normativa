@@ -11,6 +11,7 @@ import {
   type Modo,
 } from '@kamayuk/ui';
 import { useId } from 'react';
+import { useTranslation } from 'react-i18next';
 
 /**
  * **El mando de los temas** — calcado de `rentas/frontend/src/preferencias/MandoDeTema.tsx@ac379ac`
@@ -41,15 +42,40 @@ import { useId } from 'react';
  * dia que entre una cuarta identidad, y **sin que nada lo dijera**: el tema existiria, su CSS
  * viajaria en el paquete, y aqui no habria como elegirlo.
  *
- * <h2>Lo que NO se calca de `rentas`: el `t()`</h2>
+ * <h2>Y desde #60 tambien se calca el `t()`</h2>
  *
- * Alli cada rotulo pasa por `react-i18next`. Aqui el i18n es #60 y todavia no hay instancia que
- * montar, asi que el castellano va directo — que es la MISMA cadena que sera la clave, porque la
- * decision de la epica #47 es que el español es la clave. Subir esta pieza a la libreria es
- * `kamayuk-lib`#53; hasta entonces es una copia declarada, como en `catastro`#110.
+ * Alli cada rotulo pasa por `react-i18next`, y aqui tambien: el castellano de las constantes de
+ * abajo **es la clave** (epica #47), y `t()` corre donde se dibuja. Las once cadenas de esta pieza
+ * se leen **por variable** —`t(ROTULO_DE_LA_IDENTIDAD[identidad])`—, asi que `i18next-cli` no las
+ * ve: entran en el locale por `src/i18n/catalogo-de-claves.ts`, como las de las definiciones.
+ *
+ * Y esta es la unica pieza que este repositorio dibuja **fuera del interprete y fuera del marco**,
+ * asi que es la unica que el recorrido de las cuatro hojas no puede ver. Por eso
+ * `verificaciones/todo-el-texto-se-traduce.test.tsx` la monta aparte.
+ *
+ * Subir esta pieza a la libreria es `kamayuk-lib`#53; hasta entonces es una copia declarada, como en
+ * `catastro`#110.
  */
 
-/** Como se lee cada identidad. El castellano ES la clave (epica #47; el `t()` llega con #60). */
+/**
+ * **Lo que dice el cajon, en castellano, que es la clave** (#60).
+ *
+ * Los rotulos de los dos ejes y sus dos notas. Los de las opciones estan justo debajo, en los dos
+ * `Record` de siempre: no se funden aqui porque el compilador tiene que poder exigir **uno por
+ * identidad y uno por modo**, y un saco plano no exige nada.
+ */
+const FRASES_DEL_MANDO = {
+  preferencias: 'Preferencias',
+  dondeSeGuarda:
+    'Se guarda en este navegador y solo aqui: no viaja al servidor ni cambia lo que ven las demas ' +
+    'personas.',
+  identidadVisual: 'Identidad visual',
+  notaDeLaIdentidad: 'La paleta con que se dibuja este servicio.',
+  apariencia: 'Apariencia',
+  notaDeLaApariencia: 'Sin elegir, se sigue lo que el equipo tenga puesto.',
+} as const;
+
+/** Como se lee cada identidad. El castellano ES la clave (epica #47), y `t()` corre al dibujar. */
 const ROTULO_DE_LA_IDENTIDAD: Readonly<Record<Identidad, string>> = {
   institucional: 'Institucional',
   'alto-contraste': 'Alto contraste',
@@ -86,6 +112,21 @@ const DEL_MODO: readonly Opcion<Modo | null>[] = [
   { clave: 'sistema', rotulo: 'El del sistema', valor: null },
 ];
 
+/**
+ * Todo lo que esta pieza aporta al inventario del locale. Ver `src/i18n/catalogo-de-claves.ts`.
+ *
+ * Se DERIVA de las tres listas y no se escribe: el dia que `@kamayuk/ui` publique una cuarta
+ * identidad, el `Record` de arriba no compila hasta que se le ponga rotulo, y ese rotulo entra aqui
+ * solo. Una lista escrita a mano se quedaria corta sin que nada lo dijera.
+ */
+export function clavesDelMando(): readonly string[] {
+  return [
+    ...Object.values(FRASES_DEL_MANDO),
+    ...DE_LA_IDENTIDAD.map((o) => o.rotulo),
+    ...DEL_MODO.map((o) => o.rotulo),
+  ];
+}
+
 function Eje<T>({
   rotulo,
   nota,
@@ -102,10 +143,11 @@ function Eje<T>({
   // El `name` del grupo tiene que ser unico en el documento: con el mismo en los dos ejes, marcar
   // una identidad desmarcaria el modo — son el mismo grupo de radios para el navegador.
   const grupo = useId();
+  const { t } = useTranslation();
 
   return (
     <fieldset data-slot="eje-del-tema" className="m-0 border-0 p-0">
-      <legend className="mb-[7px] p-0 text-[12.5px] font-bold text-tinta-3">{rotulo}</legend>
+      <legend className="mb-[7px] p-0 text-[12.5px] font-bold text-tinta-3">{t(rotulo)}</legend>
       <div className="grid gap-[6px]">
         {opciones.map((opcion) => {
           const marcada = opcion.valor === elegido;
@@ -132,7 +174,7 @@ function Eje<T>({
                 }}
                 className="size-4 shrink-0 accent-azul"
               />
-              <span>{opcion.rotulo}</span>
+              <span>{t(opcion.rotulo)}</span>
             </label>
           );
         })}
@@ -141,7 +183,7 @@ function Eje<T>({
           sobre el lienzo, y WCAG 1.4.3 pide 4,5:1—, es el trazo de un icono decorativo. Esta frase
           se lee: es la unica que dice que hace «El del sistema». */}
       <p data-slot="nota-del-eje" className="mt-[7px] mb-0 text-[12px] leading-[1.5] text-tinta-3">
-        {nota}
+        {t(nota)}
       </p>
     </fieldset>
   );
@@ -154,6 +196,7 @@ export interface MandoDeTemaProps {
 
 export function MandoDeTema({ abierto, alCerrar }: MandoDeTemaProps) {
   const { identidad, modo, fijarIdentidad, fijarModo } = useTema();
+  const { t } = useTranslation();
 
   return (
     <Cajon
@@ -165,11 +208,8 @@ export function MandoDeTema({ abierto, alCerrar }: MandoDeTemaProps) {
       {/* El cajon de la libreria mide 262 px, que es el ancho del carril. Aqui dentro van dos listas
           con sus rotulos, y a 262 px las tres opciones del modo salen partidas. */}
       <PanelDelCajon lado="derecha" className="w-[min(360px,92vw)]">
-        <TituloDelCajon>Preferencias</TituloDelCajon>
-        <NotaDelCajon>
-          Se guarda en este navegador y solo aqui: no viaja al servidor ni cambia lo que ven las
-          demas personas.
-        </NotaDelCajon>
+        <TituloDelCajon>{t(FRASES_DEL_MANDO.preferencias)}</TituloDelCajon>
+        <NotaDelCajon>{t(FRASES_DEL_MANDO.dondeSeGuarda)}</NotaDelCajon>
         {/* El `data-slot` va en el cuerpo y NO en el panel: el panel ya lleva el suyo
             —`panel-del-cajon`, de la libreria— y pisarselo dejaria sin nombre a la pieza que lo
             dibuja, que es la que sus propias pruebas apuntan. */}
@@ -178,15 +218,15 @@ export function MandoDeTema({ abierto, alCerrar }: MandoDeTemaProps) {
           className="flex flex-col gap-[18px] overflow-y-auto px-[15px] pb-[15px]"
         >
           <Eje
-            rotulo="Identidad visual"
-            nota="La paleta con que se dibuja este servicio."
+            rotulo={FRASES_DEL_MANDO.identidadVisual}
+            nota={FRASES_DEL_MANDO.notaDeLaIdentidad}
             opciones={DE_LA_IDENTIDAD}
             elegido={identidad}
             al={fijarIdentidad}
           />
           <Eje
-            rotulo="Apariencia"
-            nota="Sin elegir, se sigue lo que el equipo tenga puesto."
+            rotulo={FRASES_DEL_MANDO.apariencia}
+            nota={FRASES_DEL_MANDO.notaDeLaApariencia}
             opciones={DEL_MODO}
             elegido={modo}
             al={fijarModo}

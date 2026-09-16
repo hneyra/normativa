@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "version": "0.1.0",
-  "description": "normativa — interfaz web. El Armazon de @kamayuk/shell, montado y vacio (#55): ninguna hoja todavia.",
+  "description": "normativa — interfaz web. El Armazon de @kamayuk/shell con las cuatro hojas del artboard V8 (#58), y todo su texto por i18next con el español como clave (#60).",
   "engines": {
     "node": ">=22"
   },
@@ -15,7 +15,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "verificar": "yarn lint && yarn typecheck && yarn test"
+    "i18n": "i18next-cli status",
+    "i18n:regenerar": "KAMAYUK_REGENERAR=1 vitest run verificaciones/el-locale-esta-completo.test.ts",
+    "verificar": "yarn lint && yarn typecheck && yarn i18n && yarn test"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.0",

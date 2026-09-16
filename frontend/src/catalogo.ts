@@ -1,6 +1,7 @@
 import type { Catalogo, ModuloDelCatalogo } from '@kamayuk/shell';
 import { ICONOS, seEscribe, tipoDe, type NombreDeIcono } from '@kamayuk/ui';
 
+import { t } from './i18n/i18n.ts';
 import { ARBOL, type ClaveDeHoja } from './pantallas/arbol.ts';
 import { pantallaDe } from './pantallas/definiciones/index.ts';
 
@@ -32,7 +33,7 @@ import { pantallaDe } from './pantallas/definiciones/index.ts';
  *
  * <h2>Lo que este archivo NO hace</h2>
  *
- * **Traducir sus rotulos** (#60) y **filtrar por permisos** (#64). El armazon recibe el catalogo YA
+ * **Filtrar por permisos** (#64) — traducir sus rotulos ya lo hace, desde #60. El armazon recibe el catalogo YA
  * filtrado —lo dice su javadoc— y quien lo filtra es quien sabe que puede abrir la cuenta, que es
  * quien tiene la sesion.
  *
@@ -90,18 +91,36 @@ const slugDeLaHoja = (clave: string): string => clave.replace(/^nor-/, '');
 export const CATALOGO: Catalogo = ARBOL.map(
   (modulo): ModuloDelCatalogo => ({
     clave: modulo.slug,
-    rotulo: modulo.rotulo,
-    nota: modulo.nota,
+    // **Las tres cadenas que una persona LEE van por `t()` desde #60**, y como captadores: lo que
+    // `src/aplicacion.tsx` pasa al armazon es este objeto, y quien lee sus propiedades es el marco
+    // al pintar el carril, la paleta y la miga. Resolverlas al importar las congelaria en el idioma
+    // del arranque. `clave`, `slug` e `icono` NO pasan por `t()` y no deben: son identificadores
+    // —el slug viaja al hash— y traducirlos cambiaria la direccion de cada hoja.
+    //
+    // **Diferencia declarada con `rentas`**: alli los rotulos de los modulos los pisa
+    // `GET /seguridad/modulos` y por eso NO se traducen (`traducirCatalogo`, `rentas`#105). Aqui el
+    // catalogo sale entero del artboard V8 y no hay backend que lo pise —eso es #64—, asi que el
+    // rotulo es texto de este sistema y se traduce como el resto.
+    get rotulo() {
+      return t(modulo.rotulo);
+    },
+    get nota() {
+      return t(modulo.nota);
+    },
     icono: iconoDelTrazo(modulo.rotulo, modulo.trazos),
     destinos: modulo.hojas.map((hoja) => ({
       clave: hoja.clave,
-      rotulo: hoja.rotulo,
+      get rotulo() {
+        return t(hoja.rotulo);
+      },
       slug: slugDeLaHoja(hoja.clave),
       seEscribe: laHojaSeEscribe(hoja.clave),
       // La barra gris de V8: que hay que HACER aqui. Vive en la definicion de la pantalla y no en
       // el arbol —dos registros paralelos por clave se desincronizan— y llega al marco por aqui
       // porque el marco no puede saberla.
-      instruccion: pantallaDe(hoja.clave).instruccion,
+      get instruccion() {
+        return t(pantallaDe(hoja.clave).instruccion);
+      },
     })),
   }),
 );
