@@ -1,5 +1,12 @@
 {
   "contenido" : [ {
+    "id" : 2,
+    "moduloId" : 2,
+    "tipo" : "OPCION_MENU",
+    "codigo" : "conjuntos",
+    "nombre" : "Conjuntos de parametros",
+    "activo" : true
+  }, {
     "id" : 1,
     "moduloId" : 1,
     "tipo" : "OPCION_MENU",
@@ -9,7 +16,7 @@
   } ],
   "pagina" : 0,
   "tamano" : 20,
-  "totalElementos" : 1,
+  "totalElementos" : 2,
   "totalPaginas" : 1,
   "hayMas" : false
 }

@@ -23,6 +23,7 @@ import kamayuk.normativa.compartido.TenantContext;
 import kamayuk.normativa.dominio.MunicipalidadId;
 import kamayuk.normativa.esquema.BaseDeDatosDePrueba;
 import kamayuk.normativa.plataforma.tenant.TenantTransactionManager;
+import kamayuk.normativa.seguridad.dominio.CatalogoDelSistema;
 import kamayuk.normativa.seguridad.dominio.consumidor.BuzonDeIdentidad;
 import kamayuk.normativa.seguridad.dominio.consumidor.EventoRecibido;
 import kamayuk.normativa.seguridad.infraestructura.consumidor.AlertaAlCanalDelResponsable;
@@ -66,6 +67,16 @@ class ConsumidorDeIdentidadJdbcTest {
 
     private static final Instant AHORA = Instant.parse("2026-09-09T12:00:00Z");
     private static final String OPCION = "parametros";
+
+    /**
+     * Una opcion que {@link CatalogoDelSistema} <b>si</b> declara, para quitarla de la copia.
+     *
+     * <p>Se toma la ultima del catalogo y no se escribe su nombre: lo que el caso necesita no es
+     * que se llame {@code conjuntos}, es que este sistema la declare y la copia no la tenga — que
+     * es la carrera de ADR-0043 §10 (a).
+     */
+    private static final String OPCION_QUE_ESTE_SISTEMA_DECLARA =
+            CatalogoDelSistema.opciones().get(CatalogoDelSistema.opciones().size() - 1).codigo();
 
     private static BaseDeDatosDePrueba base;
     private static final AtomicInteger SIGUIENTE_UBIGEO = new AtomicInteger(209901);
@@ -132,13 +143,13 @@ class ConsumidorDeIdentidadJdbcTest {
     }
 
     /**
-     * Una municipalidad recien implantada: con la opcion de este sistema, que es lo que la
-     * implantacion siembra y sin la cual un PERMISO_FIJADO no tiene sobre que fijarse.
+     * Una municipalidad recien implantada: con el catalogo de este sistema, que es lo que la
+     * implantacion siembra y sin el cual un PERMISO_FIJADO no tiene sobre que fijarse.
      */
     private static long nuevaMunicipalidad() throws SQLException {
         int ubigeo = SIGUIENTE_UBIGEO.getAndIncrement();
         long id = crearMunicipalidad(String.valueOf(ubigeo), "Municipalidad " + ubigeo);
-        sembrarLaOpcion(id);
+        sembrarElCatalogo(id);
         return id;
     }
 
@@ -420,6 +431,77 @@ class ConsumidorDeIdentidadJdbcTest {
                     .last()
                     .asString()
                     .contains("\"apartadosSinExplicar\":3");
+        }
+
+        /**
+         * ADR-0043 §10 (a): la carrera entre el consumidor y la siembra, dentro de la misma imagen.
+         *
+         * <p>El {@code CronJob} del consumidor y el {@code Job} de implantacion suben con la misma
+         * version. Si el primero corre antes de que el segundo termine de sembrar, un {@code
+         * PERMISO_FIJADO} sobre la opcion nueva llega a una copia que todavia no la tiene.
+         * Apartarlo —lo que se hacia hasta #53— lo acusa, y {@code identidad} no lo vuelve a
+         * servir: el grupo de administracion se queda <b>para siempre</b> sin permiso sobre esa
+         * opcion, sin un solo error visible.
+         *
+         * <p>La distincion es <b>el catalogo de este sistema</b>, y es la salida 2 de {@code
+         * identidad}#21 aplicada al reves de donde se midio: lo que se pospone es exactamente lo
+         * que la siembra de esta misma imagen va a crear, asi que no puede atascarse como se atasco
+         * {@code rentas} —en {@code normativa} una opcion no se retira nunca (ADR-0043 §2)—. Y si
+         * la siembra no llegara, la alerta de los 15 minutos grita.
+         */
+        @Test
+        @DisplayName(
+                "[ADR-0043 §10 (a)] un permiso sobre una opcion que ESTE sistema declara y la copia"
+                        + " no tiene todavia se POSPONE; el hecho que no la declara se aparta")
+        void unPermisoSobreUnaOpcionDelCatalogoSePospone() throws Exception {
+            // La copia de una imagen recien subida cuyo `Job` de implantacion no ha sembrado aun.
+            ejecutarComoAdmin(
+                    "DELETE FROM acceso WHERE municipalidad_id = "
+                            + municipalidadA
+                            + " AND codigo = '"
+                            + OPCION_QUE_ESTE_SISTEMA_DECLARA
+                            + "'");
+            BuzonDeMentira buzon = buzon();
+            buzon.publicar(1, "GRUPO_DADO_DE_ALTA", 3, grupo("Administracion del sistema"));
+            UUID esperando =
+                    buzon.publicar(
+                            2,
+                            "PERMISO_FIJADO",
+                            3,
+                            permiso(
+                                    "normativa",
+                                    OPCION_QUE_ESTE_SISTEMA_DECLARA,
+                                    "Administracion del sistema",
+                                    true));
+            ConsumirEventosDeIdentidad consumidor = consumidorDe(buzon);
+
+            ConsumirEventosDeIdentidad.Vuelta primera = consumidor.consumir();
+
+            assertThat(primera.pospuesto())
+                    .as(
+                            "la opcion «%s» esta en CatalogoDelSistema: la siembra va delante y llega"
+                                    + " con esta misma version. Apartarlo pierde el permiso del grupo"
+                                    + " de administracion para siempre",
+                            OPCION_QUE_ESTE_SISTEMA_DECLARA)
+                    .isEqualTo(esperando);
+            assertThat(primera.apartados())
+                    .as("pospuesto NO es apartado: el hecho esta bien, falta la siembra")
+                    .isZero();
+            assertThat(buzon.acusados())
+                    .as("y sin acuse `identidad` lo vuelve a servir, que es lo que lo salva")
+                    .doesNotContain(esperando.toString());
+            assertThat(filas("identidad_evento_muerto", "true", municipalidadA)).isEmpty();
+
+            // Llega la siembra —el `Job` de implantacion de la misma version— y la vuelta siguiente
+            // lo aplica sin que `identidad` haya tenido que reemitir nada.
+            sembrarElCatalogo(municipalidadA);
+            ConsumirEventosDeIdentidad.Vuelta segunda = consumidor.consumir();
+
+            assertThat(segunda.pospuesto()).isNull();
+            assertThat(privilegiosDe("Administracion del sistema", municipalidadA))
+                    .as("el permiso entra entero en cuanto la opcion existe")
+                    .hasSize(1);
+            assertThat(buzon.acusados()).contains(esperando.toString());
         }
 
         @Test
@@ -893,22 +975,40 @@ class ConsumidorDeIdentidadJdbcTest {
         }
     }
 
-    private static void sembrarLaOpcion(long municipalidad) throws SQLException {
+    /**
+     * El catalogo de este sistema, sembrado como lo deja la implantacion.
+     *
+     * <p>Se recorre {@link CatalogoDelSistema} y no se escribe una opcion a mano: desde ADR-0043 §2
+     * son dos, y una lista escrita aqui dejaria a todos los casos con una copia a la que le falta
+     * una opcion del catalogo —que es exactamente el estado que un caso de abajo monta a proposito,
+     * y no puede ser ademas el de todos los demas sin querer—.
+     */
+    private static void sembrarElCatalogo(long municipalidad) throws SQLException {
         try (Connection admin = base.conexionAdmin();
                 Statement sentencia = admin.createStatement()) {
-            sentencia.execute(
-                    "INSERT INTO modulo_sistema (municipalidad_id, codigo, nombre) VALUES ("
-                            + municipalidad
-                            + ", 'SEGURIDAD', 'Seguridad')");
-            sentencia.execute(
-                    "INSERT INTO acceso (municipalidad_id, modulo_id, tipo, codigo, nombre)"
-                            + " SELECT "
-                            + municipalidad
-                            + ", id, 'OPCION_MENU', '"
-                            + OPCION
-                            + "', 'Parametros del sistema' FROM modulo_sistema"
-                            + " WHERE municipalidad_id = "
-                            + municipalidad);
+            for (CatalogoDelSistema.Opcion opcion : CatalogoDelSistema.opciones()) {
+                sentencia.execute(
+                        "INSERT INTO modulo_sistema (municipalidad_id, codigo, nombre) VALUES ("
+                                + municipalidad
+                                + ", '"
+                                + opcion.moduloCodigo()
+                                + "', '"
+                                + opcion.moduloNombre()
+                                + "') ON CONFLICT DO NOTHING");
+                sentencia.execute(
+                        "INSERT INTO acceso (municipalidad_id, modulo_id, tipo, codigo, nombre)"
+                                + " SELECT "
+                                + municipalidad
+                                + ", id, 'OPCION_MENU', '"
+                                + opcion.codigo()
+                                + "', '"
+                                + opcion.nombre()
+                                + "' FROM modulo_sistema WHERE municipalidad_id = "
+                                + municipalidad
+                                + " AND codigo = '"
+                                + opcion.moduloCodigo()
+                                + "' ON CONFLICT DO NOTHING");
+            }
         }
     }
 

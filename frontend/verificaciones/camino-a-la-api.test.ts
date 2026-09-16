@@ -431,14 +431,20 @@ describe('AC 3 — el arbol, y lo que el Java exige para cada operacion', () => 
     ]);
   });
 
-  it('el listado exige el acceso «parametros» y el estado del ejercicio NO', () => {
+  it('el listado exige una opcion del catalogo y el estado del ejercicio NO', () => {
     // **Esto es el AC 2.** La hoja dibuja el fallo del listado ENCIMA del cuerpo y no en su sitio
-    // precisamente porque son dos autorizaciones distintas: una cuenta sin `parametros` recibe 403
+    // precisamente porque son dos autorizaciones distintas: una cuenta sin la opcion recibe 403
     // en el listado y 200 en el estado, y tiene que seguir viendo el estado. Si algun dia las dos
     // exigieran lo mismo, esa separacion dejaria de tener sentido — y esto lo diria.
+    //
+    // **La opcion propia del listado es `conjuntos` desde `normativa`#53** (ADR-0043 §2): entra el
+    // modulo NORMATIVA, del que cuelgan las cuatro hojas. Lo que NO cambia es la separacion que
+    // esta prueba vigila —el estado del ejercicio sigue con el centinela—, y `parametros` sigue
+    // autorizando el listado como alternativa (`oTambien`), que este analisis no lee porque lo que
+    // compara es CUAL autorizacion exige cada ruta, no quien la pasa.
     const accesos = accesosDelJava();
 
-    expect(accesos.get('/seguridad/parametros')).toBe('parametros');
+    expect(accesos.get('/seguridad/parametros')).toBe('conjuntos');
     expect(accesos.get('/seguridad/parametros/ejercicios/{ejercicio}')).toBe('SESION_PROPIA');
   });
 

@@ -5,10 +5,16 @@
     "nombre" : "Seguridad",
     "orden" : 0,
     "activo" : true
+  }, {
+    "id" : 2,
+    "codigo" : "NORMATIVA",
+    "nombre" : "Normativa",
+    "orden" : 0,
+    "activo" : true
   } ],
   "pagina" : 0,
   "tamano" : 20,
-  "totalElementos" : 1,
+  "totalElementos" : 2,
   "totalPaginas" : 1,
   "hayMas" : false
 }

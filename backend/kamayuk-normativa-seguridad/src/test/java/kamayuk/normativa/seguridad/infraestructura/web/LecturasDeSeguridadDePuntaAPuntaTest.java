@@ -254,8 +254,16 @@ class LecturasDeSeguridadDePuntaAPuntaTest {
                             idsEnLaBase("modulo_sistema", municipalidadA))
                     .doesNotContainAnyElementsOf(ids(deB));
             assertThat(codigos(deA))
-                    .as("el modulo que solo tiene la B no se ve desde la A")
-                    .containsExactly("SEGURIDAD");
+                    .as(
+                            "los modulos del catalogo de este sistema, y el que solo tiene la B no se"
+                                    + " ve desde la A. Se derivan del catalogo y no se escriben: desde"
+                                    + " #53 son DOS —SEGURIDAD y NORMATIVA— y una lista a mano habria"
+                                    + " que volver a tocarla en el siguiente")
+                    .containsExactlyInAnyOrderElementsOf(
+                            CatalogoDelSistema.opciones().stream()
+                                    .map(CatalogoDelSistema.Opcion::moduloCodigo)
+                                    .distinct()
+                                    .toList());
             assertThat(codigos(deB)).contains("SOLO_DE_B");
         }
 
