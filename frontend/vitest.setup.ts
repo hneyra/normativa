@@ -10,3 +10,42 @@ import { afterEach } from 'vitest';
  * de lo que se estaba probando.
  */
 afterEach(cleanup);
+
+/**
+ * **`:modal` y `:popover-open` contestan `false` sin preguntarle a jsdom** (#57; hallazgo de
+ * `catastro`#110, PR `catastro`#138).
+ *
+ * <h2>El defecto, medido alli y heredado aqui</h2>
+ *
+ * Abrir una capa de Radix que se coloca con `@floating-ui` —el menu de sesion del armazon; tambien
+ * los desplegables y los globos— deja el hilo de las pruebas **bloqueado decenas de segundos**. Con
+ * un perfil de CPU tomado dentro del hilo, el 95 % del tiempo es una sola recursion de
+ * `nwsapi@2.2.27` —la que trae `jsdom@26.1.0`, y la misma que este candado fija—:
+ *
+ *     isFullscreen -> matchesNative(node, ':fullscreen') -> Element.matches -> _matches -> isFullscreen …
+ *
+ * que no para hasta desbordar la pila. Quien la dispara es `@floating-ui/utils`, que en
+ * `isTopLayer()` pregunta `element.matches(':popover-open')` y `':modal'` dentro de un `try`, y lo
+ * pregunta en cada recolocacion. El `catch` recoge el desbordamiento y todo sale bien, **tarde**:
+ * alli las cinco pruebas del menu sin esta guarda no terminaron en 280 s.
+ *
+ * <h2>Por que esto y no otra cosa</h2>
+ *
+ * `false` es la respuesta verdadera en jsdom, que **no tiene capa superior**: ni `<dialog>` modal ni
+ * `popover`. Todo otro selector sigue yendo a jsdom sin tocar, y la guarda es de las pruebas: el
+ * paquete no la lleva, porque en un navegador de verdad `:modal` lo contesta el navegador.
+ *
+ * El sitio es este, y no cada prueba, porque la sufre **toda** prueba que abra una de esas capas de
+ * `@kamayuk/ui` — hoy `src/sesion.test.tsx`, y las cuatro hojas de #58 van a abrir muchas.
+ */
+function sinCapaSuperior() {
+  // Las guardas que corren con `@vitest-environment node` no tienen `Element`.
+  if (typeof Element === 'undefined') return;
+  const deJsdom = Element.prototype.matches;
+  Element.prototype.matches = function matches(this: Element, selector: string): boolean {
+    if (selector === ':modal' || selector === ':popover-open') return false;
+    return deJsdom.call(this, selector);
+  };
+}
+
+sinCapaSuperior();
