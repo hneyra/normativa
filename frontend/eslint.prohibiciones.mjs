@@ -122,9 +122,14 @@ const {
  * Es la lista VACIA, y es un dato medido, no una omision. Este frontend **no tiene cliente de API
  * propio**: lo pone `@kamayuk/api`, enlazado desde el clon hermano (#55), y la excepcion la lleva
  * la libreria en su propio arbol —`paquetes/api/` y `paquetes/sesion/`—. Medido sobre `src/` en el
- * dia de #62: **cero llamadas a `fetch`**, y `src/api/` ni existe como directorio. #57 lo deja asi
- * por contrato —toda peticion pasa por `solicitar()` de `@kamayuk/api`—, y
- * `las-prohibiciones-son-las-de-la-libreria.test.ts` vuelve a medirlo en cada corrida.
+ * dia de #62: **cero llamadas a `fetch`**, y `src/api/` ni existe como directorio.
+ *
+ * **Desde #57 `src/api/` SI existe, y la lista sigue vacia** — que es lo que aquel issue prometia.
+ * Lo que hay dentro es `cliente.ts`, una sola sentencia —`crearCliente({ prefijo:
+ * '/normativa/api/v1', token: identidad.token })`— y ni un `fetch`: sigue siendo **cero** en todo
+ * `src/`. Lo miden en cada corrida `las-prohibiciones-son-las-de-la-libreria.test.ts` y
+ * `la-puerta-y-el-cliente-son-de-la-libreria.test.ts`, que ademas vigila lo que ESLint no ve —
+ * `crypto.subtle`, los dos almacenamientos y los codigos HTTP traducidos a mano—.
  *
  * El dia que aparezca un `fetch` en `src/`, sale rojo por los dos lados: la guarda que lo mide, y
  * `yarn lint`, que ya no exceptua ningun directorio. La lista vacia es ademas la salida que el
