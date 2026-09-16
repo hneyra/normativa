@@ -1,3 +1,5 @@
+import { EJERCICIO_DE_TRABAJO } from './ejercicio.ts';
+
 /**
  * **Lo que este sistema PIDE, y con que forma contesta** (#63, AC 1 y AC 3).
  *
@@ -5,9 +7,12 @@
  *
  * El backend sirve hoy **cuatro** `GET` bajo `Api.RAIZ` —las cuatro estan en
  * `docs/50-api/formas-de-la-api.json`, que genera #49 del tipo de retorno de cada controlador—. De
- * esas cuatro, este archivo declara **las dos del Panel**; las otras dos —`GET /conjuntos` y
- * `GET /conjuntos/{id}/snapshot`— son de #65, #66 y #67, y sus conectores estan puestos y vacios en
- * `src/datos/{ediciones,cuadros,publicacion}.ts`.
+ * esas cuatro, este archivo declaraba **las dos del Panel** (#63); desde #67 declara tambien las
+ * **dos de Publicacion** —`GET /conjuntos` y `GET /conjuntos/{id}/snapshot`—, y esta ultima **dos
+ * veces**, una por ambito, porque el ambito decide que viene dentro y con ello la huella.
+ *
+ * Asi que las cuatro operaciones publicadas estan declaradas. Lo que queda por conectar es una hoja
+ * —Ediciones (#65)— y una forma de dibujar —las tablas de los cuadros (#66)—, no una operacion.
  *
  * <h2>Por que una peticion es un DATO y no una cadena compuesta al vuelo</h2>
  *
@@ -46,6 +51,10 @@
  * **la declaracion** —que operacion, con que parametros y con que forma— y **la peticion la hace
  * cada conector**, con `cliente.solicitar(rutaDe(...))`. Es ademas el reparto correcto: una
  * declaracion es dato, y un dato se puede medir contra el contrato sin montar nada.
+ *
+ * Lo unico que SI se importa es `./ejercicio.ts` (#67), y se puede: es una funcion pura y una
+ * constante leida del reloj, sin `window`, sin red y sin Spring. Lo que no se puede importar es lo
+ * que toca el navegador al cargarse.
  */
 
 /** El envoltorio paginado del backend: `RespuestaPaginada<T>`. */
@@ -124,6 +133,85 @@ export const CAMPOS_DEL_ESTADO = {
 } satisfies Record<keyof EjercicioParametrizadoResource, unknown>;
 
 /**
+ * Los dos ambitos del snapshot, en el vocabulario del backend (`kamayuk.normativa.reglas.Ambito`).
+ *
+ * **No hay un tercero que signifique «todo», y eso es una decision del backend** que esta hoja
+ * hereda: `?ambito=` es obligatorio y no tiene valor por omision
+ * (`SnapshotController.java:108-117`). Un «todo» implicito seria el snapshot mas grande servido a
+ * quien no lo pidio, con otra huella y con la mitad de sus filas sin consumidor.
+ *
+ * Y se escriben en MAYUSCULAS porque el backend no lee en minusculas: `?ambito=valuacion` se
+ * rechaza nombrandolo (`SnapshotController.java:149-151`), y aceptarlo devolveria un snapshot con
+ * otra huella que el cliente creeria correcto.
+ */
+export const AMBITOS = ['VALUACION', 'OBLIGACION'] as const;
+
+/** Uno de los dos ambitos. */
+export type Ambito = (typeof AMBITOS)[number];
+
+/**
+ * Que conjunto sellado rige el ejercicio — `SnapshotController.ConjuntoVigenteResource`.
+ *
+ * **No lleva ni una fila, y es el punto**: es la IDENTIDAD, que es lo unico que hace falta para
+ * saber si el snapshot que ya se tiene en cache sigue siendo el bueno. Y no depende del ambito: el
+ * controlador pide `OBLIGACION` para componerla y dice por que —«da igual cual, porque de esta
+ * llamada solo se lee la identidad»— (`SnapshotController.java:90-96`).
+ */
+export interface ConjuntoVigenteResource {
+  readonly conjuntoId: number;
+  readonly ejercicio: number;
+  readonly version: number;
+}
+
+/** Las llaves de la identidad del conjunto vigente, como dato. */
+export const CAMPOS_DEL_CONJUNTO_VIGENTE = {
+  conjuntoId: 0,
+  ejercicio: 0,
+  version: 0,
+} satisfies Record<keyof ConjuntoVigenteResource, unknown>;
+
+/**
+ * El cuerpo del snapshot — `SnapshotController.SnapshotResource`.
+ *
+ * <h2>Las cuatro listas son `unknown[]` a proposito</h2>
+ *
+ * De ellas esta hoja lee **cuantas filas traen y nada mas**: quien dibuja sus columnas es Cuadros
+ * (#66). Declararlas aqui con la forma de su fila seria una segunda copia de lo que aquella hoja
+ * declara, y dos copias del mismo contrato divergen — con el agravante de que la que se quedara
+ * vieja no daria error, daria `undefined` en una celda.
+ *
+ * <h2>El `sha256` NO esta aqui, y tampoco es un olvido</h2>
+ *
+ * La huella es de **estos mismos bytes**, asi que meterla dentro seria pedirle a un valor que se
+ * contenga a si mismo. Viaja en el `ETag` (`SnapshotController.java:183-190`), y por eso esta hoja
+ * la lee de una cabecera y la recalcula sobre el texto recibido.
+ */
+export interface SnapshotResource {
+  readonly conjuntoId: number;
+  readonly ejercicio: number;
+  readonly version: number;
+  readonly ambito: string;
+  readonly filas: number;
+  readonly parametros: readonly unknown[];
+  readonly valoresUnitarios: readonly unknown[];
+  readonly depreciaciones: readonly unknown[];
+  readonly valoresReferenciales: readonly unknown[];
+}
+
+/** Las llaves del snapshot, como dato. Ver «Los TESTIGOS». */
+export const CAMPOS_DEL_SNAPSHOT = {
+  conjuntoId: 0,
+  ejercicio: 0,
+  version: 0,
+  ambito: '',
+  filas: 0,
+  parametros: [],
+  valoresUnitarios: [],
+  depreciaciones: [],
+  valoresReferenciales: [],
+} satisfies Record<keyof SnapshotResource, unknown>;
+
+/**
  * Una peticion declarada: la operacion tal como la nombra el contrato, la ruta que se compone y los
  * parametros de consulta que se le ponen.
  *
@@ -174,10 +262,77 @@ export const ESTADO_DEL_EJERCICIO: PeticionDeclarada = {
   parametros: {},
 };
 
+/**
+ * El nombre de la lectura de Publicacion. Lo nombran `bloque.lectura` y `tabla.clave` de su hoja.
+ *
+ * **Es UNA sola para las tres peticiones de esa hoja** —la identidad y los dos snapshots— y eso
+ * esta medido, no supuesto: las tres van detras del MISMO `@RequiereAcceso(acceso = "parametros",
+ * privilegio = LECTURA)` (`SnapshotController.java:87,119`), asi que no hay ninguna que pueda
+ * contestar 403 mientras otra contesta 200. Partirlas en tres lecturas dibujaria tres estados que
+ * en la practica valen siempre lo mismo, y ademas pediria la identidad tres veces: los dos
+ * snapshots no se pueden pedir sin el `conjuntoId` que devuelve la primera.
+ *
+ * Es justo lo contrario del Panel, donde la separacion SI significa algo (#63, AC 2).
+ */
+export const CLAVE_DE_LA_PUBLICACION = 'publicacion';
+
+/**
+ * Los otros cinco nombres con que la definicion de Publicacion y su conector se encuentran (#67).
+ *
+ * Viven aqui por lo mismo que {@link CLAVE_DEL_ESTADO}: son **el nombre por el que la DEFINICION y
+ * los DATOS se encuentran**, y tenerlo en un solo sitio es lo que impide que uno de los dos lo
+ * escriba mal — que no da error, da una tabla sin filas y un boton impedido con «nadie atiende
+ * esto». Y viven aqui **y no en `src/datos/publicacion.ts`** porque este archivo es el unico de los
+ * dos que se puede leer sin DOM: el conector importa el cliente, el cliente importa la sesion y la
+ * sesion lee `window.location.origin` al cargarse.
+ */
+
+/** La tabla «Que viene y que no», dentro del bloque «La respuesta». */
+export const CLAVE_DE_LAS_LISTAS = 'listas';
+
+/** La tabla «Quien consume el conjunto sellado». No depende de ninguna lectura. */
+export const CLAVE_DE_LOS_CONSUMIDORES = 'consumidores';
+
+/** El tono del `ETag`: `ok`, `atencion` o `mal`. Lo lee la `insignia` de ese campo. */
+export const DATO_DEL_TONO = 'publicacion.tono';
+
+/** Por que no se puede guardar, o `null` si se puede. Lo lee el `impedida` de la accion. */
+export const DATO_DEL_IMPEDIMENTO = 'publicacion.noSePuedeGuardar';
+
+/** La operacion que la accion `hace`, y que `src/pantallas/index.ts` registra en `alHacer`. */
+export const OPERACION_DE_GUARDAR = 'guardar-el-snapshot';
+
+/**
+ * `GET /conjuntos?ejercicio=` — que conjunto sellado rige. Acceso `parametros`.
+ *
+ * El ejercicio sale del RELOJ y no de un literal, por lo que dice `src/datos/ejercicio.ts`: una
+ * lista escrita a mano sigue pareciendo correcta el 1 de enero siguiente, y la pantalla pregunta por
+ * el ejercicio equivocado sin que nada lo diga.
+ */
+export const CONJUNTO_VIGENTE: PeticionDeclarada = {
+  operacion: 'GET /conjuntos',
+  parametros: { ejercicio: String(EJERCICIO_DE_TRABAJO) },
+};
+
+/**
+ * `GET /conjuntos/{id}/snapshot?ambito=` — el conjunto entero, **una peticion por ambito**.
+ *
+ * Son dos peticiones declaradas y no una con el ambito por argumento porque el ambito **no es un
+ * detalle de la llamada**: es lo que decide que cuadros vienen dentro y, con ellos, la huella. Como
+ * dato, `verificaciones/camino-a-la-api.test.ts` recorre las dos y cruza cada una contra los
+ * parametros que el contrato declara para esa operacion.
+ */
+export const SNAPSHOT_POR_AMBITO: Readonly<Record<Ambito, PeticionDeclarada>> = {
+  VALUACION: { operacion: 'GET /conjuntos/{id}/snapshot', parametros: { ambito: 'VALUACION' } },
+  OBLIGACION: { operacion: 'GET /conjuntos/{id}/snapshot', parametros: { ambito: 'OBLIGACION' } },
+};
+
 /** Las peticiones que este sistema compone hoy. La guarda las recorre una a una. */
 export const PETICIONES: readonly PeticionDeclarada[] = [
   LISTADO_DE_CONJUNTOS,
   ESTADO_DEL_EJERCICIO,
+  CONJUNTO_VIGENTE,
+  ...AMBITOS.map((ambito) => SNAPSHOT_POR_AMBITO[ambito]),
 ];
 
 /** La consulta de una peticion, o `''`. En el orden en que se declaro: un diff se lee mejor. */

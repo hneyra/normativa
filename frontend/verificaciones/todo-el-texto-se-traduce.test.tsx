@@ -6,6 +6,8 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import { Aplicacion } from '../src/aplicacion.tsx';
 import { CATALOGO } from '../src/catalogo.ts';
+import { AMBITOS } from '../src/datos/lecturas.ts';
+import { CONSUMIDORES } from '../src/datos/publicacion.ts';
 import i18n, { ABRE, CIERRA, IDIOMA_MARCADO, IDIOMA_POR_OMISION } from '../src/i18n/i18n.ts';
 import { TEXTOS_DEL_MARCO } from '../src/i18n/armazon.ts';
 import { FRASES_DEL_INTERPRETE } from '../src/i18n/textosDelInterprete.ts';
@@ -147,6 +149,31 @@ function loQueDiceLaEscalera(): ReadonlySet<string> {
   return new Set([peldano.titulo, peldano.detalle, peldano.remedio]);
 }
 
+/**
+ * **Los IDENTIFICADORES que Publicacion dibuja, y por que no se traducen** (#67).
+ *
+ * La tabla «Quien se lo lleva» pinta dos cosas que no son frases:
+ *
+ * · **el nombre de un sistema** —`rentas`, `catastro`—, que es el mismo en todos los idiomas: es
+ *   como se llama un repositorio, un `PathPrefix` de Traefik y un espacio de nombres. Traducirlo
+ *   seria renombrar un sistema en una celda;
+ * · **el ambito** —`VALUACION`, `OBLIGACION`—, que son los dos valores de un enumerado del backend
+ *   y viajan tal cual en `?ambito=`. El controlador **no los lee en minusculas**
+ *   (`SnapshotController.java:149-151`), asi que la celda tiene que decir exactamente lo que hay que
+ *   escribir en la consulta.
+ *
+ * Y no se escriben aqui a mano: salen **del mismo dato que la hoja dibuja**, asi que un consumidor
+ * nuevo o un tercer ambito entran por su cuenta y esta exencion no se queda vieja eximiendo lo que
+ * ya no existe. Lo que la exencion NO cubre es el resto de esa tabla —«Una vez por emision», «Dice
+ * cuanto vale un predio»—, que si son frases y si pasan por `t()`.
+ */
+function losIdentificadores(): ReadonlySet<string> {
+  return new Set([
+    ...AMBITOS,
+    ...CONSUMIDORES.map((consumidor) => consumidor.sistema),
+  ]);
+}
+
 beforeAll(async () => {
   // Lo que jsdom no trae y las piezas del armazon piden. Sus motivos, en `@kamayuk/shell`.
   Element.prototype.scrollIntoView = () => {};
@@ -224,7 +251,10 @@ describe('ninguna cadena llega al DOM sin pasar por `t()`', () => {
 
   it.each(DESTINOS)('«%s» no ensena una sola cadena sin traducir, marco incluido', async (slug) => {
     await abrir(slug);
-    const escapadas = sinTraducir(document.body, loQueDiceLaEscalera());
+    const escapadas = sinTraducir(
+      document.body,
+      new Set([...loQueDiceLaEscalera(), ...losIdentificadores()]),
+    );
     expect(
       escapadas,
       `«${slug}» dibuja texto que no paso por «t()»:\n` +

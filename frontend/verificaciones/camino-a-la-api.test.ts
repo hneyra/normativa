@@ -8,17 +8,29 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
+import { EJERCICIO_DE_TRABAJO } from '../src/datos/ejercicio.ts';
 import {
+  AMBITOS,
   CAMPOS_DEL_CONJUNTO,
+  CAMPOS_DEL_CONJUNTO_VIGENTE,
   CAMPOS_DEL_ESTADO,
   CAMPOS_DEL_PAGINADO,
+  CAMPOS_DEL_SNAPSHOT,
   CLAVE_DEL_ESTADO,
+  CLAVE_DE_LAS_LISTAS,
   CLAVE_DE_LAS_VERSIONES,
+  CLAVE_DE_LA_PUBLICACION,
+  CLAVE_DE_LOS_CONSUMIDORES,
+  CONJUNTO_VIGENTE,
+  DATO_DEL_IMPEDIMENTO,
+  DATO_DEL_TONO,
   DIRECCION_DEL_LISTADO,
+  OPERACION_DE_GUARDAR,
   ESTADO_DEL_EJERCICIO,
   LISTADO_DE_CONJUNTOS,
   ORDEN_DEL_LISTADO,
   PETICIONES,
+  SNAPSHOT_POR_AMBITO,
   TAMANO_DEL_LISTADO,
   rutaDe,
 } from '../src/datos/lecturas.ts';
@@ -124,8 +136,13 @@ describe('AC 3 — lo que se pide es una operacion del contrato', () => {
     ]);
     expect(Object.keys(parametros()).filter((c) => c !== NOTA).sort()).toEqual(publicadas);
     // Y que `src/datos/**` pida algo: con `PETICIONES` vacia no habria nada que contrastar.
+    //
+    // **CINCO desde #67, y no cuatro**: las dos del Panel, la del conjunto vigente y el snapshot
+    // **una vez por ambito**. El snapshot se declara dos veces a proposito —el ambito decide que
+    // cuadros vienen dentro y con ellos la huella—, asi que la cuenta no es el numero de
+    // operaciones publicadas sino el de peticiones que este sistema compone.
     expect(PETICIONES.length, '`PETICIONES` esta vacia: esta guarda se quedaria sin sujeto').toBe(
-      2,
+      2 + 1 + AMBITOS.length,
     );
   });
 
@@ -232,6 +249,28 @@ describe('AC 3 — todo parametro que se compone lo admite esa operacion', () =>
     );
     expect(() => rutaDe(ESTADO_DEL_EJERCICIO)).toThrow(/ejercicio/);
   });
+
+  it('las de Publicacion componen el ejercicio DEL RELOJ y el ambito EN MAYUSCULAS (#67)', () => {
+    // Las dos mitades importan:
+    //
+    // · el ejercicio sale de `EJERCICIO_DE_TRABAJO` y no de un literal. Un literal sigue pareciendo
+    //   correcto el 1 de enero siguiente, y la hoja pregunta por el ejercicio equivocado sin que
+    //   nada lo diga (es la leccion de `src/datos/ejercicio.ts`);
+    // · el ambito viaja tal cual, en mayusculas. El backend **no lee en minusculas**
+    //   (`SnapshotController.java:149-151`) y lo rechaza nombrandolo — que es lo correcto: aceptarlo
+    //   devolveria un snapshot con otra huella que el cliente creeria correcto.
+    expect(rutaDe(CONJUNTO_VIGENTE)).toBe(`/conjuntos?ejercicio=${String(EJERCICIO_DE_TRABAJO)}`);
+
+    for (const ambito of AMBITOS) {
+      expect(ambito, `«${ambito}» no esta en mayusculas`).toBe(ambito.toUpperCase());
+      expect(rutaDe(SNAPSHOT_POR_AMBITO[ambito], { id: '2' })).toBe(
+        `/conjuntos/2/snapshot?ambito=${ambito}`,
+      );
+    }
+    // Y sin el sujeto revienta AQUI, no en el cable: `/conjuntos/{id}/snapshot` pedido literal
+    // seria un 404 de ruta indistinguible de los 404 de negocio.
+    expect(() => rutaDe(SNAPSHOT_POR_AMBITO.VALUACION)).toThrow(/id/);
+  });
 });
 
 /* ── 3 — las respuestas, campo a campo ─────────────────────────────────────────────────────── */
@@ -279,6 +318,34 @@ describe('AC 3 — lo que la interfaz LEE es lo que el backend publica, campo a 
     expect(forma['sellado']).toBe('booleano');
     expect(forma['conjuntoId']).toBe('entero');
     expect(forma['version']).toBe('entero');
+  });
+
+  it('`GET /conjuntos` publica los TRES campos de la identidad, y ni uno mas (#67)', () => {
+    // La identidad no lleva ni una fila: es lo unico que hace falta para saber si el snapshot que
+    // ya se tiene en cache sigue siendo el bueno. Un campo de mas aqui seria una fila viajando en
+    // la respuesta que resuelve **cual** conjunto, que es lo que ADR-0025 §1 separa a proposito.
+    const forma = formas()['GET /conjuntos'] as object;
+
+    expect(Object.keys(forma).sort()).toEqual(Object.keys(CAMPOS_DEL_CONJUNTO_VIGENTE).sort());
+  });
+
+  it('`GET /conjuntos/{id}/snapshot` publica los NUEVE campos que la hoja lee (#67)', () => {
+    // Y la huella **no esta entre ellos**: es de estos mismos bytes, asi que meterla dentro seria
+    // pedirle a un valor que se contenga a si mismo. Viaja en el `ETag`, que es una cabecera y no
+    // un campo — por eso esta hoja lee la respuesta con `solicitarRespuesta()`.
+    const forma = formas()['GET /conjuntos/{id}/snapshot'] as Record<string, unknown>;
+
+    expect(Object.keys(forma).sort()).toEqual(Object.keys(CAMPOS_DEL_SNAPSHOT).sort());
+    expect(
+      Object.keys(forma),
+      'El cuerpo del snapshot publica un `sha256`. Si el backend lo metio dentro, la comprobacion\n' +
+        '  de la huella deja de tener sentido: un valor no puede contener su propia huella.',
+    ).not.toContain('sha256');
+    // Y las cuatro listas son LISTAS: sobre un escalar, `filas.length` daria `undefined` y la
+    // tabla «Que viene y que no» diria «0» sobre algo que no se conto.
+    for (const lista of ['parametros', 'valoresUnitarios', 'depreciaciones', 'valoresReferenciales']) {
+      expect(Array.isArray(forma[lista]), `«${lista}» no se publica como lista`).toBe(true);
+    }
   });
 
   it('`fechaSellado` se publica como INSTANTE, y por eso se ensena tal cual', () => {
@@ -395,6 +462,37 @@ describe('AC 3 — el arbol, y lo que el Java exige para cada operacion', () => 
     expect(bloque?.lectura?.clave).toBe(CLAVE_DEL_ESTADO);
     expect(bloque?.fallosDe).toEqual([CLAVE_DE_LAS_VERSIONES]);
     expect(bloque?.tabla?.clave).toBe(CLAVE_DE_LAS_VERSIONES);
+  });
+
+  it('y las de Publicacion tambien: su definicion escribe las claves A MANO (#67)', () => {
+    // Esa definicion **no importa `src/datos/`** a proposito —arrastraria `src/sesion.ts`, que lee
+    // `window` al cargarse, y las guardas que la leen corren sin DOM—, asi que las claves se
+    // escriben como literales en los dos lados. Esto es lo que impide que se separen: una clave mal
+    // escrita no da error, da una tabla sin filas y un aviso de «lectura sin estado».
+    const bloques = PANTALLAS['nor-publicacion'].bloques;
+
+    expect(
+      bloques.filter((bloque) => bloque.lectura?.clave === CLAVE_DE_LA_PUBLICACION),
+      'Ningun bloque de Publicacion nombra su lectura: la hoja pediria y no dibujaria su estado.',
+    ).toHaveLength(3);
+    expect(bloques[1]?.tabla?.clave).toBe(CLAVE_DE_LAS_LISTAS);
+    expect(bloques[4]?.tabla?.clave).toBe(CLAVE_DE_LOS_CONSUMIDORES);
+
+    // La accion que guarda: su clave tiene que ser la que `src/pantallas/index.ts` registra en
+    // `alHacer`, y el dato de su impedimento el que el conector escribe. Sin lo primero el boton
+    // sale impedido con «nadie atiende esto»; sin lo segundo, pulsable sin nada que guardar.
+    const guardar = bloques[1]?.acciones?.[0];
+    expect(guardar?.hace).toBe(OPERACION_DE_GUARDAR);
+    expect(guardar?.impedida?.[0]?.si).toEqual({ dato: DATO_DEL_IMPEDIMENTO, hay: true });
+    expect(guardar?.impedida?.[0]?.motivo).toEqual({ desde: DATO_DEL_IMPEDIMENTO });
+
+    // Y el tono del `ETag` sale de un DATO y no de su texto (la leccion H18): un sha256 no dice de
+    // que color va, y deducirlo de la cadena pintaria una huella mala de verde.
+    const etag = bloques[1]?.campos[0];
+    expect(etag?.etiqueta).toBe('ETag');
+    expect(etag !== undefined && 'insignia' in etag ? etag.insignia : undefined).toMatchObject({
+      tonoDesde: DATO_DEL_TONO,
+    });
   });
 });
 
