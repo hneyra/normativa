@@ -2,8 +2,9 @@
 
 | Campo | Valor |
 |---|---|
-| Estado | **Propuesto** |
+| Estado | **Aceptado** |
 | Fecha | 2026-09-14 |
+| Aceptado | 2026-09-16, en la compuerta **G1** ([`normativa`#75](https://github.com/hneyra/normativa/issues/75)), **sin enmiendas**: se ratificaron el fondo (componer y sellar por HTTP), el acceso al snapshot con `conjuntos` u `oTambien` `parametros`, la `Idempotency-Key` obligatoria al abrir y las dos frases del punto 3 |
 | Decide | Dirección del proyecto, en la compuerta **G1** de [`normativa`#47](https://github.com/hneyra/normativa/issues/47) |
 | Nace de | [`normativa`#48](https://github.com/hneyra/normativa/issues/48) |
 | Depende de | [ADR-0007](ADR-0007-parametros-versionados.md), [ADR-0025](ADR-0025-normativa-servicio-y-libreria.md), [ADR-0008](https://github.com/hneyra/infrastructure/blob/main/docs/30-arquitectura/adr/ADR-0008-auditoria-heredada-del-manual.md) y [ADR-0039](https://github.com/hneyra/infrastructure/blob/main/docs/30-arquitectura/adr/ADR-0039-la-identidad-es-un-sistema.md) |

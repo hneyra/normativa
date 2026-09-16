@@ -16,7 +16,7 @@ historial de por que se hizo algo vale mas que la coherencia del documento.
 | [0017](ADR-0017-tablas-de-valuacion-nacionales.md) | Las tres tablas de valuación son nacionales | Aceptado |
 | [0018](ADR-0018-el-redondeo-decidido.md) | El redondeo, decidido: escala ratificada, `HALF_UP`, y ningún SRTM que imitar | Aceptado |
 | [0025](ADR-0025-normativa-servicio-y-libreria.md) | La normativa es un servicio de datos y una libreria de reglas, y no está en el camino caliente | Aceptado ¹ |
-| [0043](ADR-0043-componer-y-sellar-por-http.md) | Componer y sellar un conjunto por HTTP: el módulo `NORMATIVA`, las rutas y la idempotencia | Propuesto |
+| [0043](ADR-0043-componer-y-sellar-por-http.md) | Componer y sellar un conjunto por HTTP: el módulo `NORMATIVA`, las rutas y la idempotencia | Aceptado |
 
 ¹ **El archivo esta Aceptado desde el 2026-09-04** (`ADR-0025-normativa-servicio-y-libreria.md:5` y `:12`: «Aceptado el
 2026-09-04 por la direccion del proyecto, al contestar D-22»), y esta fila siguio diciendo «Propuesto»
