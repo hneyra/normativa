@@ -115,10 +115,10 @@ describe('el compilador es tan estricto como el issue pide', () => {
   });
 });
 
-describe('«yarn verificar» encadena las tres comprobaciones', () => {
+describe('«yarn verificar» encadena las cuatro comprobaciones', () => {
   const scripts = JSON.parse(leer(join(RAIZ, 'package.json'))).scripts as Record<string, string>;
 
-  it.each(['lint', 'typecheck', 'test'])('llama a «yarn %s»', (comprobacion) => {
+  it.each(['lint', 'typecheck', 'i18n', 'test'])('llama a «yarn %s»', (comprobacion) => {
     expect(
       scripts['verificar'],
       `«verificar» dejo de llamar a «${comprobacion}». Una cadena a la que le falta un\n` +
@@ -131,13 +131,28 @@ describe('«yarn verificar» encadena las tres comprobaciones', () => {
   });
 
   it('los guiones son los de rentas que ya tienen de que colgar, y ninguno mas', () => {
-    // `rentas@ac379ac` declara trece. Los cinco que faltan aqui llaman a piezas que todavia no
-    // existen, y cada uno entra con la suya: `i18n` e `i18n:regenerar` con i18next (#60) —y con
-    // el, el `yarn i18n` de `verificar`—, `e2e` y `e2e:navegador` con el arnes de Playwright
+    // `rentas@ac379ac` declara trece. Los tres que faltan aqui llaman a piezas que todavia no
+    // existen, y cada uno entra con la suya: `e2e` y `e2e:navegador` con el arnes de Playwright
     // (#61), y `dev:con-plataforma` con la puerta de identidad (#57). Un guion que llama a algo
     // que no esta sale rojo al usarlo, no al escribirlo.
+    //
+    // **`i18n` e `i18n:regenerar` entraron con #60**, que es cuando i18next tuvo de que colgar: el
+    // primero encadenado dentro de `verificar` —es el que avisa de una clave que el codigo usa y el
+    // locale no tiene— y el segundo suelto, porque regenerar es un acto deliberado que deja un
+    // diff, no un paso de la verificacion.
     expect(Object.keys(scripts).sort()).toEqual(
-      ['build', 'dev', 'lint', 'preview', 'test', 'test:watch', 'typecheck', 'verificar'].sort(),
+      [
+        'build',
+        'dev',
+        'i18n',
+        'i18n:regenerar',
+        'lint',
+        'preview',
+        'test',
+        'test:watch',
+        'typecheck',
+        'verificar',
+      ].sort(),
     );
   });
 });

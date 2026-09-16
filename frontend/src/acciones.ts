@@ -1,6 +1,9 @@
 import type { AccionesDelSistema } from '@kamayuk/shell';
 import { avisar } from '@kamayuk/ui';
 
+import { t } from './i18n/i18n.ts';
+import { FRASES_DEL_MARCO } from './i18n/textosDelMarco.ts';
+
 /**
  * **Que hace cada accion del pie de una pantalla** — costura de #55, la llena #58 (AC 6).
  *
@@ -36,9 +39,43 @@ import { avisar } from '@kamayuk/ui';
  *   `Idempotency-Key` (`kamayuk-lib`#57): ahi `guardar` y `limpiar` dejan de avisar.
  */
 
+/**
+ * **Lo que las tres dicen, en castellano, que es la clave** (#60).
+ *
+ * El titulo lleva el nombre del boton **dentro** y por eso es interpolacion y no concatenacion: en
+ * otro idioma el nombre no cae necesariamente al principio, y partir la frase en dos cadenas lo
+ * decidiria por el traductor.
+ *
+ * Y ese nombre sale de `FRASES_DEL_MARCO`, que es de donde sale el rotulo del boton que se acaba de
+ * pulsar: escribirlo aqui otra vez seria la misma palabra en dos sitios, traducida en uno — y el dia
+ * que el marco dijera «Descargar», el aviso seguiria diciendo «Exportar».
+ */
+export const FRASES_DE_LAS_ACCIONES = {
+  titulo: '{{que}} todavía no está conectado.',
+  exportar:
+    'El conjunto sellado se descarga entero por GET /conjuntos/{{llaves}}/snapshot, y lo que se ' +
+    'guarda son esos mismos bytes con su ETag comprobado. Llega con normativa#67.',
+  guardar:
+    'Abrir una versión, agregar un parámetro y sellar son tres escrituras que este backend ' +
+    'todavía no publica por HTTP (ADR-0043 y normativa#59). Llegan con normativa#68.',
+  limpiar:
+    'Vaciaría el formulario, y no se puede deshacer. Se ofrece junto a Guardar, y guardar ' +
+    'todavía no escribe nada: llega con normativa#68.',
+} as const;
+
+/**
+ * **La ruta lleva llaves, y las llaves son la sintaxis de la interpolacion de i18next.**
+ *
+ * `GET /conjuntos/{id}/snapshot` es como se escribe una ruta con sujeto, y es lo que hay que poder
+ * leer. Pasada por `t()` tal cual, i18next ve `{id}` y **no** lo toca —su marca son DOS llaves—,
+ * pero un traductor que escriba `{{id}}` sin querer se encontraria con un hueco vacio. Asi que el
+ * trozo entra como dato, y la clave no contiene ninguna llave suelta.
+ */
+const LLAVES_DE_LA_RUTA = '{id}';
+
 /** El aviso se dice UNA vez y con la razon dentro. Sin razon, «todavia no» no se distingue de roto. */
 const todaviaNo = (que: string, porQue: string): void => {
-  avisar(`${que} todavía no está conectado.`, { description: porQue });
+  avisar(t(FRASES_DE_LAS_ACCIONES.titulo, { que: t(que) }), { description: porQue });
 };
 
 export const ACCIONES: AccionesDelSistema = {
@@ -47,23 +84,14 @@ export const ACCIONES: AccionesDelSistema = {
   },
   exportar: () => {
     todaviaNo(
-      'Exportar',
-      'El conjunto sellado se descarga entero por GET /conjuntos/{id}/snapshot, y lo que se guarda ' +
-        'son esos mismos bytes con su ETag comprobado. Llega con normativa#67.',
+      FRASES_DEL_MARCO.exportar,
+      t(FRASES_DE_LAS_ACCIONES.exportar, { llaves: LLAVES_DE_LA_RUTA }),
     );
   },
   guardar: () => {
-    todaviaNo(
-      'Guardar',
-      'Abrir una versión, agregar un parámetro y sellar son tres escrituras que este backend ' +
-        'todavía no publica por HTTP (ADR-0043 y normativa#59). Llegan con normativa#68.',
-    );
+    todaviaNo(FRASES_DEL_MARCO.guardar, t(FRASES_DE_LAS_ACCIONES.guardar));
   },
   limpiar: () => {
-    todaviaNo(
-      'Limpiar',
-      'Vaciaría el formulario, y no se puede deshacer. Se ofrece junto a Guardar, y guardar ' +
-        'todavía no escribe nada: llega con normativa#68.',
-    );
+    todaviaNo(FRASES_DEL_MARCO.limpiar, t(FRASES_DE_LAS_ACCIONES.limpiar));
   },
 };

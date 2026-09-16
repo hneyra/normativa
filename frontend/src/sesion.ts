@@ -3,6 +3,7 @@ import { ubicacionDe, type CuentaEnLaBarra, type OpcionDeSesion } from '@kamayuk
 import { createElement, type ReactNode } from 'react';
 
 import { configuracion } from './configuracion.ts';
+import { alCambiarElIdioma, t } from './i18n/i18n.ts';
 import {
   abrirLasPreferencias,
   cerrarLasPreferencias,
@@ -108,14 +109,45 @@ export const identidad = crearIdentidad({
 });
 
 /**
- * La entidad de la barra: la municipalidad de la sesion.
+ * **Lo que este archivo dice, en castellano, que es la clave** (#60).
  *
- * Hoy no hay de donde sacarla —`GET /seguridad/sesion/municipalidad` es de #54 y leerlo es de
- * #64—, asi que dice que no la hay. **No es el nombre de ninguna municipalidad**, y ese es el
- * punto: el dia que alguien escriba uno aqui, la interfaz de las veinte instalaciones dira el de
- * la primera.
+ * Los rotulos ya no se escriben dentro de cada sitio donde se usan: viven aqui para que entren
+ * solos en el inventario del locale (`src/i18n/catalogo-de-claves.ts`). Un rotulo escrito dentro de
+ * su `t()` obligaria a acordarse de listarlo a mano, y el olvido no produce ningun rojo.
+ *
+ * **Ninguna nombra a una municipalidad ni a una persona**, que es la decision G2 (#52): eso es dato
+ * de la sesion y no hay de donde leerlo todavia. Lo que hay son dos marcadores que dicen que no lo
+ * hay.
  */
-export const ENTIDAD = 'Sin sesión';
+export const FRASES_DE_LA_SESION = {
+  /**
+   * La entidad de la barra: la municipalidad de la sesion.
+   *
+   * Hoy no hay de donde sacarla —`GET /seguridad/sesion/municipalidad` es de #54 y leerlo es de
+   * #64—, asi que dice que no la hay. **No es el nombre de ninguna municipalidad**, y ese es el
+   * punto: el dia que alguien escriba uno aqui, la interfaz de las veinte instalaciones dira el de
+   * la primera.
+   */
+  entidad: 'Sin sesión',
+  /** Y quien entro. Misma cadena y misma clave, por el mismo motivo. */
+  cuenta: 'Sin sesión',
+  miPerfil: 'Mi perfil',
+  cambiarLaContrasena: 'Cambiar la contrasena',
+  preferencias: 'Preferencias',
+  cerrarSesion: 'Cerrar sesión',
+} as const;
+
+/**
+ * La entidad de la barra, ya traducida. Ver {@link FRASES_DE_LA_SESION.entidad}.
+ *
+ * `let` por lo mismo que `TITULO` en `src/marca.ts`: `src/aplicacion.tsx` la consume como una cadena
+ * suelta y una cadena exportada no se traduce al leerla. Se rehace al cambiar el idioma.
+ */
+export let ENTIDAD: string = FRASES_DE_LA_SESION.entidad;
+
+alCambiarElIdioma(() => {
+  ENTIDAD = t(FRASES_DE_LA_SESION.entidad);
+});
 
 /**
  * Quien entro. Hoy, nadie que la interfaz pueda nombrar.
@@ -127,9 +159,15 @@ export const ENTIDAD = 'Sin sesión';
  * `iniciales` son dos puntos medios y no dos letras: cualquier par de letras seria las iniciales de
  * alguien, y el circulo de la barra las dibuja como si fueran las suyas. La V6 escribia
  * «H. Neyra Alama» (`c01fe9a:src/marco/BarraGlobal.tsx:70-76`), y eso no vuelve.
+ *
+ * `nombre` es un CAPTADOR desde #60: aqui si se puede, porque lo que `aplicacion.tsx` pasa es el
+ * objeto y quien lee la propiedad es el marco, en la pintada. `iniciales` no pasa por `t()` y no
+ * debe: dos puntos medios no son una palabra, y traducirlos no significa nada.
  */
 export const CUENTA: CuentaEnLaBarra = {
-  nombre: 'Sin sesión',
+  get nombre() {
+    return t(FRASES_DE_LA_SESION.cuenta);
+  },
   iniciales: '··',
 };
 
@@ -151,30 +189,40 @@ export const CUENTA: CuentaEnLaBarra = {
  * vacia se dibuja, se pulsa y no pasa nada, y quien la pruebe no sabe si el fallo es suyo, de la
  * red o del backend.
  *
- * Los rotulos van en castellano y sin `t()`: el i18n es #60, y el castellano es la clave.
+ * **Los rotulos pasan por `t()` desde #60**, y como captadores: el castellano de
+ * {@link FRASES_DE_LA_SESION} es la clave, y quien lee la propiedad es el marco al pintar el menu.
+ * Resolverlos al importar los congelaria en el idioma del arranque.
  */
 export const OPCIONES_DE_SESION: readonly OpcionDeSesion[] = [
   {
-    rotulo: 'Mi perfil',
+    get rotulo() {
+      return t(FRASES_DE_LA_SESION.miPerfil);
+    },
     al: () => {
       identidad.abrirLaCuenta('perfil');
     },
   },
   {
-    rotulo: 'Cambiar la contrasena',
+    get rotulo() {
+      return t(FRASES_DE_LA_SESION.cambiarLaContrasena);
+    },
     al: () => {
       identidad.abrirLaCuenta('contrasena');
     },
   },
   {
-    rotulo: 'Preferencias',
+    get rotulo() {
+      return t(FRASES_DE_LA_SESION.preferencias);
+    },
     al: () => {
       abrirLasPreferencias();
     },
   },
   // `peligrosa`: la que no se deshace. El armazon la pinta en la tinta del error.
   {
-    rotulo: 'Cerrar sesión',
+    get rotulo() {
+      return t(FRASES_DE_LA_SESION.cerrarSesion);
+    },
     peligrosa: true,
     al: () => {
       identidad.salir();

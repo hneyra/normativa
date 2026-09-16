@@ -1,7 +1,9 @@
 import type { HojaDelCatalogo } from '@kamayuk/shell';
 import { Pantalla, type Ausencia, type TonoDeInsignia } from '@kamayuk/ui';
 import { createElement, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 
+import { TEXTOS_DEL_INTERPRETE } from '../i18n/textosDelInterprete.ts';
 import type { ClaveDeHoja } from './arbol.ts';
 import { pantallaDe as definicionDe } from './definiciones/index.ts';
 import type { Pantalla as DefinicionDeUnaPantalla } from './tipos.ts';
@@ -25,8 +27,8 @@ import type { Pantalla as DefinicionDeUnaPantalla } from './tipos.ts';
  *
  * · **No pide nada.** El interprete no puede pedir datos, y este sistema todavia no los pide: es
  *   #63. Lo unico que se le pasa es la ausencia, que es lo que se dibuja en cada hueco.
- * · **No traduce.** `traducir` no se pasa, asi que el interprete deja las palabras como estan. Es
- *   #60, y el dia que llegue entra por aqui sin tocar `aplicacion.tsx`.
+ * · **Ya traduce, desde #60.** `traducir` y `textos` se le pasan desde {@link CuerpoDeLaHoja}, y
+ *   entraron por aqui sin tocar `aplicacion.tsx`, que es lo que este archivo prometia.
  * · **No atiende ningun acto.** `actos`, `alHacer` y `navegacion` son de #66, #67 y #68: hasta
  *   entonces ninguna definicion declara uno, y un boton que nadie atiende sale impedido con su
  *   motivo — nunca mudo.
@@ -93,6 +95,9 @@ export function tonoDeLaInsignia(texto: string): TonoDeInsignia {
  *
  * <h2>La `key`, que es lo unico que impide que lo tecleado pase de una hoja a la siguiente</h2>
  *
+ * Desde #60 la `key` va en {@link CuerpoDeLaHoja} y no en `<Pantalla>` directamente, y da lo mismo:
+ * React desmonta el subarbol entero, y `<Pantalla>` es su unico hijo.
+ *
  * `<Pantalla>` guarda lo tecleado en su propio `useState` (`paquetes/ui/interprete/Pantalla.tsx`).
  * Dos destinos cuya pantalla es **el mismo componente en el mismo sitio** comparten la instancia,
  * asi que un campo de la hoja A que caiga en la misma posicion y con el mismo tipo en la hoja B
@@ -112,13 +117,43 @@ export function crearPantalla(
   definicion: (clave: ClaveDeHoja) => DefinicionDeUnaPantalla,
 ): (hoja: HojaDelCatalogo) => ReactNode {
   return function pantalla(hoja: HojaDelCatalogo): ReactNode {
-    return createElement(Pantalla, {
+    return createElement(CuerpoDeLaHoja, {
       key: hoja.destino.clave,
       definicion: definicion(hoja.destino.clave as ClaveDeHoja),
-      datos: { ausencia: AUSENCIA_SIN_CONECTAR },
-      tonoDeLaInsignia,
     });
   };
+}
+
+/**
+ * **El cuerpo de una hoja, traducido** (#60, AC 3).
+ *
+ * <h2>Por que hay un componente en medio, y no una llamada suelta</h2>
+ *
+ * Porque el interprete traduce **por variable** —`traducir(campo.etiqueta)`— y ese `traducir` tiene
+ * que ser el `t` de la sesion. Aqui SI hay donde poner un gancho: esto lo dibuja React, a diferencia
+ * de `src/marca.ts` o `src/catalogo.ts`, que `src/aplicacion.tsx` consume como constantes. Asi que
+ * el cuerpo de las cuatro hojas es lo unico de este sistema que se entera de un cambio de idioma
+ * **sin esperar a la siguiente pintada**: `useTranslation()` se suscribe.
+ *
+ * <h2>Lo que se le pasa, y lo que no</h2>
+ *
+ * · **`traducir`** — las palabras de la definicion y de la ausencia. Envuelto y no pasado tal cual:
+ *   `TFunction` acepta mas formas que `(texto: string) => string`, y atar la firma del interprete a
+ *   la de i18next haria que una version nueva de i18next rompiera esta costura.
+ * · **`textos`** — las palabras que el interprete dice por su cuenta. Ver `i18n/textosDelInterprete.ts`.
+ * · **Los datos no pasan por `traducir`**, y eso lo garantiza el interprete y no esto: traducir un
+ *   importe seria absurdo.
+ */
+function CuerpoDeLaHoja({ definicion }: { readonly definicion: DefinicionDeUnaPantalla }) {
+  const { t } = useTranslation();
+
+  return createElement(Pantalla, {
+    definicion,
+    datos: { ausencia: AUSENCIA_SIN_CONECTAR },
+    tonoDeLaInsignia,
+    traducir: (texto: string) => t(texto),
+    textos: TEXTOS_DEL_INTERPRETE,
+  });
 }
 
 /**
