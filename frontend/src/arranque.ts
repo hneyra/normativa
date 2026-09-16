@@ -1,44 +1,89 @@
+import { anotarLaVuelta, fijarElPorQue } from './puerta/falla.ts';
+import { identidad } from './sesion.ts';
+
 /**
- * **El arranque de `normativa-web`** — costura de #55, la llena #57.
+ * **El arranque de `normativa-web`: primero quien pregunta, y solo entonces quien dibuja** (#57).
  *
- * <h2>El montaje entra como ARGUMENTO, y eso es lo que hace falta hoy</h2>
+ * Sobre `rentas/frontend/src/arranque.ts@ac379ac` (168 l), con `@kamayuk/sesion` en lugar de su
+ * copia y **sin la siembra del catalogo**, que alli existe porque `rentas` tiene cuarenta pantallas
+ * que mirar sin plataforma; aqui no hay ninguna hasta #58.
+ *
+ * <h2>El montaje entra como ARGUMENTO, y eso es lo que lo hace util</h2>
  *
  * `arrancar(montar)` recibe el montaje en vez de que el montaje venga en la linea de abajo en
  * `main.tsx`, porque **hay cosas que tienen que pasar antes de que React monte** y la unica forma
- * de que no puedan colarse despues es que el montaje sea lo ultimo que esta funcion hace. Es la
- * forma de `rentas/frontend/src/arranque.ts@ac379ac`, vacia por dentro.
+ * de que no puedan colarse despues es que el montaje sea lo ultimo que esta funcion hace. La forma
+ * la puso #55 vacia; esto la llena.
  *
- * Hoy no hace nada mas: monta. Y eso es correcto —no hay puerta de identidad que canjear ni una
- * sola lectura que preparar—, pero la forma se pone YA, y no cuando haga falta, por lo que dice
- * el AC 3 de #55: `src/aplicacion.tsx` **lo toca solo este issue**, y sin esta costura #57 tendria
- * que tocar `main.tsx` y `aplicacion.tsx` a la vez.
+ * <h2>Los tres pasos, y por que en este orden</h2>
  *
- * <h2>Que pone #57 aqui, y por que va ANTES del montaje</h2>
+ * 1. **`canjearSiVuelve()`**, lo primero. Al volver de Keycloak la URL trae un `?code=` que hay que
+ *    canjear antes de montar: la primera peticion de la primera pantalla seria
+ *    `GET /seguridad/sesion`, y sin token contesta 401 — o sea que montar primero enseñaria un
+ *    error de identidad **a alguien que si esta identificado**. Ademas deja la barra de direcciones
+ *    limpia, salga bien o mal.
+ * 2. **La ida a la puerta**, si no hay token. Sin token no hay nada que enseñar, asi que se va a la
+ *    puerta en vez de montar la aplicacion para que ella descubra el 401. Con la sesion de Keycloak
+ *    viva, ir a la puerta va y vuelve sin dibujar nada.
+ * 3. **`montar()`**, siempre que no nos hayamos ido.
  *
- * El canje del codigo de autorizacion. Al volver de la puerta, la URL trae un `?code=` que hay
- * que canjear antes de montar: la primera peticion de la primera pantalla seria
- * `GET /seguridad/sesion`, y sin token contesta 401 — o sea que montar primero enseñaria un error
- * de identidad **a alguien que si esta identificado**. Con el canje delante, no.
+ * <h2>Los dos frenos del rebote, y hacen falta los dos</h2>
  *
- * Y con el llegan los dos frenos que `rentas` midio y que no se pueden perder (la tabla «Lo que la
- * V6 aprendio» de la epica #47):
+ *   · **el tope de idas** (`puedeIrALaPuerta`), porque un canje que falla siempre —un
+ *     `redirect_uri` mal declarado— convierte esto en un rebote infinito: pagina en blanco
+ *     parpadeando, ninguna traza, y el emisor recibiendo la rafaga. Con el tope gastado **se
+ *     monta**, para que la puerta pueda explicarse;
+ *   · **la marca de salida** (`vieneDeSalir`), porque `post_logout_redirect_uri` trae de vuelta sin
+ *     token y sin ella el arranque volveria a entrar solo — con la sesion del emisor viva, quien
+ *     acaba de cerrar sesion se encuentra DENTRO OTRA VEZ con la misma cuenta.
  *
- *   · **el tope de idas a la puerta**, porque un canje que falla siempre —un `redirect_uri` mal
- *     declarado— convierte esto en un rebote infinito: pagina en blanco parpadeando, ninguna
- *     traza, y el emisor recibiendo la rafaga;
- *   · **la marca de salida**, porque `post_logout_redirect_uri` trae de vuelta sin token y sin
- *     ella el arranque volveria a entrar solo — quien acaba de cerrar sesion se encuentra DENTRO
- *     OTRA VEZ con la misma cuenta.
+ * <h2>Y un TERCER freno, que es de este sistema: el emisor que no dejo entrar</h2>
  *
- * <h2>Es `async`, y hoy no espera nada</h2>
+ * Si la vuelta trae un `?error=`, no se va a la puerta. Volver seria pedir otra vez lo que el
+ * emisor acaba de negar —«el alcance que se pide no existe», «el emisor no reconoce a este
+ * cliente»—, y con el tope de tres eso termina en una pantalla en blanco sin una palabra de la
+ * causa. `rentas` no lo necesita porque su casco pide `GET /seguridad/sesion` al montar y el 401 lo
+ * explica; **esta interfaz no tiene ninguna lectura obligatoria al arrancar**, asi que el motivo se
+ * anota aqui y lo dibuja `PuertaCaida`. El porque entero, en `puerta/falla.ts`.
  *
- * Porque lo que #57 mete es una ida a la red. Devolver `Promise<void>` desde el primer dia hace
- * que `main.tsx` ya escriba el `void arrancar(…)` que entonces hara falta, y que ese PR no tenga
- * que tocarlo.
+ * Y un cuarto que no es un freno sino una ausencia: **sin `crypto.subtle` no hay puerta**
+ * (`hayPuerta()`), porque S256 no se puede calcular. El navegador no lo expone fuera de un origen
+ * seguro, asi que esto pasa de verdad: `http://` con un nombre que no sea `localhost`.
+ *
+ * <h2>Y hay un QUINTO caso en que se monta: cuando la ida no llega a ocurrir</h2>
+ *
+ * No montar es correcto **cuando la puerta contesta**. Cuando no —el emisor apagado, un DNS que no
+ * resuelve, una espera agotada— la navegacion se rechaza y no queda ni documento nuevo ni
+ * aplicacion: la pagina de antes, vacia. Medido en `rentas`#112 con `yarn dev` y nada mas
+ * levantado: `body.innerText` vacio y la consola con dos lineas de Vite, ni un error.
+ *
+ * Por eso `entrar()` de `@kamayuk/sesion` pregunta primero si el emisor esta y devuelve la falla
+ * cuando no. Con ella se monta y `PuertaCaida` explica **quien** no contesto y **en que URL** — que
+ * es lo que hace falta para arreglarlo. El camino bueno no cambia: si el emisor contesta, sigue sin
+ * montarse nada.
+ *
+ * **La condicion se lee al reves de lo que parece**: `null` es que todo fue bien y la pagina se va.
  */
 export async function arrancar(montar: () => void): Promise<void> {
-  // Sin nada delante todavia. Ver el javadoc: lo que entre aqui entra ARRIBA de esta linea, nunca
-  // debajo — el montaje es lo ultimo que esta funcion hace, y es lo unico que la hace util.
-  await Promise.resolve();
+  fijarElPorQue(null);
+
+  // **Lo que dijo el emisor gana, y por eso esto va antes que nada.** Un `?error=` no se contesta
+  // volviendo a la puerta: el emisor devolveria el mismo error, y a la tercera el tope pararia sin
+  // una palabra de la causa. Se anota el motivo, se monta, y la puerta caida lo dice.
+  const noDejoEntrar = anotarLaVuelta(await identidad.canjearSiVuelve());
+
+  if (
+    !noDejoEntrar &&
+    identidad.token() === null &&
+    identidad.hayPuerta() &&
+    identidad.puedeIrALaPuerta() &&
+    !identidad.vieneDeSalir()
+  ) {
+    const falla = await identidad.entrar();
+    if (falla !== null) fijarElPorQue({ tipo: 'no-contesto', falla });
+    // Solo se deja de montar cuando la navegacion SI ocurrio.
+    if (falla === null) return;
+  }
+
   montar();
 }

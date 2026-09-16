@@ -4,6 +4,20 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
+import { SENAS_POR_OMISION, type ClaveDeConfiguracion } from '../src/configuracion.ts';
+
+/**
+ * Las tres llaves que la interfaz sabe leer, derivadas del tipo y no escritas dos veces.
+ *
+ * `satisfies` es lo que ata la lista al tipo: quitar una la deja incompleta sin que nada lo diga,
+ * y anadir una que no exista es rojo en `tsc`.
+ */
+const CLAVES_DE_CONFIGURACION = [
+  'oidcRealm',
+  'oidcCliente',
+  'oidcAlcance',
+] as const satisfies readonly ClaveDeConfiguracion[];
+
 /**
  * Que `normativa-web` se pueda desplegar, y que llegue a alguien (#39).
  *
@@ -663,12 +677,52 @@ describe('el compose y el descriptor dicen lo mismo (ADR-0011)', () => {
    * El cliente OIDC que las senias del ambiente declaran.
    *
    * Hasta `c01fe9a` esta prueba lo comparaba tambien con el escalon por omision de
-   * `src/api/configuracion.ts`, que salio con la V6. La mitad del descriptor se queda —es lo que
-   * `infrastructure` pone en el `ConfigMap`— y la otra vuelve en #57, con la puerta de identidad:
-   * si se separaran, `yarn dev` entraria por un cliente y el despliegue por otro, y el sintoma
-   * es «Invalid parameter: redirect_uri» en una maquina donde nadie puede reproducirlo.
+   * `src/api/configuracion.ts`, que salio con la V6. **La otra mitad volvio en #57**, ahora contra
+   * `src/configuracion.ts`: si los dos se separaran, `yarn dev` entraria por un cliente y el
+   * despliegue por otro, y el sintoma es «Invalid parameter: redirect_uri» en una maquina donde
+   * nadie puede reproducirlo.
    */
   it('el descriptor sigue declarando el cliente OIDC de la interfaz', () => {
     expect(DESCRIPTOR()).toContain('const CLIENTE_OIDC_DE_LA_INTERFAZ = "kamayuk-backoffice"');
+  });
+
+  /**
+   * **Y es EL MISMO que el escalon por omision de la interfaz** (#57, AC 7).
+   *
+   * El descriptor se lee **dentro del `it`** y la omision se importa de `src/configuracion.ts`: los
+   * dos extremos, ninguna copia. Una prueba que escribiera «kamayuk-backoffice» a los dos lados
+   * seguiria verde con los dos cambiados a la vez, que es lo unico que no puede pasar aqui — el
+   * ConfigMap del cluster y el `yarn dev` de quien desarrolla tienen que entrar por el mismo
+   * cliente publico del realm.
+   */
+  it('y es el mismo cliente que el escalon por omision de `src/configuracion.ts`', () => {
+    const descriptor = DESCRIPTOR();
+    const declarado = /const CLIENTE_OIDC_DE_LA_INTERFAZ = "([^"]+)"/.exec(descriptor)?.[1];
+
+    expect(declarado, 'el descriptor ya no declara `CLIENTE_OIDC_DE_LA_INTERFAZ`').toBeDefined();
+    expect(
+      SENAS_POR_OMISION.oidcCliente,
+      'El cliente OIDC del descriptor y el de la omision de la interfaz se han separado.\n' +
+        'El sintoma no aparece aqui: aparece en el navegador de quien entra, como\n' +
+        '«Invalid parameter: redirect_uri», y solo en el ambiente donde la senia servida falte.',
+    ).toBe(declarado);
+  });
+
+  /**
+   * **Las llaves del `ConfigMap` son las que la interfaz sabe leer** (#57, AC 2).
+   *
+   * El descriptor compone `window.__KAMAYUK_NORMATIVA__` con tres llaves. Si alguna se llamara
+   * distinto de las de `ClaveDeConfiguracion`, la interfaz no la leeria y caeria al escalon por
+   * omision **sin un solo error**: entraria por el emisor de `localhost` en produccion.
+   */
+  it('las tres senias del ConfigMap son las tres llaves que la interfaz lee', () => {
+    const descriptor = DESCRIPTOR();
+
+    expect(descriptor).toContain('window.__KAMAYUK_NORMATIVA__');
+    for (const clave of CLAVES_DE_CONFIGURACION) {
+      expect(descriptor, `el descriptor no sirve la senia «${clave}»`).toMatch(
+        new RegExp(`\\b${clave}:`),
+      );
+    }
   });
 });

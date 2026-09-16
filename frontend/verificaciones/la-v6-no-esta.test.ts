@@ -113,6 +113,16 @@ const ESTA: readonly string[] = [
   'src/marca.ts',
   'src/pantallas/index.ts',
   'src/sesion.ts',
+  // Lo que #57 puso en su sitio: la puerta y el cliente, los dos de `kamayuk-lib`. Ninguno se
+  // llama como el de la V6 —`src/api/identidad.ts` esta arriba, en `SE_FUE`— y ninguno lleva
+  // `fetch` ni PKCE dentro, que es lo que vigila
+  // `verificaciones/la-puerta-y-el-cliente-son-de-la-libreria.test.ts`.
+  'src/configuracion.ts',
+  'src/api/cliente.ts',
+  'src/puerta/falla.ts',
+  'src/puerta/AvisoDeLaPuerta.tsx',
+  'src/preferencias/cajon.ts',
+  'src/preferencias/MandoDeTema.tsx',
 ];
 
 /**
