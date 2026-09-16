@@ -163,5 +163,9 @@
     "nombre": "texto",
     "tipo": "texto"
   },
-  "GET /seguridad/sesion/permisos": "objeto"
+  "GET /seguridad/sesion/permisos": {
+    "<codigo>": [
+      "texto"
+    ]
+  }
 }

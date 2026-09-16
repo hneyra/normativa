@@ -124,22 +124,30 @@ function admitidos(operacion: string): readonly string[] {
 /* ── 1 y 6 — las operaciones existen, y su forma es una FORMA ──────────────────────────────── */
 
 describe('AC 3 — lo que se pide es una operacion del contrato', () => {
-  it('EL CENTINELA: los dos JSON estan, y publican las SEIS operaciones de hoy', () => {
+  it('EL CENTINELA: los dos JSON estan, y publican las ONCE operaciones de hoy', () => {
     // Sin esto, un archivo vacio o con solo la nota dejaria todo lo de abajo pasando sobre el
     // conjunto vacio: cero operaciones comparadas, en verde.
     //
-    // **SEIS desde #56, y no las cuatro que #49 midio**: se anaden `GET /conjuntos/{id}/parametros`
-    // —el contenido de un conjunto, ABIERTO o sellado— y `GET /parametros` —los publicados que se
-    // le pueden agregar—, las filas 4 y 5 de ADR-0043 §1. La hoja de Ediciones (#65) las lee; esta
-    // lista sube con el backend, no con la hoja.
+    // **ONCE, y no las cuatro que #49 midio**: #56 anadio `GET /conjuntos/{id}/parametros` —el
+    // contenido de un conjunto, ABIERTO o sellado— y `GET /parametros` —los publicados que se le
+    // pueden agregar—, las filas 4 y 5 de ADR-0043 §1; y #54 las cinco lecturas de `/seguridad`
+    // con las que la interfaz compone su menu y su barra —los modulos, los accesos, quien es la
+    // sesion, de que municipalidad y que puede—. La lista se escribe entera a proposito: una
+    // operacion que aparezca o desaparezca del contrato tiene que salir nombrada aqui, no colarse
+    // en un `length`. Sube con el backend, no con la hoja que la lea.
     const publicadas = [...operacionesDelContrato()].sort();
     expect(publicadas).toEqual([
       'GET /conjuntos',
       'GET /conjuntos/{id}/parametros',
       'GET /conjuntos/{id}/snapshot',
       'GET /parametros',
+      'GET /seguridad/accesos',
+      'GET /seguridad/modulos',
       'GET /seguridad/parametros',
       'GET /seguridad/parametros/ejercicios/{ejercicio}',
+      'GET /seguridad/sesion',
+      'GET /seguridad/sesion/municipalidad',
+      'GET /seguridad/sesion/permisos',
     ]);
     expect(Object.keys(parametros()).filter((c) => c !== NOTA).sort()).toEqual(publicadas);
     // Y que `src/datos/**` pida algo: con `PETICIONES` vacia no habria nada que contrastar.
