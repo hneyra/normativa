@@ -30,8 +30,24 @@ public class ParametrosRepositoryJdbc extends RepositorioJdbc implements Paramet
     private static final OrdenSeguro ORDEN_CONJUNTO =
             OrdenSeguro.sobre("ejercicio", "version", "estado", "id");
 
+    /**
+     * La lista blanca del listado de parametros publicados, con <b>desempate</b> (#56).
+     *
+     * <p>{@code desempatandoPor("id")} no estaba, y sin el este listado no tiene orden total:
+     * {@code parametros-2026.csv} publica <b>cinco</b> filas {@code UIT} con la misma clave vacia,
+     * asi que {@code ORDER BY tipo} las deja empatadas y el plan decide cual va en que pagina. Con
+     * paginacion eso no es un detalle estetico: dos paginas consecutivas pueden repetir una fila y
+     * omitir otra, que es el defecto que {@link OrdenSeguro#desempatandoPor} existe para cerrar.
+     *
+     * <p>Se puede tocar <b>aqui</b> y no en {@link #parametrosDe(long)} por una diferencia medida:
+     * esta lista blanca solo la usa {@link #parametros(Paginacion)}, que hasta #56 no tenia ni un
+     * llamador, asi que el cambio no altera ninguna respuesta que alguien ya reciba. El {@code
+     * ORDER BY} de {@code parametrosDe} es el que serializa el snapshot, y cambiarlo cambiaria el
+     * {@code sha256} de todo conjunto ya sellado que {@code rentas} y {@code catastro} tengan en
+     * cache (ADR-0025 §Consecuencias).
+     */
     private static final OrdenSeguro ORDEN_PARAMETRO =
-            OrdenSeguro.sobre("tipo", "clave", "vigencia_desde", "id");
+            OrdenSeguro.sobre("tipo", "clave", "vigencia_desde", "id").desempatandoPor("id");
 
     private static final String COLUMNAS_CONJUNTO =
             "id, ejercicio, version, estado, fecha_sellado, usuario_sellado";

@@ -83,9 +83,21 @@ public class ParametrosController {
      * es del sistema entero, y sin el las doce pantallas que calculan no pueden decir por que no
      * pueden calcular.
      *
-     * <p>Lo que si deja, y las otras dos lecturas de sesion no, es su <b>fila de {@code
-     * ACCESO}</b>: esta admite un parametro, asi que quien recorra 1990 a 2100 deja su nombre en
-     * cada intento. La escribe el caso de uso, en la misma transaccion que la lectura.
+     * <p><b>No deja fila de {@code ACCESO}, y este javadoc decia lo contrario</b> (#56). Afirmaba
+     * que «la escribe el caso de uso, en la misma transaccion que la lectura», y el caso de uso
+     * dice justo lo opuesto con su motivo escrito —{@code
+     * AdministrarParametros.estadoDelEjercicio}, «No deja fila en la bitacora, y es deliberado»— y
+     * no audita: {@code grep -rn 'Operacion.ACCESO' backend/*}{@code /src/main} no encuentra ningun
+     * escritor, solo encontraba esta frase. Era el AC 2 de #605, y medirlo cambio la respuesta:
+     * este es el unico endpoint <b>fuera</b> del catalogo ({@link RequiereAcceso#SESION_PROPIA}),
+     * asi que auditarlo pondria una escritura <b>sin cota</b> —recorrer 1990 a 2100 la hace crecer
+     * sin que nada lo pare— al alcance de cualquier token valido, sobre una tabla append-only: sin
+     * {@code DELETE} (regla 4, RNF-051), sin poda y sin limite de peticiones. Lo fija {@code
+     * ParametrosControllerTest.preguntarNoDejaFilaDeBitacora}.
+     *
+     * <p>Dos javadoc que se contradicen son peores que uno que falte: el que estaba aqui es el que
+     * lee quien va a tocar la ruta, y le habria hecho «arreglar» la ausencia de una fila que se
+     * decidio no escribir.
      */
     @GetMapping("/ejercicios/{ejercicio}")
     @RequiereAcceso(acceso = RequiereAcceso.SESION_PROPIA, privilegio = Privilegio.LECTURA)

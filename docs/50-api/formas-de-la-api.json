@@ -5,6 +5,28 @@
     "ejercicio": "entero",
     "version": "entero"
   },
+  "GET /conjuntos/{id}/parametros": {
+    "conjunto": {
+      "id": "entero",
+      "ejercicio": "entero",
+      "version": "entero",
+      "estado": "texto",
+      "fechaSellado": "instante",
+      "usuarioSellado": "texto"
+    },
+    "parametros": [
+      {
+        "id": "entero",
+        "tipo": "texto",
+        "clave": "texto",
+        "valorNumerico": "texto",
+        "valorTexto": "texto",
+        "vigenciaDesde": "texto",
+        "vigenciaHasta": "texto",
+        "documentoFuente": "texto"
+      }
+    ]
+  },
   "GET /conjuntos/{id}/snapshot": {
     "conjuntoId": "entero",
     "ejercicio": "entero",
@@ -53,6 +75,25 @@
         "documentoFuente": "texto"
       }
     ]
+  },
+  "GET /parametros": {
+    "contenido": [
+      {
+        "id": "entero",
+        "tipo": "texto",
+        "clave": "texto",
+        "valorNumerico": "texto",
+        "valorTexto": "texto",
+        "vigenciaDesde": "texto",
+        "vigenciaHasta": "texto",
+        "documentoFuente": "texto"
+      }
+    ],
+    "pagina": "entero",
+    "tamano": "entero",
+    "totalElementos": "entero",
+    "totalPaginas": "entero",
+    "hayMas": "booleano"
   },
   "GET /seguridad/parametros": {
     "contenido": [
