@@ -12,6 +12,8 @@ import i18n, { ABRE, CIERRA, IDIOMA_MARCADO, IDIOMA_POR_OMISION } from '../src/i
 import { TEXTOS_DEL_MARCO } from '../src/i18n/armazon.ts';
 import { FRASES_DEL_INTERPRETE } from '../src/i18n/textosDelInterprete.ts';
 import { FRASES_DEL_MARCO } from '../src/i18n/textosDelMarco.ts';
+import { PANTALLAS } from '../src/pantallas/definiciones/index.ts';
+import type { Pantalla } from '../src/pantallas/tipos.ts';
 import { MandoDeTema } from '../src/preferencias/MandoDeTema.tsx';
 import { AvisoDeLaPuerta } from '../src/puerta/AvisoDeLaPuerta.tsx';
 import { artboardDeclarado } from './artboards.ts';
@@ -171,7 +173,38 @@ function losIdentificadores(): ReadonlySet<string> {
   return new Set([
     ...AMBITOS,
     ...CONSUMIDORES.map((consumidor) => consumidor.sistema),
+    ...losCamposDelContrato(),
   ]);
+}
+
+/**
+ * **El `campo` y el `dominio` que las definiciones escriben, y por que NO se traducen** (#66, H23).
+ *
+ * `cabecera-con-campo-y-dominio` de `kamayuk-lib`#61 pone bajo el rotulo de una columna —y bajo la
+ * etiqueta de un campo— **el nombre del campo del contrato** y, cuando la base lo acota, su
+ * dominio. La libreria los dibuja tal cual y dice por que: «no se traducen: es codigo, como las
+ * operaciones del pie de #44» (`paquetes/ui/interprete/tipos.ts:129-138`).
+ *
+ * Y es la decision correcta, no una comodidad: `anioConstruccionHasta` es el nombre de una llave del
+ * JSON, y `MUROS · TECHOS · PUERTAS` es lo que el CHECK `valor_unitario_edificacion_partida_check`
+ * admite. Traducirlos escribiria en la pantalla una llave que no existe y un dominio que la base no
+ * aplica — que es peor que no escribirlos.
+ *
+ * Se derivan **de las propias definiciones** y no se escriben aqui a mano: una columna nueva entra
+ * por su cuenta y esta exencion no se queda vieja eximiendo lo que ya no se dibuja.
+ */
+function losCamposDelContrato(): readonly string[] {
+  const salida: string[] = [];
+  for (const pantalla of Object.values(PANTALLAS) as readonly Pantalla[]) {
+    for (const bloque of pantalla.bloques) {
+      for (const campo of bloque.campos) if (campo.campo !== undefined) salida.push(campo.campo);
+      for (const columna of bloque.tabla?.columnas ?? []) {
+        if (columna.campo !== undefined) salida.push(columna.campo);
+        if (columna.dominio !== undefined) salida.push(columna.dominio);
+      }
+    }
+  }
+  return salida;
 }
 
 beforeAll(async () => {

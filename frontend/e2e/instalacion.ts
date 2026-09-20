@@ -264,6 +264,189 @@ export async function conLoDePublicacion(
   return { peticiones };
 }
 
+/* ── Lo que Cuadros pide (#66) ─────────────────────────────────────────────────────────────── */
+
+/**
+ * **El ejercicio al que este arnes mueve el reloj del navegador.**
+ *
+ * `2031` y no el de hoy, y a proposito: una guarda del ejercicio que **no mueva el reloj** pasa
+ * igual con un literal dentro, porque hoy el ano es el mismo. Mover el reloj es lo unico que la
+ * hace poder fallar.
+ *
+ * El instante es **mediodia UTC**, no medianoche: `ejercicioDe` lee el ano en la zona del puesto
+ * —el ejercicio tributario es una fecha civil de la municipalidad—, y a mediodia UTC el 1 de enero
+ * sigue siendo 2031 en cualquier zona del planeta. A medianoche no: en Lima seria todavia el 31 de
+ * diciembre de 2030, y este arnes saldria rojo o verde segun donde se corra.
+ */
+export const EJERCICIO_DEL_ARNES = 2031;
+export const RELOJ_DEL_ARNES = '2031-01-01T12:00:00Z';
+
+/** El documento fuente que traen las filas de cada cuadro. Es de prueba: no sale de ningun corpus. */
+export const FUENTE_DE_LOS_UNITARIOS = 'Documento de prueba · valores unitarios';
+export const FUENTE_DE_LA_DEPRECIACION = 'Documento de prueba · depreciación';
+export const FUENTE_DEL_VEHICULAR = 'Documento de prueba · anexo vehicular';
+
+/**
+ * **Las filas que este arnes sirve, y por que son las que son.**
+ *
+ * Ninguna cifra sale del corpus: lo que se mide es **como se lee una fila**, no cuanto vale un
+ * metro cuadrado. Lo que si esta elegido es la FORMA:
+ *
+ * · **dos tablas de depreciacion**, cada una con su tramo abierto, y **con topes distintos**. Con
+ *   una sola, una implementacion que buscara el maximo del cuadro entero pasaria igual; con dos, la
+ *   segunda tiene que decir el suyo y no el de la primera;
+ * · **un `anioConstruccionHasta: null`**, que es «Sin tope»;
+ * · **cifras con un decimal** —`11.5`—, para que se vea que se completan a dos y que lo que se
+ *   pinta no es lo que llego tal cual;
+ * · y **una cifra de siete digitos**, para que el separador de miles tenga algo que agrupar.
+ */
+export const UNITARIOS_SERVIDOS: readonly Record<string, unknown>[] = [
+  {
+    partida: 'MUROS',
+    categoria: 'A',
+    anioConstruccionDesde: 1990,
+    anioConstruccionHasta: 1999,
+    valorM2: '11.5',
+    documentoFuente: FUENTE_DE_LOS_UNITARIOS,
+  },
+  {
+    partida: 'TECHOS',
+    categoria: 'B',
+    anioConstruccionDesde: 2000,
+    anioConstruccionHasta: null,
+    valorM2: '2222333.4',
+    documentoFuente: FUENTE_DE_LOS_UNITARIOS,
+  },
+];
+
+export const DEPRECIACIONES_SERVIDAS: readonly Record<string, unknown>[] = [
+  {
+    uso: '01',
+    material: 'Concreto',
+    estadoConservacion: 'Muy Bueno',
+    antiguedadHasta: 5,
+    porcentaje: '0',
+    documentoFuente: FUENTE_DE_LA_DEPRECIACION,
+  },
+  {
+    uso: '01',
+    material: 'Concreto',
+    estadoConservacion: 'Muy Bueno',
+    antiguedadHasta: 30,
+    porcentaje: '12',
+    documentoFuente: FUENTE_DE_LA_DEPRECIACION,
+  },
+  {
+    uso: '01',
+    material: 'Concreto',
+    estadoConservacion: 'Muy Bueno',
+    antiguedadHasta: null,
+    porcentaje: '27',
+    documentoFuente: FUENTE_DE_LA_DEPRECIACION,
+  },
+  {
+    uso: '02',
+    material: 'Ladrillo',
+    estadoConservacion: 'Malo',
+    antiguedadHasta: null,
+    porcentaje: '60',
+    documentoFuente: FUENTE_DE_LA_DEPRECIACION,
+  },
+];
+
+/**
+ * El anexo vehicular, **de la medida que se le pida**.
+ *
+ * `54 129` es lo que mide el de 2026 (`ElEjercicio2026SeSellaTest.java:246`), y es la cifra con la
+ * que hay que medir la paginacion: con diez filas, una tabla sin paginar y una paginada se ven
+ * igual.
+ */
+export function vehicularesServidos(cuantos: number): readonly Record<string, unknown>[] {
+  return Array.from({ length: cuantos }, (_, i) => ({
+    ejercicio: EJERCICIO_DEL_ARNES,
+    categoria: i % 2 === 0 ? 'A1' : 'A2',
+    marca: 'MARCA DE PRUEBA',
+    modelo: i === 0 ? 'OTROS MODELOS' : `MODELO ${String(i)}`,
+    anioFabricacion: 2030 - (i % 20),
+    valor: `${String(1000 + i)}.5`,
+    documentoFuente: FUENTE_DEL_VEHICULAR,
+  }));
+}
+
+/** Lo que se le puede cambiar a lo que este arnes sirve. */
+export interface CuadrosServidos {
+  /** Cuantas filas trae el anexo vehicular. Por omision, dos. */
+  readonly vehiculares?: number;
+  /** Las celdas de valores unitarios que van en VALUACION. Por omision, las dos de arriba. */
+  readonly unitarios?: readonly Record<string, unknown>[];
+  /** Las de depreciacion. */
+  readonly depreciaciones?: readonly Record<string, unknown>[];
+}
+
+/** El cuerpo de un snapshot para Cuadros, comprobado campo a campo contra la forma publicada. */
+export function elSnapshotDeLosCuadros(
+  ambito: 'VALUACION' | 'OBLIGACION',
+  servido: CuadrosServidos = {},
+): Record<string, unknown> {
+  const laValuacion = ambito === 'VALUACION';
+  const unitarios = laValuacion ? (servido.unitarios ?? UNITARIOS_SERVIDOS) : [];
+  const depreciaciones = laValuacion ? (servido.depreciaciones ?? DEPRECIACIONES_SERVIDAS) : [];
+  const vehiculares = laValuacion ? [] : vehicularesServidos(servido.vehiculares ?? 2);
+  return comoElContrato('GET /conjuntos/{id}/snapshot', {
+    ...CONJUNTO_SERVIDO,
+    ejercicio: EJERCICIO_DEL_ARNES,
+    ambito,
+    filas: unitarios.length + depreciaciones.length + vehiculares.length,
+    parametros: [],
+    valoresUnitarios: unitarios,
+    depreciaciones,
+    valoresReferenciales: vehiculares,
+  });
+}
+
+/**
+ * Deja contestadas las dos lecturas de Cuadros, **con el reloj del navegador movido**, y cuenta lo
+ * que se pidio.
+ *
+ * El reloj se instala antes de navegar: `EJERCICIO_DE_TRABAJO` se lee **una vez al cargar el
+ * modulo**, asi que moverlo despues no cambiaria nada y esta guarda mediria el ano de hoy.
+ */
+export async function conLosCuadros(
+  pagina: Page,
+  servido: CuadrosServidos = {},
+): Promise<{ readonly peticiones: string[]; readonly cuerpos: Record<string, string> }> {
+  // `setFixedTime` y no `install()`: lo unico que hay que mover es lo que `new Date()` contesta.
+  // `install()` ademas **para los temporizadores**, y con ellos parados el planificador de React y
+  // los reintentos de TanStack se quedan esperando algo que nunca llega — un arnes colgado que no
+  // habla del ejercicio.
+  await pagina.clock.setFixedTime(RELOJ_DEL_ARNES);
+  const peticiones: string[] = [];
+  const cuerpos: Record<string, string> = {
+    VALUACION: JSON.stringify(elSnapshotDeLosCuadros('VALUACION', servido)),
+    OBLIGACION: JSON.stringify(elSnapshotDeLosCuadros('OBLIGACION', servido)),
+  };
+
+  await pagina.route(LECTURA_DEL_CONJUNTO, (ruta) => {
+    peticiones.push(ruta.request().url());
+    return ruta.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ ...elConjuntoVigente(), ejercicio: EJERCICIO_DEL_ARNES }),
+    });
+  });
+  await pagina.route(LECTURA_DEL_SNAPSHOT, (ruta) => {
+    const url = ruta.request().url();
+    peticiones.push(url);
+    const ambito = url.includes('ambito=OBLIGACION') ? 'OBLIGACION' : 'VALUACION';
+    return ruta.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: cuerpos[ambito] ?? '{}',
+    });
+  });
+  return { peticiones, cuerpos };
+}
+
 /**
  * Abre un destino por su hash y espera a que el armazon exista.
  *

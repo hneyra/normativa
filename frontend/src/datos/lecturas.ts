@@ -170,20 +170,124 @@ export const CAMPOS_DEL_CONJUNTO_VIGENTE = {
   version: 0,
 } satisfies Record<keyof ConjuntoVigenteResource, unknown>;
 
+/* ── Las filas de los tres cuadros nacionales (#66) ────────────────────────────────────────── */
+
+/**
+ * **Una celda del cuadro de valores unitarios de edificacion** —
+ * `SnapshotDelConjunto.ValorUnitarioDelSnapshot` (ADR-0017).
+ *
+ * <h2>`anioConstruccionHasta` es nulable, y ese nulo NO es un dato que falte</h2>
+ *
+ * Es el tramo que no tiene tope —la construccion mas reciente—, y el `record` del backend lo
+ * declara `@Nullable Integer` (`SnapshotDelConjunto.java:97-103`) por lo mismo que la
+ * depreciacion: un `int` lo leeria como cero y convertiria el tramo abierto en uno que no cubre
+ * nada, sin ningun error de por medio. Quien lo dibuja es {@link module:datos/cuadros}, y lo
+ * dibuja como «Sin tope».
+ *
+ * <h2>Y `valorM2` es una CADENA</h2>
+ *
+ * Porque es una cifra sellada y en coma flotante pierde decimales antes de llegar a la pantalla
+ * (regla 1, RNF-055). El backend la sirve como texto, aqui se lee como texto y **no se opera**:
+ * solo se formatea.
+ */
+export interface ValorUnitarioDelSnapshot {
+  readonly partida: string;
+  readonly categoria: string;
+  readonly anioConstruccionDesde: number;
+  readonly anioConstruccionHasta: number | null;
+  readonly valorM2: string;
+  readonly documentoFuente: string;
+}
+
+/** Las llaves de una celda de valores unitarios, como dato. Ver «Los TESTIGOS». */
+export const CAMPOS_DEL_VALOR_UNITARIO = {
+  partida: '',
+  categoria: '',
+  anioConstruccionDesde: 0,
+  anioConstruccionHasta: null,
+  valorM2: '',
+  documentoFuente: '',
+} satisfies Record<keyof ValorUnitarioDelSnapshot, unknown>;
+
+/**
+ * **Una fila del cuadro de depreciacion** — `SnapshotDelConjunto.DepreciacionDelSnapshot`.
+ *
+ * `antiguedadHasta` llega nulo en el **tramo abierto** con que cierra cada tabla del Anexo I del
+ * RNT, y el propio `record` lo dice: va como `Integer` y no como `int` «justamente por eso: leer
+ * ese nulo como cero convierte el tramo abierto en uno que no cubre nada, sin ningun error de por
+ * medio» (`SnapshotDelConjunto.java:105-118`). En un padron viejo es el tramo que mas predios
+ * alcanza.
+ */
+export interface DepreciacionDelSnapshot {
+  readonly uso: string;
+  readonly material: string;
+  readonly estadoConservacion: string;
+  readonly antiguedadHasta: number | null;
+  readonly porcentaje: string;
+  readonly documentoFuente: string;
+}
+
+/** Las llaves de una fila de depreciacion, como dato. */
+export const CAMPOS_DE_LA_DEPRECIACION = {
+  uso: '',
+  material: '',
+  estadoConservacion: '',
+  antiguedadHasta: null,
+  porcentaje: '',
+  documentoFuente: '',
+} satisfies Record<keyof DepreciacionDelSnapshot, unknown>;
+
+/**
+ * **Una fila del anexo vehicular del MEF** — `SnapshotDelConjunto.ValorReferencialDelSnapshot`.
+ *
+ * Es la lista grande: el anexo de un ejercicio son **decenas de miles de filas**, y llega entera
+ * en una sola respuesta porque el snapshot no pagina. Por eso su tabla pagina **en el cliente**.
+ *
+ * Lleva su propio `ejercicio` y no es el del conjunto: el anexo se publica por ejercicio y esa
+ * columna es parte de la identidad de la fila, como la categoria.
+ */
+export interface ValorReferencialDelSnapshot {
+  readonly ejercicio: number;
+  readonly categoria: string;
+  readonly marca: string;
+  readonly modelo: string;
+  readonly anioFabricacion: number;
+  readonly valor: string;
+  readonly documentoFuente: string;
+}
+
+/** Las llaves de una fila del anexo vehicular, como dato. */
+export const CAMPOS_DEL_VALOR_REFERENCIAL = {
+  ejercicio: 0,
+  categoria: '',
+  marca: '',
+  modelo: '',
+  anioFabricacion: 0,
+  valor: '',
+  documentoFuente: '',
+} satisfies Record<keyof ValorReferencialDelSnapshot, unknown>;
+
 /**
  * El cuerpo del snapshot — `SnapshotController.SnapshotResource`.
  *
- * <h2>Las cuatro listas son `unknown[]` a proposito</h2>
+ * <h2>Tres listas con la forma de su fila, y una que sigue siendo `unknown[]`</h2>
  *
- * De ellas esta hoja lee **cuantas filas traen y nada mas**: quien dibuja sus columnas es Cuadros
- * (#66). Declararlas aqui con la forma de su fila seria una segunda copia de lo que aquella hoja
- * declara, y dos copias del mismo contrato divergen — con el agravante de que la que se quedara
- * vieja no daria error, daria `undefined` en una celda.
+ * Hasta #66 las cuatro eran `unknown[]`: Publicacion lee **cuantas filas traen y nada mas**, y
+ * declarar aqui la forma de una fila que ninguna hoja dibujaba habria sido escribir un contrato sin
+ * lector. Desde #66 hay quien las dibuja —los tres cuadros nacionales de ADR-0017—, asi que las
+ * tres bajan a su forma y **una guarda las cruza campo a campo** contra
+ * `docs/50-api/formas-de-la-api.json`
+ * (`verificaciones/la-lectura-declara-lo-que-la-operacion-publica.test.ts`).
+ *
+ * `parametros` se queda en `unknown[]` **a proposito y con su motivo escrito**: ninguna de las
+ * cuatro hojas dibuja una fila de parametros —Publicacion las cuenta, Cuadros no las mira— y una
+ * forma declarada que nadie lee no se entera de quedarse vieja. La misma guarda lo declara como
+ * excepcion con este motivo, y sale roja el dia que alguien la lea sin declararla.
  *
  * <h2>El `sha256` NO esta aqui, y tampoco es un olvido</h2>
  *
  * La huella es de **estos mismos bytes**, asi que meterla dentro seria pedirle a un valor que se
- * contenga a si mismo. Viaja en el `ETag` (`SnapshotController.java:183-190`), y por eso esta hoja
+ * contenga a si mismo. Viaja en el `ETag` (`SnapshotController.java:183-190`), y por eso Publicacion
  * la lee de una cabecera y la recalcula sobre el texto recibido.
  */
 export interface SnapshotResource {
@@ -193,9 +297,9 @@ export interface SnapshotResource {
   readonly ambito: string;
   readonly filas: number;
   readonly parametros: readonly unknown[];
-  readonly valoresUnitarios: readonly unknown[];
-  readonly depreciaciones: readonly unknown[];
-  readonly valoresReferenciales: readonly unknown[];
+  readonly valoresUnitarios: readonly ValorUnitarioDelSnapshot[];
+  readonly depreciaciones: readonly DepreciacionDelSnapshot[];
+  readonly valoresReferenciales: readonly ValorReferencialDelSnapshot[];
 }
 
 /** Las llaves del snapshot, como dato. Ver «Los TESTIGOS». */
@@ -301,6 +405,68 @@ export const DATO_DEL_IMPEDIMENTO = 'publicacion.noSePuedeGuardar';
 
 /** La operacion que la accion `hace`, y que `src/pantallas/index.ts` registra en `alHacer`. */
 export const OPERACION_DE_GUARDAR = 'guardar-el-snapshot';
+
+/* ── Los nombres con que la definicion de Cuadros y su conector se encuentran (#66) ────────── */
+
+/**
+ * El nombre de la lectura de Cuadros. Lo nombran `bloque.lectura` y `bloque.fallosDe` de su hoja.
+ *
+ * **Es UNA sola para las tres peticiones de esa hoja**, por el mismo motivo medido que en
+ * Publicacion: la identidad y los dos snapshots van detras del MISMO
+ * `@RequiereAcceso(acceso = "parametros", privilegio = LECTURA)`
+ * (`SnapshotController.java:87,119`), asi que no hay ninguna que pueda contestar 403 mientras otra
+ * contesta 200 — y los dos snapshots no se pueden pedir sin el `conjuntoId` que devuelve la
+ * primera. Tres estados que valen siempre lo mismo son tres huecos donde hay uno.
+ *
+ * Es una lectura distinta de la de Publicacion **y tiene que serlo**: la clave de consulta lleva la
+ * hoja dentro, y dos hojas que compartieran entrada de cache compartirian tambien lo que una de
+ * ellas invalidara.
+ */
+export const CLAVE_DE_LOS_CUADROS = 'cuadros';
+
+/**
+ * Las claves de las tres tablas de Cuadros: `tabla.clave` en la definicion, y por donde el conector
+ * entrega sus filas.
+ *
+ * Son tres y no una porque son **tres cuadros distintos de dos ambitos distintos** (ADR-0017 y el
+ * reparto de ADR-0024), cada uno con sus columnas. Una sola tabla con una columna «cuadro» mezclaria
+ * un valor por metro cuadrado con un porcentaje de depreciacion en la misma columna de cifras.
+ */
+export const CLAVE_DE_LOS_UNITARIOS = 'valores-unitarios';
+export const CLAVE_DE_LAS_DEPRECIACIONES = 'depreciaciones';
+export const CLAVE_DE_LOS_REFERENCIALES = 'valores-referenciales';
+
+/** Las tres, en el orden en que la hoja las dibuja. La guarda las recorre. */
+export const CLAVES_DE_LOS_CUADROS: readonly string[] = [
+  CLAVE_DE_LOS_UNITARIOS,
+  CLAVE_DE_LAS_DEPRECIACIONES,
+  CLAVE_DE_LOS_REFERENCIALES,
+];
+
+/**
+ * **Donde vive la pagina abierta de cada tabla de Cuadros**, y por que son tres sitios y no uno.
+ *
+ * `paginacion.enLaRuta` es el nombre del sitio donde la tabla guarda su pagina. Las tres tablas
+ * estan en la MISMA hoja: con un solo nombre, pasar de pagina en el cuadro vehicular moveria
+ * tambien la del cuadro de depreciacion, que no se toco. Son tres nombres, uno por tabla, y se
+ * derivan de su clave para que no se puedan escribir mal por separado.
+ */
+export const paginaDe = (clave: string): string => `pagina-${clave}`;
+
+/**
+ * **Cuantas filas se montan de una vez en una tabla de Cuadros** (#66, AC 3).
+ *
+ * El anexo vehicular de un ejercicio son **decenas de miles de filas** y el snapshot no pagina: la
+ * respuesta las trae todas. Sin esto, `filas.map` las pinta todas —que es lo que hacia la V6
+ * (`c01fe9a:frontend/src/secciones/Tabla.tsx:140`), y nunca se ejercio contra el cuadro de verdad—
+ * y el navegador monta decenas de miles de `<tr>` para ensenar los primeros veinte.
+ *
+ * La paginacion es **de cliente** y no de servidor: las filas ya estan todas delante, asi que
+ * cuantas paginas hay es una cuenta y no una suposicion (`paginaDeLaTabla` de `@kamayuk/ui`). No es
+ * el `tamano` de una peticion: esta operacion no admite `tamano` —no esta en sus parametros
+ * declarados— y mandarselo seria el 422 que `camino-a-la-api` persigue.
+ */
+export const FILAS_POR_PAGINA = 100;
 
 /**
  * `GET /conjuntos?ejercicio=` — que conjunto sellado rige. Acceso `parametros`.
