@@ -2,6 +2,25 @@ import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
 import { afterEach } from 'vitest';
 
+import { requestQueAceptaLaSenalDeOtroRealm } from './verificaciones/request-del-arnes.ts';
+
+/**
+ * **El `Request` del arnes acepta la senal que fabrica el documento** (#90).
+ *
+ * El motivo entero, con las cifras de los dos motores, esta en `verificaciones/request-del-arnes.ts`;
+ * en una linea: bajo Vitest el `Request` es el de `undici` y el `AbortController` es el de jsdom,
+ * y desde **Node 24** `undici` rechaza la senal de otro realm — con lo que muere cada navegacion
+ * de `react-router` y con ella dos pruebas de este arbol y 213 rechazos sin atender.
+ *
+ * El envoltorio **no cambia nada** cuando el entorno acepta la senal —el caso de Node 22, con el
+ * que este arbol corrio hasta #90—: solo replica cuando el de debajo la rechaza, que es el de
+ * Node 24, el que se declara desde #90.
+ *
+ * Va lo primero, antes de montar nada: `react-router` construye su `Request` en la primera
+ * navegacion, y una hoja montada antes de esta linea ya no lo veria.
+ */
+globalThis.Request = requestQueAceptaLaSenalDeOtroRealm(globalThis.Request);
+
 /**
  * Testing Library limpia el DOM entre pruebas por su cuenta solo cuando Vitest corre con
  * `globals: true`. Aqui corre sin globales —los importes explicitos dicen de donde sale
