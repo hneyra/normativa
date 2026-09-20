@@ -65,8 +65,13 @@ import { artboardDeclarado } from './artboards.ts';
  *
  * Los cuatro que quedan son separadores que el propio artboard dibuja —la raya de un dato vacio, la
  * barra de la miga— y el circulo de la cuenta. Traducir una raya no significa nada.
+ *
+ * **Y desde #65, las DOS FLECHAS del mando de orden**, por lo mismo: `↑` y `↓` son
+ * `textos.flechaAscendente` y `flechaDescendente` de `@kamayuk/ui`, y no hay idioma en que se
+ * escriban de otra forma. Lo que SI se traduce de ese boton es su `title` y su `aria-label` —«Ordenar
+ * de mayor a menor»—, que son los que se leen en voz alta, y esos se miden como todo lo demas.
  */
-const NO_ES_TEXTO = new Set(['—', '/', '·', '··', ':']);
+const NO_ES_TEXTO = new Set(['—', '/', '·', '··', ':', '↑', '↓']);
 
 /**
  * Los atributos que LLEVAN TEXTO, que son los que nadie mira.

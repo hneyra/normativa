@@ -149,7 +149,13 @@ async function losDosBien(
 async function pedir(): Promise<LoDeLaPublicacion> {
   const lectura = PUBLICACION.lecturas[0];
   expect(lectura?.clave, 'la hoja dejo de declarar su lectura').toBe(CLAVE_DE_LA_PUBLICACION);
-  return (await lectura?.pedir(new AbortController().signal)) as LoDeLaPublicacion;
+  // La ruta entra por parametro desde #65 —es de donde sale la ventana de una tabla paginada— y
+  // esta hoja no lee ni un sitio de ella: se le pasa vacia, que es lo que `useDatosDeLaHoja` pasa
+  // cuando el destino no declara nada en su `enLaRuta`.
+  return (await lectura?.pedir(new AbortController().signal, {
+    sujeto: null,
+    parametros: {},
+  })) as LoDeLaPublicacion;
 }
 
 /** Y reparte lo que llego, como lo hace el interprete. */

@@ -1,6 +1,7 @@
 import type { Catalogo, ModuloDelCatalogo } from '@kamayuk/shell';
 import { ICONOS, seEscribe, tipoDe, type NombreDeIcono } from '@kamayuk/ui';
 
+import { LA_RUTA_DE_CADA_HOJA } from './datos/lecturas.ts';
 import { t } from './i18n/i18n.ts';
 import { ARBOL, type ClaveDeHoja } from './pantallas/arbol.ts';
 import { pantallaDe } from './pantallas/definiciones/index.ts';
@@ -121,6 +122,14 @@ export const CATALOGO: Catalogo = ARBOL.map(
       get instruccion() {
         return t(pantallaDe(hoja.clave).instruccion);
       },
+      // **Lo que la hoja guarda en la ruta** (#65), DERIVADO y no escrito otra vez aqui. El marco
+      // tira con aviso lo que un destino no declara, asi que una lista paralela dejaria el
+      // `?pagina=` que el mando acaba de escribir fuera de la direccion: el mando se pulsa, la
+      // tabla no se mueve y no hay ningun error. Una hoja sin entrada no declara nada, que es la
+      // direccion de siempre —`#/<slug>`—.
+      ...(LA_RUTA_DE_CADA_HOJA[hoja.clave] === undefined
+        ? {}
+        : { enLaRuta: LA_RUTA_DE_CADA_HOJA[hoja.clave] }),
     })),
   }),
 );

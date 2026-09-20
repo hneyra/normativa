@@ -1,5 +1,5 @@
 import { peldanoDe } from '@kamayuk/sesion';
-import type { DatosDeLaPantalla, EstadoDeUnaLectura } from '@kamayuk/ui';
+import { valorEnLaRuta, type DatosDeLaPantalla, type EstadoDeUnaLectura, type RutaDeLaHoja } from '@kamayuk/ui';
 import { useQueries } from '@tanstack/react-query';
 
 import { hojaDe, type ClaveDeHoja } from '../pantallas/arbol.ts';
@@ -76,15 +76,36 @@ function falloDe(error: unknown, reintentar: (() => void) | undefined): EstadoDe
   };
 }
 
-export function useDatosDeLaHoja(clave: ClaveDeHoja): DatosDeLaPantalla {
+/** Una ruta vacia, para quien monte una hoja fuera del marco: entonces no hay nada elegido. */
+const SIN_RUTA: RutaDeLaHoja = { sujeto: null, parametros: {} };
+
+/**
+ * @param clave la hoja abierta
+ * @param ruta **la de la hoja, entera** (#65): su sujeto —`#/<slug>/<sujeto>`— y sus parametros,
+ *   que es donde el interprete de `@kamayuk/ui` deja la pagina, el tamano y el orden que se
+ *   eligieron. Sale de `useHoja().ruta` del marco, que ya entrega **solo lo que el destino
+ *   declara** (`Destino.enLaRuta`, derivado en `src/catalogo.ts` de `LA_RUTA_DE_CADA_HOJA`).
+ */
+export function useDatosDeLaHoja(
+  clave: ClaveDeHoja,
+  ruta: RutaDeLaHoja = SIN_RUTA,
+): DatosDeLaPantalla {
   const conector = CONECTORES[clave];
   const declaradas = conector?.lecturas ?? [];
 
   const resultados = useQueries({
     queries: declaradas.map((lectura) => ({
-      // La clave lleva la hoja dentro: dos hojas no comparten cache aunque pidan lo mismo.
-      queryKey: lectura.consulta,
-      queryFn: ({ signal }: { signal: AbortSignal }) => lectura.pedir(signal),
+      // La clave lleva la hoja dentro: dos hojas no comparten cache aunque pidan lo mismo. Y
+      // detras, **lo que la lectura lee de la ruta** (#65): cambiar de pagina o de orden tiene que
+      // traer OTRA respuesta. Sin esto, el mando mueve la direccion, `pedir` no se vuelve a llamar
+      // y la tabla dibuja la pagina 0 con el rotulo de la 3 — en verde.
+      queryKey: [
+        ...lectura.consulta,
+        ...(lectura.enLaRuta ?? []).map((sitio) => valorEnLaRuta(ruta, sitio) ?? ''),
+      ],
+      queryFn: ({ signal }: { signal: AbortSignal }) => lectura.pedir(signal, ruta),
+      // Lo que no se puede pedir todavia **no se pide**: ver `enEsperaSi`.
+      enabled: !(lectura.enEsperaSi?.(ruta) ?? false),
       retry: false,
     })),
   });
@@ -112,6 +133,13 @@ export function useDatosDeLaHoja(clave: ClaveDeHoja): DatosDeLaPantalla {
 
   declaradas.forEach((lectura, i) => {
     const resultado = resultados[i];
+    // ANTES que `isPending`, y es lo unico que no se puede reordenar: con `enabled: false` la
+    // consulta se queda «pendiente» para siempre, asi que mirar primero el estado dibujaria barras
+    // eternas donde lo que pasa es que nadie ha elegido nada.
+    if (lectura.enEsperaSi?.(ruta) === true) {
+      lecturas.set(lectura.clave, { estado: 'en-espera' });
+      return;
+    }
     if (resultado === undefined || resultado.isPending) {
       lecturas.set(lectura.clave, { estado: 'pidiendo' });
       return;

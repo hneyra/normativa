@@ -12,8 +12,18 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-import { CLAVE_DEL_ESTADO, CLAVE_DE_LAS_VERSIONES } from '../src/datos/lecturas.ts';
-import type { ConjuntoResource, EjercicioParametrizadoResource, Paginado } from '../src/datos/lecturas.ts';
+import {
+  CLAVE_DEL_CONTENIDO,
+  CLAVE_DEL_ESTADO,
+  CLAVE_DE_LAS_VERSIONES,
+} from '../src/datos/lecturas.ts';
+import type {
+  ConjuntoResource,
+  ContenidoDelConjuntoResource,
+  EjercicioParametrizadoResource,
+  Paginado,
+} from '../src/datos/lecturas.ts';
+import { EDICIONES, FRASES_DE_EDICIONES } from '../src/datos/ediciones.ts';
 import { EJERCICIO_DE_TRABAJO } from '../src/datos/ejercicio.ts';
 import { FRASES_DEL_PANEL, PANEL } from '../src/datos/panel.ts';
 
@@ -205,6 +215,149 @@ describe('AC 6 — la fecha se ensena como la escribio el servidor', () => {
       culpables,
       `El conector del Panel toca el reloj o la zona:\n${culpables.join('\n')}\n\n` +
         '  Lo que llega es un instante escrito por el servidor, y se ensena tal cual (AC 6).',
+    ).toEqual([]);
+  });
+});
+
+/* ── Ediciones: los SEIS nulables que #65 dibuja ───────────────────────────────────────────── */
+
+/**
+ * **Y lo mismo en Ediciones, con seis campos nulables y no dos** (#65, AC 5).
+ *
+ * El criterio los nombra uno a uno: `clave`, `valorNumerico`, `valorTexto`, `vigenciaHasta`,
+ * `fechaSellado` y `usuarioSellado`. Los seis son `@Nullable` en los dos `record` del backend, y
+ * los seis significan algo distinto de un cero:
+ *
+ * · una `clave` vacia es «este tipo tiene un solo valor» —la UIT no lleva clave—;
+ * · `valorNumerico` nulo es «este parametro no es una cifra», y un `0` ahi seria una alicuota del
+ *   cero por ciento;
+ * · `vigenciaHasta` vacio es «sin fecha de fin», que es lo contrario de «vencio hoy».
+ *
+ * **Y `valorNumerico` es una CADENA** (regla 1): llega con todos sus decimales y se dibuja tal
+ * cual. La otra mitad —que no se convierta ni se opere— la vigila la prohibicion
+ * `importe-convertido-a-number` de ESLint sobre la fuente; aqui se mide que lo que sale del
+ * conector es la misma cadena que entro, sin pasar por `Number`.
+ */
+describe('AC 5 de #65 — los seis nulables de Ediciones, y la cifra como cadena', () => {
+  /** La cifra tal como la escribe el backend: `toPlainString()`, con sus seis decimales. */
+  const LA_CIFRA = '5350.000000';
+
+  /** Un conjunto abierto, con sus dos nulos, y un parametro de cada clase. */
+  const CONTENIDO: ContenidoDelConjuntoResource = {
+    conjunto: {
+      id: 41,
+      ejercicio: 2027,
+      version: 2,
+      estado: 'ABIERTO',
+      fechaSellado: null,
+      usuarioSellado: null,
+    },
+    parametros: [
+      {
+        id: 1,
+        tipo: 'UIT',
+        // La UIT no lleva clave, es una cifra y no tiene fecha de fin: tres nulos de tres clases.
+        clave: null,
+        valorNumerico: LA_CIFRA,
+        valorTexto: null,
+        vigenciaDesde: '2026-01-01',
+        vigenciaHasta: null,
+        documentoFuente: 'Decreto Supremo N.° 260-2025-EF',
+      },
+      {
+        id: 2,
+        tipo: 'PLAZO',
+        clave: 'DECLARACION-JURADA',
+        valorNumerico: null,
+        valorTexto: 'ultimo dia habil de febrero',
+        vigenciaDesde: '2004-11-15',
+        vigenciaHasta: '2026-12-31',
+        documentoFuente: 'TUO LTM (D.S. N.° 156-2004-EF)',
+      },
+    ],
+  };
+
+  const reparto = () =>
+    EDICIONES.repartir(new Map<string, unknown>([[CLAVE_DEL_CONTENIDO, CONTENIDO]]));
+
+  it('EL CENTINELA: con el detalle puesto, la ficha y la tabla SI traen sus valores', () => {
+    // Sin esto, un conector que devolviera mapas vacios pasaria toda esta guarda: no habria ningun
+    // cero porque no habria nada que mirar.
+    const lo = reparto();
+    expect(lo.valores?.get('1|0'), 'el identificador').toBe('41');
+    expect(lo.valores?.get('1|1'), 'el ejercicio').toBe('2027');
+    expect(lo.valores?.get('1|3'), 'el estado').toBe('ABIERTO');
+    expect(lo.tablas?.get(CLAVE_DEL_CONTENIDO)?.filas).toHaveLength(2);
+  });
+
+  it('los dos del conjunto ABIERTO se dicen como ausencia, y no se dibujan', () => {
+    const lo = reparto();
+    expect(lo.valores?.has('1|4'), '«Fecha de sellado» no puede tener valor sin sello').toBe(false);
+    expect(lo.valores?.has('1|5'), '«Usuario que selló» tampoco').toBe(false);
+    expect(lo.ausenciaPorCampo?.get('1|4')).toBe(FRASES_DE_EDICIONES.sinSellar);
+    expect(lo.ausenciaPorCampo?.get('1|5')).toBe(FRASES_DE_EDICIONES.sinSellar);
+  });
+
+  it('y los cuatro de las filas van con `texto: null` y su nota, nunca con un cero', () => {
+    const filas = reparto().tablas?.get(CLAVE_DEL_CONTENIDO)?.filas ?? [];
+    const laUit = filas[0];
+    const elPlazo = filas[1];
+
+    // Columnas 1, 3 y 5: «Clave», «Valor de texto» y «Vigente hasta».
+    expect(textoDe(laUit?.celdas[1]), 'la UIT no lleva clave').toBeNull();
+    expect(textoDe(laUit?.celdas[3]), 'la UIT no tiene valor de texto').toBeNull();
+    expect(textoDe(laUit?.celdas[5]), 'la UIT no tiene fecha de fin').toBeNull();
+    // Y la columna 2 en el que no es una cifra.
+    expect(textoDe(elPlazo?.celdas[2]), 'el plazo no es una cifra').toBeNull();
+
+    // Cada una con su POR QUE, y los tres distintos: una raya sola no distingue «este tipo no
+    // lleva clave» de «esta norma no tiene fin» de «esto esta roto».
+    const notas = [1, 3, 5].map((columna) => (laUit?.celdas[columna] as { nota?: string }).nota ?? '');
+    for (const nota of notas) expect(nota.trim().length, 'una celda nula sin motivo').toBeGreaterThan(10);
+    expect(new Set(notas).size, 'las tres celdas nulas dicen lo mismo').toBe(3);
+  });
+
+  it('ninguna celda ni ningun valor de Ediciones es un cero, una raya ni una cadena vacia', () => {
+    const lo = reparto();
+    const sospechosos = [...(lo.valores ?? new Map<string, string>())]
+      .filter(([, valor]) => LO_QUE_NO_PUEDE_SER.includes(valor.trim()))
+      .map(([donde, valor]) => `  ${donde} = «${valor}»`);
+    const sospechosas = (lo.tablas?.get(CLAVE_DEL_CONTENIDO)?.filas ?? []).flatMap((fila, i) =>
+      fila.celdas
+        .map((celda, j) => ({ j, texto: textoDe(celda) }))
+        .filter(({ texto }) => texto !== null && LO_QUE_NO_PUEDE_SER.includes(texto.trim()))
+        .map(({ j, texto }) => `  fila ${String(i)}, columna ${String(j)} = «${String(texto)}»`),
+    );
+
+    expect(
+      [...sospechosos, ...sospechosas],
+      'Hay campos o celdas de Ediciones dibujados con un cero o una raya:\n' +
+        `${[...sospechosos, ...sospechosas].join('\n')}\n\n` +
+        '  Un cero no es la ausencia de un dato: es un dato. En la hoja que ensena los valores con\n' +
+        '  los que se cobra, esa diferencia es la unica que importa.',
+    ).toEqual([]);
+  });
+
+  it('`valorNumerico` sale como la CADENA que llego: ni un decimal de menos', () => {
+    // `Number('5350.000000')` da `5350`, y `String(5350)` da «5350»: pasar por `number` pierde los
+    // decimales **sin fallar**. La celda tiene que ser la misma cadena que el backend escribio.
+    const filas = reparto().tablas?.get(CLAVE_DEL_CONTENIDO)?.filas ?? [];
+    expect(textoDe(filas[0]?.celdas[2])).toBe(LA_CIFRA);
+  });
+
+  it('y el conector de Ediciones tampoco toca `Date` ni ningun formateador de zona (AC 6)', () => {
+    const fuente = readFileSync(join(AQUI, '../src/datos/ediciones.ts'), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, ' ')
+      .replace(/\/\/.*$/gm, ' ');
+    const culpables = [...fuente.matchAll(/\b(new Date|toLocale\w*|Intl\.DateTimeFormat)\b/g)].map(
+      (hallazgo) => `  «${hallazgo[0]}»`,
+    );
+
+    expect(
+      culpables,
+      `El conector de Ediciones toca el reloj o la zona:\n${culpables.join('\n')}\n\n` +
+        '  La fecha de sellado es un instante escrito por el servidor y las dos vigencias son dias:\n' +
+        '  los tres se ensenan tal cual (AC 6).',
     ).toEqual([]);
   });
 });
