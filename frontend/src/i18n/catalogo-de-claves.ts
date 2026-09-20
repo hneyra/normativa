@@ -1,4 +1,5 @@
 import { FRASES_DE_LAS_ACCIONES } from '../acciones.ts';
+import { clavesDeLosCuadros } from '../datos/cuadros.ts';
 import { clavesDelPanel } from '../datos/panel.ts';
 import { clavesDeLaPublicacion } from '../datos/publicacion.ts';
 import { FRASES_DE_LA_MARCA } from '../marca.ts';
@@ -113,6 +114,11 @@ export function catalogoDeClaves(): readonly string[] {
     // lista y por que no se puede guardar. Viajan por `valores`, por celdas y por `nombrados`, que
     // el interprete no traduce, asi que se traducen donde se componen.
     ...clavesDeLaPublicacion(),
+    // Y las de Cuadros (#66): los cuatro desenlaces de cada cuadro, el tramo abierto —«Sin tope» y
+    // «Más de N años»— con sus notas, y lo que se dice de un documento fuente que no cuadra o de un
+    // valor fuera del dominio de la base. Viajan por `valores` y por celdas, que el interprete no
+    // traduce, asi que se traducen donde se componen.
+    ...clavesDeLosCuadros(),
     ...clavesDelMarco(),
     ...clavesDelInterprete(),
     ...clavesDelMando(),

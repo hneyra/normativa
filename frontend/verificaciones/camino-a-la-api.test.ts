@@ -16,12 +16,16 @@ import {
   CAMPOS_DEL_ESTADO,
   CAMPOS_DEL_PAGINADO,
   CAMPOS_DEL_SNAPSHOT,
+  CLAVES_DE_LOS_CUADROS,
   CLAVE_DEL_ESTADO,
   CLAVE_DE_LAS_LISTAS,
   CLAVE_DE_LAS_VERSIONES,
   CLAVE_DE_LA_PUBLICACION,
   CLAVE_DE_LOS_CONSUMIDORES,
+  CLAVE_DE_LOS_CUADROS,
   CONJUNTO_VIGENTE,
+  FILAS_POR_PAGINA,
+  paginaDe,
   DATO_DEL_IMPEDIMENTO,
   DATO_DEL_TONO,
   DIRECCION_DEL_LISTADO,
@@ -516,6 +520,44 @@ describe('AC 3 — el arbol, y lo que el Java exige para cada operacion', () => 
     expect(etag !== undefined && 'insignia' in etag ? etag.insignia : undefined).toMatchObject({
       tonoDesde: DATO_DEL_TONO,
     });
+  });
+
+  it('y las de Cuadros: una lectura, tres tablas y su pagina, escritas A MANO en los dos lados (#66)', () => {
+    // Misma costura y mismo motivo que la de arriba: esa definicion **no importa `src/datos/`**
+    // —arrastraria `src/sesion.ts`, que lee `window` al cargarse—, asi que las claves se escriben
+    // como literales en los dos lados y esto es lo que impide que se separen.
+    const bloques = PANTALLAS['nor-cuadros'].bloques;
+
+    // Los TRES bloques con tabla nombran la MISMA lectura: las tres peticiones de esta hoja van
+    // detras del mismo `@RequiereAcceso`, asi que no hay ninguna que pueda contestar 403 mientras
+    // otra contesta 200 (medido arriba, en los accesos del Java).
+    const conTabla = bloques.filter((bloque) => bloque.tabla !== undefined);
+    expect(conTabla, 'la hoja de Cuadros dejo de declarar sus tres tablas').toHaveLength(3);
+    expect(conTabla.map((bloque) => bloque.lectura?.clave)).toEqual(
+      conTabla.map(() => CLAVE_DE_LOS_CUADROS),
+    );
+    expect(conTabla.map((bloque) => bloque.tabla?.clave)).toEqual([...CLAVES_DE_LOS_CUADROS]);
+
+    // Y la paginacion es la de CLIENTE, con un sitio por tabla derivado de su clave. La de
+    // servidor seria un 422: `GET /conjuntos/{id}/snapshot` no declara `pagina` ni `tamano` —solo
+    // `ambito`— y `GuardiaDeParametros` rechaza todo nombre que la firma no lea.
+    for (const bloque of conTabla) {
+      const clave = bloque.tabla?.clave ?? '';
+      expect(bloque.tabla?.paginacion?.en, `«${clave}» no pagina en el cliente`).toBe('cliente');
+      expect(bloque.tabla?.paginacion?.enLaRuta).toBe(paginaDe(clave));
+      expect(bloque.tabla?.paginacion?.tamano).toBe(FILAS_POR_PAGINA);
+      // Y ninguna tabla ofrece ordenar: el orden de estas filas lo fija el `ORDER BY` total de las
+      // tres consultas del backend, y un `ordenarPor` sobre esta operacion es un 422.
+      expect(
+        'orden' in (bloque.tabla ?? {}),
+        `«${clave}» ofrece ordenar en una operacion que no admite «ordenarPor»`,
+      ).toBe(false);
+    }
+
+    // El selector de ambito escribe el nombre del parametro de la consulta bajo su etiqueta (H23).
+    // Es el que viaja en `?ambito=`, y el backend no lo lee en minusculas.
+    expect(bloques[0]?.campos[0]?.campo).toBe('ambito');
+    expect(Object.keys(SNAPSHOT_POR_AMBITO.VALUACION.parametros)).toEqual(['ambito']);
   });
 });
 
