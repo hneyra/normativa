@@ -5,6 +5,7 @@ import {
   conElEstadoDelEjercicio,
   conLaPuertaAgotada,
   conLosCuadros,
+  conLoDeEdiciones,
   erroresDeConsola,
   laConsolaQuedoLimpia,
 } from './instalacion.ts';
@@ -140,6 +141,12 @@ test('ninguna tabla desplaza la PAGINA de lado', async ({ page }) => {
   // found» sobre `[data-slot="tabla"]` al llegar a «cuadros».
   await conLosCuadros(page);
   await page.setViewportSize({ width: 900, height: 900 });
+  // **Las lecturas de Ediciones hay que contestarlas desde #65**, y no es un apano: sus dos
+  // bloques declaran su `lectura`, asi que con la peticion caida el interprete dibuja el fallo EN
+  // EL SITIO DEL CUERPO y esa hoja se queda sin ninguna tabla que medir. Lo que este caso mide es
+  // una tabla ancha dentro de una pagina estrecha, y para eso tiene que haber filas. Las otras
+  // tres hojas siguen igual: sus tablas se dibujan con su ausencia debajo.
+  await conLoDeEdiciones(page);
   // Las cuatro hojas llevan tabla: Panel y Cuadros tres, Ediciones y Publicacion dos.
   for (const slug of ['panel', 'ediciones', 'cuadros', 'publicacion']) {
     await abrir(page, slug);

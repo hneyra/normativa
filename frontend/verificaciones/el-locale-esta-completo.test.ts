@@ -114,8 +114,15 @@ const PLURALES: Readonly<Record<string, string>> = {
  * El suelo es el 80 % de lo medido: por debajo de eso no es una frase que se quito, es una fuente
  * entera que dejo de leerse. Con 10 fuentes derivadas, la mas pequena —las dos ausencias— ya son mas
  * del 1 %, y las dos mayores —las definiciones y el marco— pasan del 20 % cada una.
+ *
+ * **La cuenta subio de 227 a 333 el 2026-09-20**, con las dos hojas de la ola 5 que se conectaron
+ * ese dia: #66 (Cuadros) y #65 (Ediciones). Lo que la subio esta medido: las quince palabras que el
+ * interprete dice al dibujar los mandos de una tabla (`textosDelInterprete.ts`), las que componen
+ * los dos conectores nuevos, y lo que sus definiciones ganan —los rotulos del orden, la columna de
+ * acciones, los vacios y la espera del detalle—. Se vuelve a fijar el suelo en vez de dejarlo en la
+ * cuenta vieja: con 227 sobre 333, este centinela dejaria pasar que se perdiera una fuente entera.
  */
-const CLAVES_AL_MEDIRLO = { cuantas: 227, el: '2026-09-16' } as const;
+const CLAVES_AL_MEDIRLO = { cuantas: 333, el: '2026-09-20' } as const;
 
 /** El suelo del centinela. Ver {@link CLAVES_AL_MEDIRLO}. */
 const AL_MENOS = Math.floor(CLAVES_AL_MEDIRLO.cuantas * 0.8);

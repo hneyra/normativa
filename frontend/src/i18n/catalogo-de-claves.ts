@@ -1,5 +1,6 @@
 import { FRASES_DE_LAS_ACCIONES } from '../acciones.ts';
 import { clavesDeLosCuadros } from '../datos/cuadros.ts';
+import { clavesDeEdiciones } from '../datos/ediciones.ts';
 import { clavesDelPanel } from '../datos/panel.ts';
 import { clavesDeLaPublicacion } from '../datos/publicacion.ts';
 import { FRASES_DE_LA_MARCA } from '../marca.ts';
@@ -62,6 +63,11 @@ function deLasPantallas(): readonly string[] {
     salida.push(pantalla.instruccion);
     for (const bloque of pantalla.bloques) {
       salida.push(bloque.titulo, bloque.nota);
+      // Lo que se dice mientras falta el sujeto para poder pedir (#65): «Elija una edicion de la
+      // lista…». Es de la HOJA y no del saco del interprete —dice que hay que elegir y donde—, y
+      // por eso viaja en la definicion y se traduce como el resto. Solo si es una cadena: un
+      // `Texto` con un dato dentro nombra un dato, y un dato no se traduce.
+      if (typeof bloque.lectura?.espera === 'string') salida.push(bloque.lectura.espera);
       for (const campo of bloque.campos) {
         salida.push(campo.etiqueta);
         if ('opciones' in campo) salida.push(...campo.opciones);
@@ -85,6 +91,31 @@ function deLasPantallas(): readonly string[] {
       // FRASE de la definicion, como la nota, y hasta ahora ninguna la traia: sin esto llegaria al
       // DOM sin traducir y `todo-el-texto-se-traduce` lo diria, que es como se encontro.
       if (tabla.vacio !== undefined) salida.push(tabla.vacio);
+      // **Lo que los mandos de #65 anaden a la tabla.** Tres cosas, y ninguna la ve el extractor:
+      //
+      //   · los ROTULOS de los campos de orden —el `valor` no: es lo que viaja al backend, y
+      //     cambiar de idioma no puede cambiar lo que se pide;
+      //   · el rotulo de la columna de acciones, lo que se lee en la fila que no ofrece ninguna y
+      //     el rotulo de cada accion —solo si es una cadena, por lo mismo que la espera—;
+      //   · el `vacio` con su salida, si alguna tabla lo trae.
+      //
+      // El `campo` y el `dominio` de una columna NO entran, y es deliberado: son el nombre del
+      // campo del contrato y sus valores admitidos —`ejercicio`, `ABIERTO · SELLADO`—, o sea
+      // codigo. Traducirlos diria que el JSON tiene otro campo. Es la misma frontera que el nombre
+      // de un sistema en la tabla de consumidores de Publicacion.
+      for (const campo of tabla.orden?.campos ?? []) salida.push(campo.rotulo);
+      const porFila = tabla.accionesPorFila;
+      if (porFila !== undefined) {
+        salida.push(porFila.columna, porFila.sinAcciones);
+        for (const accion of porFila.acciones) {
+          if (typeof accion.rotulo === 'string') salida.push(accion.rotulo);
+        }
+      }
+      const conSalida = tabla.vacioConSalida;
+      if (conSalida !== undefined) {
+        salida.push(conSalida.titulo);
+        if (conSalida.texto !== undefined) salida.push(conSalida.texto);
+      }
     }
   }
   return salida;
@@ -110,6 +141,10 @@ export function catalogoDeClaves(): readonly string[] {
     // Y las que compone el conector del Panel, que son texto de este sistema aunque viajen por
     // `valores` —que el interprete no traduce— y por eso pasan por `t()` donde se componen.
     ...clavesDelPanel(),
+    // Y las de Ediciones (#65): el conteo de la ventana, los motivos de cada celda nula y lo que
+    // esta hoja SI lee y todavia no hace. Mismo camino: viajan por celdas y por `valores`, que el
+    // interprete no traduce, asi que se traducen donde se componen.
+    ...clavesDeEdiciones(),
     // Y las de Publicacion (#67): el veredicto de la huella, lo de la cache, los motivos de cada
     // lista y por que no se puede guardar. Viajan por `valores`, por celdas y por `nombrados`, que
     // el interprete no traduce, asi que se traducen donde se componen.

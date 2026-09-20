@@ -597,7 +597,7 @@ const PANTALLAS = {
         ['ESPECTACULO_ALICUOTA', 'OTROS', '10', 'Otros espectáculos públicos; 10%', '2007-12-20', '—', 'TUO LTM art. 57 (Ley N.° 29168)'],
         ['FACTOR_OFICIALIZACION', '—', '0.68', 'FACTOR DE OFICIALIZACIÓN Fo = 0,68', '2026-01-01', '2026-12-31', 'Resolución Ministerial N.° 277-2025-VIVIENDA'],
         ['PORCENTAJE_DE_ACTUALIZACION', '—', '0', 'En el ejercicio 2026 se publicaron los aranceles de terrenos y los precios unitarios oficiales de construcción; el supuesto del art. 12 no se cumple y no hay actualización que aplicar: 0', '2026-01-01', '2026-12-31', 'TUO LTM (D.S. N.° 156-2004-EF), art. 12']],
-        n: 'La clave va vacía cuando el tipo tiene un solo valor —la UIT no lleva clave; TRAMO_PREDIAL lleva tres— y «Vigente hasta» vacío no es un olvido: es una norma sin fecha de fin. Donde no hay dato va —, no una celda en blanco. Las filas llegan del snapshot del conjunto, y su huella se comprueba antes de usarlas.' }],
+        n: 'La clave va vacía cuando el tipo tiene un solo valor —la UIT no lleva clave; TRAMO_PREDIAL lleva tres— y «Vigente hasta» vacío no es un olvido: es una norma sin fecha de fin. Donde no hay dato va —, no una celda en blanco. Las filas son el contenido del conjunto y se leen por la misma ruta esté abierto o sellado.' }],
     ['Abrir versión', 'Una versión nueva del ejercicio, para componerla desde cero o para corregir lo que un conjunto ya sellado no admite. La versión NO se recibe: se calcula. Quien corrige un conjunto sellado no tiene por qué saber cuántas versiones hubo antes, y dejárselo elegir es la forma de acabar con dos versiones 2.', [
       ['Ejercicio', 's', ['', '2026', '2027', '2028']],
       ['Versión que se asignará', 'r', 'La calcula el sistema al guardar'],

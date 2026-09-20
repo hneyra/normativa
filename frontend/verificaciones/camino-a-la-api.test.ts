@@ -13,11 +13,15 @@ import {
   AMBITOS,
   CAMPOS_DEL_CONJUNTO,
   CAMPOS_DEL_CONJUNTO_VIGENTE,
+  CAMPOS_DEL_CONTENIDO,
   CAMPOS_DEL_ESTADO,
   CAMPOS_DEL_PAGINADO,
+  CAMPOS_DEL_PARAMETRO,
   CAMPOS_DEL_SNAPSHOT,
   CLAVES_DE_LOS_CUADROS,
   CLAVE_DEL_ESTADO,
+  CLAVE_DEL_CONTENIDO,
+  CLAVE_DE_LAS_EDICIONES,
   CLAVE_DE_LAS_LISTAS,
   CLAVE_DE_LAS_VERSIONES,
   CLAVE_DE_LA_PUBLICACION,
@@ -41,6 +45,7 @@ import {
 import { YA_SERVIDAS } from '../src/datos/servidas.ts';
 import { ARBOL } from '../src/pantallas/arbol.ts';
 import { PANTALLAS } from '../src/pantallas/definiciones/index.ts';
+import type { Pantalla } from '../src/pantallas/tipos.ts';
 
 /**
  * **El camino a la API: lo que esta interfaz pide contra lo que el backend PUBLICA** (#63, AC 3).
@@ -156,12 +161,16 @@ describe('AC 3 — lo que se pide es una operacion del contrato', () => {
     expect(Object.keys(parametros()).filter((c) => c !== NOTA).sort()).toEqual(publicadas);
     // Y que `src/datos/**` pida algo: con `PETICIONES` vacia no habria nada que contrastar.
     //
-    // **CINCO desde #67, y no cuatro**: las dos del Panel, la del conjunto vigente y el snapshot
-    // **una vez por ambito**. El snapshot se declara dos veces a proposito —el ambito decide que
-    // cuadros vienen dentro y con ellos la huella—, asi que la cuenta no es el numero de
-    // operaciones publicadas sino el de peticiones que este sistema compone.
+    // **SIETE desde #65, y no cinco**: las dos del Panel, la del conjunto vigente, el snapshot
+    // **una vez por ambito** y las dos de Ediciones —la pagina de conjuntos y el contenido del
+    // elegido—. El snapshot se declara dos veces a proposito —el ambito decide que cuadros vienen
+    // dentro y con ellos la huella—, y el listado tambien: el del Panel pide 500 de un tiron para
+    // filtrar por el ejercicio de trabajo y el de Ediciones es una VENTANA que se mueve, asi que
+    // fundirlos haria que el Panel cambiara de pagina cuando alguien pagina en Ediciones. La
+    // cuenta no es el numero de operaciones publicadas sino el de peticiones que este sistema
+    // compone.
     expect(PETICIONES.length, '`PETICIONES` esta vacia: esta guarda se quedaria sin sujeto').toBe(
-      2 + 1 + AMBITOS.length,
+      2 + 1 + AMBITOS.length + 2,
     );
   });
 
@@ -367,6 +376,36 @@ describe('AC 3 — lo que la interfaz LEE es lo que el backend publica, campo a 
     }
   });
 
+  it('`GET /conjuntos/{id}/parametros` publica el conjunto Y sus parametros (#65)', () => {
+    // Los dos campos de arriba, y que el conjunto sea **el mismo recurso** que la fila del
+    // listado: el detalle dibuja sus seis campos con el mismo lector, y dos formas del mismo
+    // recurso divergen justo en el campo que una pantalla lee (ADR-0043 §1).
+    const forma = formas()['GET /conjuntos/{id}/parametros'] as Record<string, unknown>;
+
+    expect(Object.keys(forma).sort()).toEqual(Object.keys(CAMPOS_DEL_CONTENIDO).sort());
+    expect(
+      Object.keys(forma['conjunto'] as object).sort(),
+      'El conjunto del detalle dejo de ser el `ConjuntoResource` del listado.',
+    ).toEqual(Object.keys(CAMPOS_DEL_CONJUNTO).sort());
+    expect(Array.isArray(forma['parametros']), '«parametros» no se publica como lista').toBe(true);
+  });
+
+  it('y su fila tiene los OCHO campos que `ParametroResource` declara, con la cifra en TEXTO', () => {
+    const forma = formas()['GET /conjuntos/{id}/parametros'] as Record<string, unknown>;
+    const fila = (forma['parametros'] as readonly unknown[])[0] as Record<string, unknown>;
+
+    expect(Object.keys(fila).sort()).toEqual(Object.keys(CAMPOS_DEL_PARAMETRO).sort());
+    // **`valorNumerico` es «texto» y no «decimal»**, y es la regla 1 dicha en el contrato: el
+    // backend lo serializa con `toPlainString()` porque un numero JSON lo lee el navegador como
+    // `double` y lo redondea. El dia que el backend lo publique como numero, esta linea se pone
+    // roja ANTES de que una interfaz pinte un importe con el centimo perdido.
+    expect(fila['valorNumerico']).toBe('texto');
+    // Y las dos fechas de la vigencia son texto, no instantes: son dias, y un instante las
+    // moveria de dia en la zona del puesto.
+    expect(fila['vigenciaDesde']).toBe('texto');
+    expect(fila['vigenciaHasta']).toBe('texto');
+  });
+
   it('`fechaSellado` se publica como INSTANTE, y por eso se ensena tal cual', () => {
     // No es un detalle de tipos: es el AC 6. Un instante lo escribe el servidor en su texto ISO, y
     // pasarlo por `Date` lo moveria a la zona del puesto — el mismo sello leido con dos fechas
@@ -489,6 +528,33 @@ describe('AC 3 — el arbol, y lo que el Java exige para cada operacion', () => 
     expect(bloque?.lectura?.clave).toBe(CLAVE_DEL_ESTADO);
     expect(bloque?.fallosDe).toEqual([CLAVE_DE_LAS_VERSIONES]);
     expect(bloque?.tabla?.clave).toBe(CLAVE_DE_LAS_VERSIONES);
+  });
+
+  it('y las de Ediciones: dos bloques, dos lecturas, y las tablas con su clave (#65)', () => {
+    // La definicion de esta hoja **tampoco importa `src/datos/`** —arrastraria `src/sesion.ts`,
+    // que lee `window` al cargarse, y esta guarda corre sin DOM—, asi que las cuatro claves se
+    // escriben como literales en los dos lados. Esto es lo que impide que se separen: una clave
+    // mal escrita no da error, da una tabla sin filas y un aviso de «lectura sin estado».
+    //
+    // Y son DOS lecturas y no una porque fallan por su cuenta: un 404 del detalle no puede vaciar
+    // la lista, y una averia de la lista no puede borrar el detalle (AC 4). Que cada bloque
+    // declare la SUYA es lo que hace que cada fallo se dibuje en su sitio.
+    // Anotado, como en `catalogo-de-claves.ts`: `PANTALLAS` es un `satisfies` de cuatro formas
+    // distintas, y sin la anotacion el compilador estrecha cada bloque a su literal —y uno que no
+    // declara `fallosDe` no tiene esa propiedad ni para preguntar por ella—.
+    const bloques: Pantalla['bloques'] = PANTALLAS['nor-ediciones'].bloques;
+
+    expect(bloques[0]?.lectura?.clave).toBe(CLAVE_DE_LAS_EDICIONES);
+    expect(bloques[0]?.tabla?.clave).toBe(CLAVE_DE_LAS_EDICIONES);
+    expect(bloques[1]?.lectura?.clave).toBe(CLAVE_DEL_CONTENIDO);
+    expect(bloques[1]?.tabla?.clave).toBe(CLAVE_DEL_CONTENIDO);
+    // Y ninguno de los dos declara `fallosDe`: decir el fallo del vecino ENCIMA del cuerpo propio
+    // es lo que hace el Panel, donde las dos lecturas piden autorizaciones distintas. Aqui piden la
+    // misma, y taparse mutuamente seria justo lo contrario de «por bloque».
+    expect(bloques[0]?.fallosDe).toBeUndefined();
+    expect(bloques[1]?.fallosDe).toBeUndefined();
+    // La espera del detalle la dice la HOJA y no el saco del interprete: «Elija una edicion…».
+    expect(typeof bloques[1]?.lectura?.espera).toBe('string');
   });
 
   it('y las de Publicacion tambien: su definicion escribe las claves A MANO (#67)', () => {

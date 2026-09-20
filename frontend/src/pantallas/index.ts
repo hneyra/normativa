@@ -1,5 +1,5 @@
-import type { HojaDelCatalogo } from '@kamayuk/shell';
-import { Pantalla, type DatosDeLaPantalla } from '@kamayuk/ui';
+import { useHoja, useNavegacion, type HojaDelCatalogo } from '@kamayuk/shell';
+import { Pantalla, type DatosDeLaPantalla, type RutaDeLaHoja } from '@kamayuk/ui';
 import { createElement, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -71,7 +71,7 @@ import type { Pantalla as DefinicionDeUnaPantalla } from './tipos.ts';
  */
 export function crearPantalla(
   definicion: (clave: ClaveDeHoja) => DefinicionDeUnaPantalla,
-  usarLosDatos: (clave: ClaveDeHoja) => DatosDeLaPantalla = useDatosDeLaHoja,
+  usarLosDatos: (clave: ClaveDeHoja, ruta?: RutaDeLaHoja) => DatosDeLaPantalla = useDatosDeLaHoja,
 ): (hoja: HojaDelCatalogo) => ReactNode {
   return function pantalla(hoja: HojaDelCatalogo): ReactNode {
     const clave = hoja.destino.clave as ClaveDeHoja;
@@ -127,12 +127,15 @@ function CuerpoDeLaHoja({
 }: {
   readonly clave: ClaveDeHoja;
   readonly definicion: DefinicionDeUnaPantalla;
-  readonly usarLosDatos: (clave: ClaveDeHoja) => DatosDeLaPantalla;
+  readonly usarLosDatos: (clave: ClaveDeHoja, ruta?: RutaDeLaHoja) => DatosDeLaPantalla;
 }) {
   const { t } = useTranslation();
+  // La ruta de la hoja y como ir a otra, si hay marco alrededor (#65). Ver `siLaHay`.
+  const hoja = siLaHay(useHoja);
+  const navegacion = siLaHay(useNavegacion);
   // Se llama incondicionalmente y en el mismo sitio de cada pintada: es un gancho, y la `key` por
   // destino hace que cambiar de hoja desmonte en vez de reconciliar.
-  const datos = usarLosDatos(clave);
+  const datos = usarLosDatos(clave, hoja?.ruta);
 
   return createElement(Pantalla, {
     definicion,
@@ -141,7 +144,45 @@ function CuerpoDeLaHoja({
     traducir: (texto: string) => t(texto),
     textos: TEXTOS_DEL_INTERPRETE,
     alHacer: LO_QUE_LAS_HOJAS_HACEN,
+    // **La ruta, para las dos direcciones** (#65): el interprete lee de ella que pagina y que
+    // orden se eligieron —y escribe en ella cuando se pulsa un mando—, y de ahi los saca
+    // `useDatosDeLaHoja` para pedir. Sin pasarla, los mandos guardarian su estado dentro de la
+    // tabla: se moverian, nadie volveria a pedir y la direccion no se podria compartir.
+    ...(hoja === undefined ? {} : { hoja }),
+    // Y como ir a otra hoja —o a esta con otro sujeto—, que es lo que hace la accion de cada fila
+    // de Ediciones. Sin ella el interprete dibuja esos botones **impedidos con su motivo**, nunca
+    // mudos.
+    ...(navegacion === undefined ? {} : { navegacion }),
   });
+}
+
+/**
+ * Lo que un gancho del marco da, **o nada si no hay marco alrededor** (#65).
+ *
+ * <h2>Por que se pregunta y se acepta el no</h2>
+ *
+ * `useHoja()` y `useNavegacion()` de `@kamayuk/shell` **revientan** fuera del `<Armazon>`, y lo
+ * hacen a proposito: devolver una hoja vacia dejaria el aviso de cambios sin guardar sin disparar
+ * nunca, y una navegacion que no navega dejaria botones que no hacen nada al pulsarlos. Esa
+ * decision es correcta para quien los llama de verdad.
+ *
+ * Pero **esta costura se monta tambien fuera del armazon**, y no por descuido: el arnes de
+ * `verificaciones/la-hoja-no-hereda-lo-tecleado.test.tsx` dibuja `pantalla(hoja)` en un `<div>`
+ * suelto **precisamente para medir la `key` de este archivo sin la que `@kamayuk/shell` pone por su
+ * cuenta**. Envolverlo en un `<Armazon>` para que los ganchos no revienten mediria la otra mitad,
+ * que ya mide su segundo caso.
+ *
+ * El `try` no salta el gancho: `useContext` se llama SIEMPRE y en el mismo orden —esta dentro de
+ * `useHoja`, antes del `throw`—, asi que lo que se atrapa es el error que la libreria lanza
+ * despues de leer el contexto, no una llamada que no ocurrio. Lo que cambia entre montar dentro y
+ * fuera del marco es el valor, nunca el numero de ganchos.
+ */
+function siLaHay<T>(gancho: () => T): T | undefined {
+  try {
+    return gancho();
+  } catch {
+    return undefined;
+  }
 }
 
 /**

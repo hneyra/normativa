@@ -158,12 +158,35 @@ function formaDe(operacion: string): Record<string, unknown> {
   return forma as Record<string, unknown>;
 }
 
-/** Un cuerpo doblado, comprobado CAMPO A CAMPO contra la forma que el contrato publica. */
-function comoElContrato<T extends Record<string, unknown>>(operacion: string, cuerpo: T): T {
+/**
+ * Un cuerpo doblado, comprobado CAMPO A CAMPO contra la forma que el contrato publica.
+ *
+ * @param dentro el nombre de una LISTA de la forma, cuando lo que se comprueba es una de sus filas
+ *   (#65): `contenido` en una respuesta paginada, `parametros` en el contenido de un conjunto. Sin
+ *   el, se compara el cuerpo entero contra la forma de la operacion.
+ */
+function comoElContrato<T extends Record<string, unknown>>(
+  operacion: string,
+  cuerpo: T,
+  dentro?: string,
+): T {
+  const forma = formaDe(operacion);
+  const suya =
+    dentro === undefined
+      ? forma
+      : ((forma[dentro] as readonly unknown[] | undefined)?.[0] as Record<string, unknown> | undefined);
+  if (suya === undefined) {
+    throw new Error(
+      `El contrato no publica una lista «${String(dentro)}» dentro de «${operacion}», o la publica ` +
+        'vacia. Sin una fila de ejemplo no hay campos que comparar, y este arnes doblaria un cuerpo ' +
+        'que nada comprueba.',
+    );
+  }
   expect(
     Object.keys(cuerpo).sort(),
-    `El cuerpo doblado de «${operacion}» dejo de cuadrar con la forma publicada.`,
-  ).toEqual(Object.keys(formaDe(operacion)).sort());
+    `El cuerpo doblado de «${operacion}»${dentro === undefined ? '' : ` · ${dentro}`} dejo de ` +
+      'cuadrar con la forma publicada.',
+  ).toEqual(Object.keys(suya).sort());
   return cuerpo;
 }
 
@@ -445,6 +468,169 @@ export async function conLosCuadros(
     });
   });
   return { peticiones, cuerpos };
+}
+
+/* ── Lo que Ediciones pide (#65) ───────────────────────────────────────────────────────────── */
+
+/**
+ * La lectura del CONTENIDO de un conjunto: `GET /conjuntos/{id}/parametros` (#56).
+ *
+ * Sin `?` al final, a diferencia de las demas: esta operacion **no declara ni un parametro de
+ * consulta**, asi que la ruta termina en `/parametros`. Y `\d+` y no `.+`: lo que va en el camino
+ * es el identificador, y una ruta con `{id}` literal dentro —el sujeto que no se sustituyo— no
+ * casa aqui y se ve como la peticion sin contestar que es.
+ */
+export const LECTURA_DEL_CONTENIDO = /\/normativa\/api\/v1\/conjuntos\/\d+\/parametros(\?|$)/;
+
+/** Cuantos conjuntos tiene el padron que este arnes sirve. Mas de una pagina, a proposito. */
+export const CUANTAS_EDICIONES = 54;
+
+/**
+ * Una pagina de `GET /seguridad/parametros`, **compuesta con lo que la peticion pidio**.
+ *
+ * No es una respuesta fija: el arnes pagina y ordena de verdad sobre un padron de
+ * {@link CUANTAS_EDICIONES} filas, porque lo que hay que medir es que la pagina 2 traiga otras
+ * filas que la 1. Con un cuerpo fijo, pulsar «Siguiente» daria lo mismo y la prueba pasaria con
+ * una paginacion que no pagina, que es el defecto que su guarda de jsdom existe para cazar.
+ *
+ * El envoltorio se comprueba **campo a campo contra la forma publicada** —igual que los de
+ * Publicacion—, y las filas tambien: uno de mas o de menos pone rojo el arnes en vez de pasar en
+ * silencio.
+ */
+export function laPaginaDeEdiciones(url: string): Record<string, unknown> {
+  const consulta = new URL(url).searchParams;
+  const tamano = Number(consulta.get('tamano') ?? '20');
+  const pagina = Number(consulta.get('pagina') ?? '0');
+  const descendente = consulta.get('direccion') === 'DESCENDENTE';
+  const desde = pagina * tamano;
+
+  const todas = Array.from({ length: CUANTAS_EDICIONES }, (_, i) => unaEdicion(i + 1));
+  const ordenadas = descendente ? [...todas].reverse() : todas;
+  const contenido = ordenadas.slice(desde, desde + tamano).map((fila) => comoElContrato(
+    'GET /seguridad/parametros',
+    fila,
+    'contenido',
+  ));
+
+  return comoElContrato('GET /seguridad/parametros', {
+    contenido,
+    pagina,
+    tamano,
+    totalElementos: CUANTAS_EDICIONES,
+    totalPaginas: Math.ceil(CUANTAS_EDICIONES / tamano),
+    hayMas: desde + tamano < CUANTAS_EDICIONES,
+  });
+}
+
+/**
+ * Una fila del listado. Las IMPARES van SIN sellar, con sus dos nulos dentro.
+ *
+ * Los nulos no son decoracion: son el AC 5 —«un nulo no es un cero»— y la unica forma de medir en
+ * un navegador de verdad que la celda dice la palabra y no un `0` ni un blanco.
+ */
+export function unaEdicion(id: number): Record<string, unknown> {
+  const sellado = id % 2 === 0;
+  return {
+    id,
+    // Dos ejercicios, para que ordenar por `ejercicio` signifique algo.
+    ejercicio: 2026 + (id % 2),
+    version: id,
+    estado: sellado ? 'SELLADO' : 'ABIERTO',
+    fechaSellado: sellado ? '2026-09-06T14:12:03.512Z' : null,
+    usuarioSellado: sellado ? 'hneyra' : null,
+  };
+}
+
+/**
+ * El contenido de un conjunto: `GET /conjuntos/{id}/parametros`.
+ *
+ * Con **los seis campos nulables repartidos entre sus dos filas** —la UIT no lleva clave, no tiene
+ * valor de texto y no tiene fecha de fin; el plazo no es una cifra— y con la cifra **como cadena,
+ * con sus seis decimales**: es lo que el backend escribe con `toPlainString()`, y lo que hace
+ * visible que la interfaz no la pasa por `Number` (`5350.000000` volveria «5350»).
+ */
+export function elContenidoDelConjunto(id: number): Record<string, unknown> {
+  return comoElContrato('GET /conjuntos/{id}/parametros', {
+    conjunto: unaEdicion(id),
+    parametros: [
+      comoElContrato(
+        'GET /conjuntos/{id}/parametros',
+        {
+          id: 1,
+          tipo: 'UIT',
+          clave: null,
+          valorNumerico: '5350.000000',
+          valorTexto: null,
+          vigenciaDesde: '2026-01-01',
+          vigenciaHasta: null,
+          documentoFuente: 'Decreto Supremo N.° 260-2025-EF',
+        },
+        'parametros',
+      ),
+      comoElContrato(
+        'GET /conjuntos/{id}/parametros',
+        {
+          id: 2,
+          tipo: 'PLAZO',
+          clave: 'DECLARACION-JURADA',
+          valorNumerico: null,
+          valorTexto: 'último día hábil de febrero',
+          vigenciaDesde: '2004-11-15',
+          vigenciaHasta: '2026-12-31',
+          documentoFuente: 'TUO LTM (D.S. N.° 156-2004-EF)',
+        },
+        'parametros',
+      ),
+    ],
+  });
+}
+
+/** Como se contesta a una de las dos lecturas: con su cuerpo, o con un estado que no es 200. */
+export interface LoQueSeContesta {
+  readonly estado?: number;
+  readonly cuerpo?: unknown;
+}
+
+/**
+ * Deja contestadas las dos lecturas de Ediciones, y **apunta todas las URL que se pidieron**.
+ *
+ * El registro de URL es la mitad del criterio: lo que hay que poder afirmar es que el listado lleva
+ * exactamente los cuatro nombres del dialecto, que cambiar de pagina vuelve a pedir **una** vez, y
+ * que elegir una fila pide `/parametros` y **no** `/snapshot`.
+ */
+export async function conLoDeEdiciones(
+  pagina: Page,
+  cambios: { readonly listado?: LoQueSeContesta; readonly contenido?: LoQueSeContesta } = {},
+): Promise<{ readonly peticiones: string[] }> {
+  const peticiones: string[] = [];
+  // **Se apunta lo que SALE, no lo que se contesta.** Con un apunte por manejador de ruta, una
+  // peticion que la hoja no deberia hacer —el snapshot para el detalle, por ejemplo— no la recoge
+  // nadie: la contesta el 404 general de `conLaPuertaAgotada` y el rojo diria «no se pidio lo que
+  // esperaba» en vez de NOMBRAR la URL que se pidio. Escuchando la peticion, la dice.
+  pagina.on('request', (peticion) => {
+    const url = peticion.url();
+    if (url.includes('/normativa/api/v1/')) peticiones.push(url);
+  });
+  await pagina.route(LECTURA_DEL_LISTADO, (ruta) => {
+    const url = ruta.request().url();
+    const suyo = cambios.listado ?? {};
+    return ruta.fulfill({
+      status: suyo.estado ?? 200,
+      contentType: 'application/json',
+      body: JSON.stringify(suyo.cuerpo ?? laPaginaDeEdiciones(url)),
+    });
+  });
+  await pagina.route(LECTURA_DEL_CONTENIDO, (ruta) => {
+    const url = ruta.request().url();
+    const suyo = cambios.contenido ?? {};
+    const id = Number(/\/conjuntos\/(\d+)\/parametros/.exec(url)?.[1] ?? '0');
+    return ruta.fulfill({
+      status: suyo.estado ?? 200,
+      contentType: 'application/json',
+      body: JSON.stringify(suyo.cuerpo ?? elContenidoDelConjunto(id)),
+    });
+  });
+  return { peticiones };
 }
 
 /**
