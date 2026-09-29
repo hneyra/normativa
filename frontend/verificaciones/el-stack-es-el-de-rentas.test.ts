@@ -48,8 +48,18 @@ import { describe, expect, it } from 'vitest';
  * la comparacion de arriba, con un `-` que lo nombra.
  */
 
-/** De donde se copio la lista. Cambiarlo es cambiar la lista, en el mismo PR. */
-const RENTAS_EN = 'ac379ac2d1fbcc45914d1246f600ee5ff5a2eb71';
+/**
+ * De donde se copio la lista. Cambiarlo es cambiar la lista, en el mismo PR.
+ *
+ * **`9964a08` desde #96**, el `main` de `rentas` del 2026-09-28. Hasta entonces era `ac379ac`
+ * (2026-09-13), y lo que movio su `frontend/package.json` entre los dos es exactamente esto:
+ * `engines.node` de `>=22` a `^24.21.0` (`rentas`#289, `ba15d76c`) y `recharts ^3.10.1`
+ * (`rentas`#288, `ef409ae1`). El resto de lo que ese diff toca del stack ya estaba aqui: el
+ * `Dockerfile` construye sobre `node:24-alpine` desde #90, y `tsconfig.json` pasa el arnes de
+ * `e2e/` por `tsc` desde #61 —`rentas` lo metio en su #312—; ninguno de los dos lo lee esta guarda.
+ * Y `yarn.lock` queda **byte a byte** el de `rentas@9964a08`, como era el de `ac379ac` antes.
+ */
+const RENTAS_EN = '9964a085a06c6b9d16142da94e5e6d257020a115';
 
 type Seccion = 'dependencies' | 'devDependencies';
 
@@ -80,6 +90,14 @@ const EL_STACK_DE_RENTAS: Readonly<Record<Seccion, Readonly<Record<string, strin
     'react-hook-form': '^7.88.0',
     'react-i18next': '^17.0.13',
     'react-router-dom': '^7.18.3',
+    // **Entra con #96 sin que aqui se dibuje un solo grafico**, y es a proposito. `rentas` lo
+    // anadio para el de `ini-flujo` (`rentas`#288); aqui no lo importa nadie, asi que Vite no lo
+    // mete en el bundle —`yarn build` da los mismos bytes con el que sin el—. La otra salida era
+    // dejarlo fuera «con su motivo», y esta guarda no tiene donde: `ENTRAN_DESPUES` es para lo que
+    // ENTRA con su issue, y una ausencia para siempre seria justo la excepcion que el docblock de
+    // arriba nombra —«una dependencia que se quita porque aqui todavia no se usa»—. Abrirla para
+    // uno la abre para el siguiente.
+    recharts: '^3.10.1',
     sonner: '^2.0.8',
     'tailwind-merge': '^3.6.0',
     zod: '^4.6.2',
@@ -130,40 +148,21 @@ const ENTRAN_DESPUES: Readonly<
 > = {};
 
 /**
- * El motor que `rentas` declara en `engines.node`, en el mismo `sha` — **y tambien hoy en su
- * `origin/main`**, 111 commits despues (comprobado el 2026-09-20).
+ * El motor que `rentas` declara en `engines.node`, en el mismo `sha`: **`^24.21.0` desde
+ * `rentas`#289** (`ba15d76c`, 2026-09-23, «La version de Node se dice una vez, en `.nvmrc`, y es
+ * la 24»), y es el que este manifiesto declara.
+ *
+ * <h2>Aqui hubo una divergencia declarada, y ya no la hay (#90 -> #96)</h2>
+ *
+ * Del 2026-09-20 al 2026-09-29 este arbol prometio `>=24` mientras `rentas@ac379ac` prometia
+ * `>=22`: `kamayuk-lib` —de donde salen los seis `@kamayuk/*`— pedia `>=24` desde el 2026-09-16 y
+ * su CI corria ESTA suite con 24. Se escribio como la unica divergencia con `rentas`, con su motivo,
+ * su medida y una prueba que salia roja el dia que `rentas` subiera, para que se borrara. `rentas`
+ * subio el 23 y esa prueba no se entero —compara contra un `sha` fijo, y el `sha` seguia siendo
+ * `ac379ac`—; #96 movio el `sha` y la borro. La medida de los dos motores sigue en
+ * `el-motor-que-se-promete-es-el-que-corre.test.ts`, que es la guarda de `.nvmrc` contra esto.
  */
-const EL_MOTOR_DE_RENTAS = '>=22';
-
-/**
- * **LA UNICA DIVERGENCIA DECLARADA CON `rentas`, y por que** (#90; decision del dueno del
- * 2026-09-20).
- *
- * <h2>Quien pide 24, y desde cuando</h2>
- *
- * `kamayuk-lib` —de donde salen los SEIS `@kamayuk/*` de la lista de arriba— subio su raiz a
- * `>=24` el 2026-09-16 (`kamayuk-lib`#90, PR #91), y con ella los tres `node-version` de su CI,
- * incluido el del trabajo `consumidores`, que es el que corre **esta** suite. Durante cuatro dias
- * este manifiesto siguio prometiendo `>=22` y la CI de aqui corriendo 22.14.0: lo que se enlaza
- * exigia un motor que aqui no se usaba, y salia verde **por suerte** —la libreria viaja como
- * fuente y todavia no ejerce nada que solo exista en 24— y no por diseno.
- *
- * <h2>Y por que esto no es aflojar la guarda</h2>
- *
- * Porque es UNA diferencia, escrita, con su medida y con el dia en que deja de existir. La
- * comparacion dependencia a dependencia sigue entera: las 44 entradas, los mismos rangos y los
- * mismos seis paquetes del hermano. Lo que se aparta es `engines.node`, que no es una
- * dependencia: es con que motor se ejecuta lo que esa lista fija.
- *
- * Que la subida no rompe nada esta MEDIDO —los dos motores, antes y despues, con cifras— en
- * `el-motor-que-se-promete-es-el-que-corre.test.ts`, y lo que la hizo posible es
- * `request-del-arnes.ts`: con Node 24 y sin el, `yarn verificar` salia `Tests 2 failed | 574
- * passed (576)` con 213 rechazos sin atender.
- *
- * **El dia que `rentas` suba tambien**, esto deja de ser una divergencia y la ultima prueba de
- * este archivo sale roja para que se borre: dos numeros iguales no necesitan cuatro parrafos.
- */
-const EL_MOTOR_DE_AQUI = '>=24';
+const EL_MOTOR_DE_RENTAS = '^24.21.0';
 
 const AQUI = dirname(fileURLToPath(import.meta.url));
 const RAIZ = join(AQUI, '..');
@@ -212,7 +211,7 @@ describe(`el stack es el de rentas@${RENTAS_EN.slice(0, 7)}, version a version`,
     const entradas =
       Object.keys(EL_STACK_DE_RENTAS.dependencies).length +
       Object.keys(EL_STACK_DE_RENTAS.devDependencies).length;
-    expect(entradas, 'la lista de rentas tiene 44 entradas; con 35 o menos alguien la vacio').toBeGreaterThan(35);
+    expect(entradas, 'la lista de rentas tiene 45 entradas; con 35 o menos alguien la vacio').toBeGreaterThan(35);
     // Y los SEIS `@kamayuk/*` estan los seis desde #62. Es lo que sustituye al centinela que
     // `ENTRAN_DESPUES` era mientras tenia algo dentro: con el mapa vacio, la prueba de mas abajo
     // recorre cero elementos, y esta linea es la que dice que eso es porque ya entraron todos.
@@ -287,28 +286,18 @@ describe(`el stack es el de rentas@${RENTAS_EN.slice(0, 7)}, version a version`,
     ).toEqual([]);
   });
 
-  it('el motor NO es el de rentas, y esa es la unica divergencia declarada (#90)', () => {
+  it('el motor es el de rentas, y no hay ninguna divergencia declarada (#96)', () => {
+    // Es la prueba que #90 dejo pedida: «el dia que rentas suba, se borra EL_MOTOR_DE_AQUI […] y
+    // la de arriba vuelve a comparar contra EL_MOTOR_DE_RENTAS». Declarar otro motor aqui vuelve
+    // a ser un desvio de rentas, y sale rojo como cualquier otro.
     expect(
       elManifiesto().engines?.node,
-      `«engines.node» tiene que ser «${EL_MOTOR_DE_AQUI}».\n\n` +
-        `  rentas@${RENTAS_EN.slice(0, 7)} declara «${EL_MOTOR_DE_RENTAS}» y este arbol se aparta\n` +
-        '  a proposito desde #90, porque `kamayuk-lib` —que entra por `link:`— pide «>=24» desde\n' +
-        '  el 2026-09-16 y su CI corre ESTA suite con 24. El motivo entero, la medida de los dos\n' +
-        '  motores y el dia en que la divergencia se borra estan en EL_MOTOR_DE_AQUI.\n' +
-        '  Volver a «>=22» no es «alinearse con rentas»: es prometer un motor que la libreria que\n' +
-        '  se enlaza ya no soporta.',
-    ).toBe(EL_MOTOR_DE_AQUI);
-  });
-
-  it('y la divergencia existe de verdad: el dia que rentas suba, esto se borra', () => {
-    // Sin esta linea, `EL_MOTOR_DE_AQUI` podria quedarse escrito —con sus cuatro parrafos— sobre
-    // una diferencia que ya no lo es: quien actualizara `EL_MOTOR_DE_RENTAS` con el `sha` nuevo
-    // no tiene por que acordarse de que aqui hay una excepcion que retirar.
-    expect(
-      EL_MOTOR_DE_AQUI,
-      'rentas ya declara este mismo motor: entonces no hay divergencia que declarar. Se borra\n' +
-        '  EL_MOTOR_DE_AQUI, esta prueba y la de arriba vuelve a comparar contra EL_MOTOR_DE_RENTAS.',
-    ).not.toBe(EL_MOTOR_DE_RENTAS);
+      `«engines.node» no es el de rentas@${RENTAS_EN.slice(0, 7)}, que declara «${EL_MOTOR_DE_RENTAS}».\n\n` +
+        '  La divergencia de #90 («>=24» contra el «>=22» de rentas) se borro en #96, cuando rentas\n' +
+        '  subio a «^24.21.0» (rentas#289). Si rentas cambio de motor, se sigue con el sha nuevo; si\n' +
+        '  el cambio es solo de aqui, no entra sin volver a declarar una divergencia con su motivo y\n' +
+        '  su medida, como hizo #90. Y `.nvmrc` se mueve con el: lo compara `motor.ts`.',
+    ).toBe(EL_MOTOR_DE_RENTAS);
   });
 
   it('y el gestor es yarn classic, con su candado v1', () => {

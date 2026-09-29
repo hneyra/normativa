@@ -26,6 +26,9 @@
  * CI no usaba**. Lo cerro la decision del dueno del 2026-09-20 (#90): este arbol se alinea a Node
  * 24, y los tres sitios de arriba dicen 24 desde entonces.
  *
+ * Y desde #96 dicen `^24.21.0` —`engines`— y `24.21.0` —`.nvmrc`—, que es lo que `rentas` declara
+ * desde su #289: la divergencia con `rentas` que #90 tuvo que declarar ya no existe.
+ *
  * Que se alineen HOY no es lo que cuesta: es que sigan alineados. Por eso la cuarta regla guarda
  * lo que la raiz de la libreria pedia cuando se midio, y sale roja cuando se mueva — pidiendo que
  * alguien vuelva a MEDIR, no que alguien copie el numero nuevo. Y la tercera mira lo que de
@@ -63,14 +66,25 @@ export interface Desacuerdo {
 }
 
 /**
- * **La UNICA forma de rango que esta guarda sabe leer**, y el motivo de que sea una sola.
+ * **Las DOS formas de rango que esta guarda sabe leer**, y el motivo de que no sean mas.
  *
- * Los seis manifiestos del producto escriben `>=22` o `>=24`, y nada mas. Un lector de rangos de
- * semver completo —`^24 || >=22.5 <23`— tendria que ADIVINAR, y lo que se juega es autorizar un
- * motor que nadie ha medido. Asi que lo que no cuadra con esto no se interpreta: sale rojo y lo
- * lee una persona, que es exactamente el acto que este issue pide que no se salte nadie.
+ * Hasta #96 los manifiestos del producto escribian `>=22` o `>=24`, y nada mas. Desde `rentas`#289
+ * —y aqui desde #96— `engines` es `^24.21.0`: un PIN de mayor, que rechaza la 25 igual que la 23, y
+ * no un suelo abierto. Son las dos que se leen. Un lector de rangos de semver completo —`^24 ||
+ * >=22.5 <23`, `~24.21`, `24.x`— tendria que ADIVINAR, y lo que se juega es autorizar un motor que
+ * nadie ha medido. Asi que lo que no cuadra con esto no se interpreta: sale rojo y lo lee una
+ * persona, que es exactamente el acto que #90 pide que no se salte nadie.
  */
 const SOLO_MAYOR_O_IGUAL = /^>=\s*(\d+)(?:\.(\d+))?(?:\.(\d+))?$/;
+
+/**
+ * `^N`, `^N.M` o `^N.M.P`: desde lo escrito hasta la mayor siguiente, sin incluirla.
+ *
+ * **Solo con `N` distinto de cero.** Con la mayor en cero el `^` de semver cambia de significado
+ * —`^0.3.1` no llega a `0.4.0`, y `^0.0.3` no pasa de si mismo—, ningun Node se llama asi, y leerlo
+ * como los demas seria autorizar lo que el rango no dice. Sale como «no se sabe leer».
+ */
+const CIRCUNFLEJO = /^\^\s*([1-9]\d*)(?:\.(\d+))?(?:\.(\d+))?$/;
 
 /** Una version a secas: `22`, `22.14` o `22.14.0`. */
 const UNA_VERSION = /^v?(\d+)(?:\.(\d+))?(?:\.(\d+))?$/;
@@ -85,11 +99,25 @@ function cifras(encontrado: RegExpExecArray): [number, number, number] {
  * son dos rojos distintos y el remedio de cada uno es otro.
  */
 export function cumple(version: string, rango: string): boolean | null {
-  const pedido = SOLO_MAYOR_O_IGUAL.exec(rango.trim());
   const tengo = UNA_VERSION.exec(version.trim());
-  if (pedido === null || tengo === null) return null;
-  const [mayorPedida, menorPedida, parchePedido] = cifras(pedido);
-  const [mayor, menor, parche] = cifras(tengo);
+  if (tengo === null) return null;
+  const mayorOIgual = SOLO_MAYOR_O_IGUAL.exec(rango.trim());
+  if (mayorOIgual !== null) return noEsMenor(cifras(tengo), cifras(mayorOIgual));
+  const circunflejo = CIRCUNFLEJO.exec(rango.trim());
+  if (circunflejo !== null) {
+    const suelo = cifras(circunflejo);
+    const laMia = cifras(tengo);
+    // El techo es la mayor siguiente: `^24.21.0` admite 24.99.0 y no 25.0.0.
+    return laMia[0] === suelo[0] && noEsMenor(laMia, suelo);
+  }
+  return null;
+}
+
+/** Si `version` es igual o posterior a `suelo`, cifra a cifra. */
+function noEsMenor(
+  [mayor, menor, parche]: [number, number, number],
+  [mayorPedida, menorPedida, parchePedido]: [number, number, number],
+): boolean {
   if (mayor !== mayorPedida) return mayor > mayorPedida;
   if (menor !== menorPedida) return menor > menorPedida;
   return parche >= parchePedido;
@@ -131,9 +159,9 @@ export function desacuerdos(motores: Motores, laLibreriaPedia: string): Desacuer
       donde: '.nvmrc contra engines.node',
       que: `no se sabe leer «${elige}» contra «${promete}».`,
       remedio:
-        'Esta guarda solo lee rangos de la forma «>=N», que es la unica que escriben los seis\n' +
-        '  manifiestos del producto. Si hace falta otra, se ensena aqui con su muestra: adivinarla\n' +
-        '  seria autorizar un motor que nadie midio.',
+        'Esta guarda solo lee rangos de la forma «>=N» y «^N» (con N distinto de cero), que son\n' +
+        '  las que escriben los manifiestos del producto. Si hace falta otra, se ensena aqui con su\n' +
+        '  muestra: adivinarla seria autorizar un motor que nadie midio.',
     });
   } else if (!elegidaVale) {
     salida.push({
