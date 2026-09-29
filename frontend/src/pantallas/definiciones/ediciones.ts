@@ -2,7 +2,8 @@ import type { ClaveDeHoja } from '../arbol.ts';
 import type { Pantalla } from '../tipos.ts';
 
 /**
- * **La pantalla de **Ediciones**: las versiones del conjunto, y su sellado** (#58, AC 2).
+ * **La pantalla de **Ediciones**: las versiones del conjunto, y su sellado** (#58, AC 2; conectada
+ * en lectura por #65).
  *
  * Transcrita de `const PANTALLAS['nor-ediciones']` y de `const INSTRUCCIONES['nor-ediciones']` de
  * `frontend/diseno/NormativaV8.dc.html`, con las cadenas literales. La compara con el artboard
@@ -19,20 +20,45 @@ import type { Pantalla } from '../tipos.ts';
  * viven **solo** en el artboard, que no esta bajo `src/` y no lo importa una linea de produccion
  * (`rentas`#97). Lo que se conserva es la FORMA. Lo vigila `verificaciones/sin-cifras-inventadas`.
  *
- * Y **nada se rellena**: esta hoja todavia no tiene conector —su `src/datos/<hoja>.ts` esta puesto y
- * vacio, y lo llena su issue de la ola 5—, asi que cada campo y cada tabla dicen su ausencia con el
- * motivo que redacta `src/porQueNoHayDato.ts`: «publicado y sin pedir», que no es lo mismo que
- * «sin conectar».
+ * <h2>Lo que #65 anade, y por que nada de ello cambia la FORMA del artboard</h2>
  *
- * <h2>Lo que esta hoja NO dibuja todavia, dicho aqui y no descubierto luego</h2>
+ * La comparacion anti-deriva mira `[titulo, nota, campos, {t, c, f, n?, i?, a?}]`: el titulo de la
+ * tabla, sus columnas con su alineacion, su nota y su columna de insignia. Todo lo de abajo
+ * —`clave`, `campo`, `dominio`, `paginacion`, `orden`, `vacio`, `insignia`, `accionesPorFila`,
+ * `lectura`— vive **fuera** de esa forma: la pantalla dice lo mismo que el artboard y ademas dice
+ * de donde salen sus filas. Por eso el artboard no se toca.
  *
- * Es la hoja con mas huecos de las cuatro: la paginacion y el orden en el servidor (H01), el filtro
- * en el cliente con su conteo (H02), la seleccion de fila con su ficha (H03), los pasos en pestanas
- * (H04a) y los tres actos con su observacion (H04b, H05a) no caben en `{{ titulo, nota, campos,
- * tabla }}`. Aqui los tres actos —abrir, agregar y sellar— son **tres bloques de campos**, que es
- * lo que el artboard dibuja y lo que el interprete de hoy sabe leer; que se puedan pulsar es #68.
- * La ayuda de la observacion viaja como `ayuda` del campo, y que de ahi se deduzca «opcional» es
- * H05b, todavia sin publicar (`kamayuk-lib`#86).
+ *   · **`clave`** — el nombre por el que la tabla y el conector se encuentran. Se escribe como
+ *     literal en los dos lados y lo cruza `camino-a-la-api`: esta definicion **no importa
+ *     `src/datos/`**, porque lo leen dos guardas que corren sin DOM y ese camino arrastra
+ *     `src/sesion.ts`, que toca `window` al cargarse.
+ *   · **`paginacion` y `orden` en SERVIDOR** (H01) — los mandos no ordenan ni piden: escriben en la
+ *     ruta, y el conector lee la ruta. `hayMas` y `paginas` son NOMBRES de datos que pone el
+ *     conector con lo que el servidor dijo.
+ *   · **`campo` y `dominio`** (H23) — el nombre del campo del contrato bajo el rotulo. Es ademas lo
+ *     que ata una columna a `orden`: la que lleva el campo que se esta ordenando anuncia
+ *     `aria-sort`, sin una segunda lista que se quede vieja.
+ *   · **`insignia`** (H18) — el tono como DATO y no deducido del texto de la celda.
+ *   · **`accionesPorFila`** (H03, H46) — elegir una fila abre su detalle.
+ *
+ * <h2>Lo que esta hoja sigue SIN dibujar, dicho aqui y no descubierto luego</h2>
+ *
+ *   · **El filtro en el cliente con su conteo** (H02). Los dos campos del primer bloque —«Buscar en
+ *     las ediciones» y «Estado»— se dibujan porque el artboard los dibuja, y **no filtran nada**:
+ *     lo tecleado en un campo vive en el estado de `<Pantalla>` y ni el conector ni la ruta lo ven.
+ *     Y **no se filtra en el servidor en su lugar**: `GET /seguridad/parametros` no declara
+ *     `?estado=`, asi que mandarlo seria un 422 «Parametro desconocido» (#48). Lo debe
+ *     `kamayuk-lib`#86.
+ *   · **Las insignias fijas de la cabecera** (H42) y **el texto con marcas** (H43), tambien de
+ *     `kamayuk-lib`#86.
+ *   · **Los pasos en pestanas** (H04a) y **los tres actos con su observacion** (H04b, H05a): aqui
+ *     —abrir, agregar y sellar— siguen siendo **tres bloques de campos**, que es lo que el artboard
+ *     dibuja. Que se puedan pulsar es #68, y las tres escrituras son #59.
+ *   · **La marca «rige»** (H19): la decide `GET /seguridad/parametros/ejercicios/{e}`, una lectura
+ *     **por ejercicio**, y una pagina de este listado trae tantos ejercicios como filas. Pedir uno
+ *     por fila son N peticiones por pagina; deducirla de la pagina dice que rige el sellado mas
+ *     alto **de esta pagina**, que con dos versiones partidas en dos paginas es falso. Se declara y
+ *     no se inventa.
  */
 export const EDICIONES = {
   'nor-ediciones': {
@@ -42,26 +68,106 @@ export const EDICIONES = {
       {
         titulo: 'Versiones del conjunto, y su sellado',
         nota: '',
+        // La lectura de ESTE bloque, y solo de este: un 403 aquí deja el detalle intacto, y al
+        // revés (AC 4). Por eso no se declara `fallosDe`: el fallo de una no se dice encima de la
+        // otra, porque las dos tienen su propio sitio donde decirlo.
+        lectura: { clave: 'ediciones' },
         campos: [
           { etiqueta: 'Buscar en las ediciones', tipo: '', ayuda: 'Año, «v2» o identificador' },
           { etiqueta: 'Estado', tipo: 's', opciones: ['Todas', 'Abiertas', 'Selladas'] },
         ],
         tabla: {
           titulo: 'Ediciones',
+          clave: 'ediciones',
           columnas: [
-            { rotulo: 'Ejercicio', alineadoDerecha: true },
-            { rotulo: 'Versión', alineadoDerecha: true },
-            { rotulo: 'Estado', alineadoDerecha: false },
-            { rotulo: 'Fecha de sellado', alineadoDerecha: false },
-            { rotulo: 'Usuario que selló', alineadoDerecha: false },
-            { rotulo: 'Identificador', alineadoDerecha: true },
+            { rotulo: 'Ejercicio', campo: 'ejercicio', alineadoDerecha: true },
+            { rotulo: 'Versión', campo: 'version', alineadoDerecha: true },
+            {
+              rotulo: 'Estado',
+              campo: 'estado',
+              dominio: 'ABIERTO · SELLADO',
+              alineadoDerecha: false,
+              // El tono es DATO y no se deduce del texto (H18). Son los mismos dos colores que la
+              // tabla del artboard pinta —`ABIERTO` en atención, lo sellado en ok—, con la
+              // diferencia de que ahora lo dice la definición y no una tabla de cadenas: el día
+              // que el backend añada un tercer estado, sale en `info` y no en verde.
+              insignia: {
+                casos: { ABIERTO: { tono: 'atencion' }, SELLADO: { tono: 'ok' } },
+                otro: { tono: 'info' },
+              },
+            },
+            { rotulo: 'Fecha de sellado', campo: 'fechaSellado', alineadoDerecha: false },
+            { rotulo: 'Usuario que selló', campo: 'usuarioSellado', alineadoDerecha: false },
+            { rotulo: 'Identificador', campo: 'id', alineadoDerecha: true },
           ],
           columnaDeInsignia: 2,
+          // La página y el tamaño viven en la RUTA, con el nombre del parámetro del contrato. El
+          // tope de 500 es `Paginacion.TAMANO_MAXIMO`, y que ninguno de los ofrecidos lo pase lo
+          // cruza la guarda contra `tamanoMaximo` del contrato.
+          paginacion: {
+            en: 'servidor',
+            enLaRuta: 'pagina',
+            tamano: 20,
+            tamanos: [20, 50, 100, 500],
+            tamanoEnLaRuta: 'tamano',
+            hayMas: 'ediciones.hayMas',
+            paginas: 'ediciones.paginas',
+          },
+          // Los CUATRO de la lista blanca del backend —`OrdenSeguro.sobre("ejercicio", "version",
+          // "estado", "id")`, publicada como `ordenarPorAdmitidos`— y ni uno más: otro campo es un
+          // 422 `ORDEN_NO_ADMITIDO`, que la escalera de hoy no distingue del otro 422. El primero
+          // es `ejercicio` porque es el orden por omisión del controlador
+          // (`ParametrosController:45`, `aPaginacion("ejercicio")`).
+          orden: {
+            campos: [
+              { valor: 'ejercicio', rotulo: 'Ejercicio' },
+              { valor: 'version', rotulo: 'Versión' },
+              { valor: 'estado', rotulo: 'Estado' },
+              { valor: 'id', rotulo: 'Identificador' },
+            ],
+            enLaRuta: 'ordenarPor',
+            sentidoEnLaRuta: 'direccion',
+            ascendente: 'ASCENDENTE',
+            descendente: 'DESCENDENTE',
+          },
+          vacio: 'Esta municipalidad no tiene ninguna edición del conjunto de parámetros. Hasta que se abra la primera no hay nada que sellar, y sin conjunto sellado no se puede calcular ningún ejercicio.',
+          accionesPorFila: {
+            columna: 'Contenido',
+            acciones: [
+              {
+                clave: 'abrir',
+                rotulo: 'Ver sus parámetros',
+                // A ESTA misma hoja, con el conjunto en el camino: `#/ediciones/12`. Y con la
+                // ventana puesta, que no es adorno: `ir` del marco escribe la dirección entera, así
+                // que sin los cuatro parámetros elegir una fila de la página 3 devolvería la lista
+                // a la 0. Los cuatro los publica el conector con lo que PIDIÓ, no con lo que la
+                // ruta traía: así también están cuando la ruta está vacía.
+                va: {
+                  hoja: 'nor-ediciones',
+                  sujeto: { desde: 'id' },
+                  parametros: {
+                    pagina: { desde: 'ediciones.pagina' },
+                    tamano: { desde: 'ediciones.tamano' },
+                    ordenarPor: { desde: 'ediciones.ordenarPor' },
+                    direccion: { desde: 'ediciones.direccion' },
+                  },
+                },
+              },
+            ],
+            sinAcciones: 'Sin acciones',
+          },
         },
       },
       {
         titulo: 'Parámetros del conjunto',
         nota: 'Lo que este conjunto contiene, tal como se compuso. Lleva la vigencia de cada fila y no el valor ya resuelto: un conjunto sellado guarda a propósito el histórico de una llave —la UIT aparece cinco veces— y quien resuelve cuál rige es el lector, contra el ejercicio del conjunto.',
+        // La segunda lectura, y su espera: sin conjunto elegido no se pide nada, y lo que se dice
+        // no es un fallo ni un vacío — es que todavía no hay a qué preguntar.
+        lectura: {
+          clave: 'contenido',
+          espera:
+            'Elija una edición de la lista de arriba y aquí saldrá lo que ese conjunto lleva dentro. Se lee igual abierto que sellado, por la misma ruta.',
+        },
         campos: [
           { etiqueta: 'Identificador', tipo: 'r' },
           { etiqueta: 'Ejercicio', tipo: 'r' },
@@ -72,16 +178,23 @@ export const EDICIONES = {
         ],
         tabla: {
           titulo: 'Parámetros',
+          clave: 'contenido',
           columnas: [
-            { rotulo: 'Tipo', alineadoDerecha: false },
-            { rotulo: 'Clave', alineadoDerecha: false },
-            { rotulo: 'Valor numérico', alineadoDerecha: true },
-            { rotulo: 'Valor de texto', alineadoDerecha: false },
-            { rotulo: 'Vigente desde', alineadoDerecha: false },
-            { rotulo: 'Vigente hasta', alineadoDerecha: false },
-            { rotulo: 'Documento fuente', alineadoDerecha: false },
+            { rotulo: 'Tipo', campo: 'tipo', alineadoDerecha: false },
+            { rotulo: 'Clave', campo: 'clave', alineadoDerecha: false },
+            { rotulo: 'Valor numérico', campo: 'valorNumerico', alineadoDerecha: true },
+            { rotulo: 'Valor de texto', campo: 'valorTexto', alineadoDerecha: false },
+            { rotulo: 'Vigente desde', campo: 'vigenciaDesde', alineadoDerecha: false },
+            { rotulo: 'Vigente hasta', campo: 'vigenciaHasta', alineadoDerecha: false },
+            { rotulo: 'Documento fuente', campo: 'documentoFuente', alineadoDerecha: false },
           ],
-          nota: 'La clave va vacía cuando el tipo tiene un solo valor —la UIT no lleva clave; TRAMO_PREDIAL lleva tres— y «Vigente hasta» vacío no es un olvido: es una norma sin fecha de fin. Donde no hay dato va —, no una celda en blanco. Las filas llegan del snapshot del conjunto, y su huella se comprueba antes de usarlas.',
+          // La última frase cambió en #65, y el cambio entró primero EN EL ARTBOARD: hasta #56 este
+          // detalle sólo se podía leer del snapshot —que se niega a servir un conjunto abierto, que
+          // es justo el que se está componiendo— y ahora se lee de `GET /conjuntos/{id}/parametros`,
+          // que sirve los dos estados y no viene firmada. Dejar la frase vieja habría dicho en
+          // pantalla que se comprueba una huella que aquí no se comprueba.
+          nota: 'La clave va vacía cuando el tipo tiene un solo valor —la UIT no lleva clave; TRAMO_PREDIAL lleva tres— y «Vigente hasta» vacío no es un olvido: es una norma sin fecha de fin. Donde no hay dato va —, no una celda en blanco. Las filas son el contenido del conjunto y se leen por la misma ruta esté abierto o sellado.',
+          vacio: 'Este conjunto no tiene ni un parámetro. Es una respuesta y no un fallo: un conjunto recién abierto está vacío hasta que se le agrega el primero, y sellarlo así sellaría un ejercicio sin una sola cifra.',
         },
       },
       {

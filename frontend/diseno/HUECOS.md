@@ -156,6 +156,15 @@ los dos llevan `aria-disabled` cuando no hay a dónde ir.
 (catastro#137); KL#65 lo dice en «Lo que NO entra»: la paginación la decide #61 junto con #25. La forma de la
 respuesta es la `RespuestaPaginada` común (`contenido, pagina, tamano, totalElementos, totalPaginas, hayMas`).
 
+**LLEGÓ, y está puesto (hneyra/normativa#65).** `kamayuk-lib`#61 se mezcló el 2026-09-16 (PR `kamayuk-lib`#87) y
+publica `tabla.paginacion: { en: 'servidor' }` y `tabla.orden`, con el estado **en la ruta de la hoja** y la vuelta
+a la página 1 en un solo movimiento (`cambiosEn`). La forma final no es la de arriba —los cuatro sitios se declaran
+sueltos (`enLaRuta`, `tamanoEnLaRuta`, `orden.enLaRuta`, `orden.sentidoEnLaRuta`), y `hayMas` y `paginas` son
+NOMBRES de datos que pone el sistema con lo que el servidor dijo— y hace lo mismo. Dos diferencias medidas con la
+V6, las dos dichas en `src/datos/ediciones.ts`: el cuarto parámetro se llama **`direccion`** y no `sentido`
+—`rentas` lo renombró por un choque que este repositorio no tiene— y el orden y la página **viajan siempre**,
+también cuando la ruta no dice ninguno.
+
 ### H02 · `filtro-en-el-cliente-con-conteo`
 
 **Hoja** `nor-ediciones` · **genérico** · **Renace en** KL#61 (nuevo: no está entre sus H1-H13)
@@ -180,6 +189,13 @@ El buscador y los chips «Todas / Abiertas / Selladas» filtran **la página que
 **Por qué KL#61.** `buscador` y `chips-de-filtro` de `catastro` se quedaron locales (KL#65 y KL#67, «Lo que NO
 entra»), y además van **a la ruta y al servidor**. Aquí es lo contrario: filtran en memoria y lo dicen.
 
+**SIGUE ABIERTO, y ahora es `kamayuk-lib`#86.** Al partirse KL#61 el 2026-09-16, H02 quedó entre los diez que
+pasaron a #86 (campos, actos y prosa). hneyra/normativa#65 conectó la hoja **sin** él, así que los dos campos del
+primer bloque —«Buscar en las ediciones» y el desplegable «Estado»— se dibujan porque el artboard los dibuja y **no
+filtran nada**: lo tecleado vive en el estado de `<Pantalla>` y ni la ruta ni el conector lo ven. La hoja **lo dice
+en su frase de arriba** en vez de dejar que alguien teclee y concluya que la lista está rota. Y no se filtra en el
+servidor en su lugar, por lo de siempre: `?estado=` es un 422 «parámetro desconocido».
+
 ### H03 · `seleccion-de-fila-y-detalle`
 
 **Hoja** `nor-ediciones` · **genérico** · **Renace en** KL#44 (reparto: #67, `maestro-detalle`)
@@ -200,6 +216,16 @@ salir de la lista; elegir otra reinicia el paso, lo tecleado, el intento y la ne
 
 **Observación.** La V6 busca la elegida sólo entre las filas de la página (`:139`): si no vino en esta página,
 la ficha cae en silencio al formulario de apertura. `catastro` dice «no está en esta página»; aquí no se dice.
+
+**LLEGÓ, y NO por `maestro-detalle` (hneyra/normativa#65).** La pieza de KL#67 pone la lista a la izquierda y el
+detalle a la derecha, y eso **no es lo que el artboard V8 dibuja**: aquí son dos bloques, uno debajo del otro, y
+cambiarlo sería cambiar el diseño para que quepa una pieza. Lo que se usó son las dos piezas que ya publica la
+librería y que sí caben en la gramática: `tabla.accionesPorFila` (KL#65) con una acción que `va` **a esta misma
+hoja con el conjunto de sujeto**, y `fila.realzada`, que pone el `aria-current` de la V6. La ficha es el segundo
+bloque, que declara su propia `lectura` y su espera —«Elija una edición…»— y **no pide nada** mientras no haya
+sujeto. La acción se lleva además los cuatro parámetros de la ventana, porque `ir` del marco escribe la dirección
+entera: sin ellos, elegir una fila de la página 3 devolvería la lista a la 0. Lo que la V6 no decía —«no está en
+esta página»— sigue sin decirse: el detalle se pide por su identificador y contesta esté o no en la página.
 
 ### H11 · `ausencia-por-bloque`
 
@@ -883,6 +909,15 @@ Al pie del acto, un secundario vacía lo tecleado, el intento y la negativa, y l
 {"pieza":"marcaDeVigente","clave":"normativa.vigente"}
 ```
 
+**NO llegó con hneyra/normativa#65, y se declara con su medida.** La lista paginada trae **tantos ejercicios como
+filas** —el padrón tiene una versión por ejercicio y varias por ejercicio sellado—, y quién rige lo dice
+`GET /seguridad/parametros/ejercicios/{e}`, que es una lectura **por ejercicio**: marcarlo bien costaría N
+peticiones por página. La otra salida —la de la V6, `vigenteDe` sobre lo servido— dice que rige el sellado de
+versión más alta **de esta página**, y con dos versiones del mismo ejercicio partidas en dos páginas eso es
+sencillamente falso: la de la página 1 saldría marcada y la que de verdad rige, no. Entre inventarlo y no decirlo,
+no se dice. Lo que sí entra es el resto del AC-2 de #65: el tono de `ABIERTO`/`SELLADO` es **dato** de la
+definición (H18) y no se deduce del texto de la celda.
+
 ### H20 · `pestanas-con-conteo`
 
 **Hoja** `nor-cuadros` · **genérico** · **Renace en** KL#44 (reparto: #67, `pestanas`; el conteo, `texto-con-dato`)
@@ -1161,6 +1196,20 @@ la página cero.
 **Diferencia con `catastro`.** La V6 de `normativa` lo guardaba en el estado del marco, no en la dirección: el hash
 sólo lleva la pestaña (`c01fe9a:frontend/src/marco/Marco.tsx:144` `` marcarHash(pestanas.activa); ``). Recargar
 lo perdía. Con `estado-en-la-ruta` sobrevive también a recargar.
+
+**LLEGÓ A MEDIAS, y la mitad que falta es del MARCO (hneyra/normativa#65).** Medido sobre
+`kamayuk-lib@origin/main`:
+
+- **Recargar y compartir el enlace sí**: la página, el tamaño, el orden, el sentido y el conjunto elegido viven en
+  la dirección (`#/ediciones/12?direccion=…&ordenarPor=…&pagina=…&tamano=…`), y el arnés lo mide recargando.
+- **Ir a otra hoja y volver, no.** `Armazon.saltarA` escribe `ubicacionDe(slug, extraDe(declarada))` con lo que se
+  le pase y **nada más** (`paquetes/shell/Armazon.tsx:265`), y el árbol y la miga llaman a `irA(clave)` sin extra:
+  volver a Ediciones escribe `#/ediciones` a secas. El marco **no se acuerda** de la última ruta de cada hoja, y no
+  puede acordarse desde aquí: `moverLaRuta` navega con `replace`, así que ni el botón de atrás la recupera.
+
+O sea que el AC 7 de #65 —«tras abrir la página 2 ordenada por `version`, ir al Panel y volver deja la misma página
+y el mismo orden»— **no se cumple hoy**, y lo que falta es que `@kamayuk/shell` recuerde la ruta por destino. Es
+esto, H35a, y va con `kamayuk-lib`#86.
 
 ### H45 · `bloque-de-una-sola-pestana`
 

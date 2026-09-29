@@ -181,7 +181,11 @@ describe('el paquete se identifica y fija con que Node se instala', () => {
   });
 
   it('declara la version de Node que necesita', () => {
-    expect(paquete.engines?.['node']).toBe('>=22');
+    // **`>=24` desde #90**, por la decision del dueno del 2026-09-20: lo que este frontend enlaza
+    // por `link:` pide `>=24` desde el 2026-09-16, y la CI de la libreria corre con 24 tambien
+    // ESTA suite. Los dos motores se midieron antes de subir, y las cifras estan en
+    // `el-motor-que-se-promete-es-el-que-corre.test.ts`.
+    expect(paquete.engines?.['node']).toBe('>=24');
   });
 
   it('y `.nvmrc` dice CUAL, que es de donde la toma la CI', () => {
@@ -190,6 +194,9 @@ describe('el paquete se identifica y fija con que Node se instala', () => {
     // Dos mitades de la misma afirmacion: `engines` acota, `.nvmrc` elige. Si la CI
     // llevara el numero escrito a mano, serian dos que pueden separarse sin que nada
     // lo diga.
+    //
+    // Que la elegida CUMPLA lo prometido no lo dice esta expresion —se tragaria un `.nvmrc` de
+    // 22 contra un `engines` de 24, que es justo el error de #90—: lo compara `motor.ts`.
     expect(leer(join(RAIZ, '.nvmrc')).trim()).toMatch(/^2[2-9]\.\d+\.\d+$/);
   });
 
@@ -317,12 +324,23 @@ describe('el frontend tiene su propia CI', () => {
     expect(workflow).toContain('--frozen-lockfile');
   });
 
-  it('toma la version de Node del archivo, no de un literal', () => {
+  it('toma la version de Node del archivo, no de un literal — y en LOS DOS trabajos (#90)', () => {
     expect(
       workflow,
       'Con el numero escrito aqui, la CI y quien clona el repositorio son dos versiones\n' +
         'que pueden separarse sin que nada lo diga.',
     ).toContain('node-version-file: normativa/frontend/.nvmrc');
+    // Contados, y no «al menos uno»: son dos trabajos —`verificar` y `arnes`— y cada uno monta
+    // su propio Node. Uno solo con el archivo dejaria al otro con el numero a mano, que es la
+    // forma exacta en que la CI y el arbol se separan sin que nada lo diga (#90). Se comparan
+    // contra los `setup-node` que hay, para que anadir un trabajo con un literal salga rojo.
+    const conArchivo = workflow.match(/node-version-file:/g) ?? [];
+    const conNode = workflow.match(/uses: actions\/setup-node@/g) ?? [];
+    expect(conArchivo, 'ningun `setup-node` escribe la version a mano').toHaveLength(
+      conNode.length,
+    );
+    expect(conNode.length, 'los dos trabajos montan Node: `verificar` y `arnes`').toBe(2);
+    expect(workflow, 'y ninguno la escribe a mano').not.toMatch(/node-version:\s*["']?\d/);
   });
 
   it('no pide permisos de escritura: lee y verifica, no publica', () => {

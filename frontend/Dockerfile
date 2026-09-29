@@ -31,15 +31,19 @@
 # ## Las dos etapas se tratan distinto a proposito
 #
 # `construccion` se tira: nada de ella se publica, y por eso su base es la etiqueta movil
-# `node:22-alpine` —la version mayor es la que `frontend.yml` declara y lo que fija que se instale
-# es `yarn.lock` con `--frozen-lockfile`—.
+# `node:24-alpine` —la version mayor es la del `.nvmrc`, de donde la toma tambien `frontend.yml`
+# con `node-version-file`, y lo que fija que se instale es `yarn.lock` con `--frozen-lockfile`—.
+#
+# **Desde #90 la mayor es 24, y ya no la ata un comentario**: `verificaciones/motor.ts` compara
+# esta etiqueta con `.nvmrc` y sale roja si se separan. Hasta entonces aqui decia que la mayor es
+# «la que `frontend.yml` declara», y `frontend.yml` no declara ninguna: la lee del archivo.
 #
 # `interfaz` SI se publica, asi que su base va clavada: `nginx:1.31.5-alpine`, no `stable-alpine`
 # ni `1.31`. Es lo que permite que un escaneo de imagenes diga de que version habla, y actualizar
 # el numero es la correccion cuando el escaneo encuentre algo, no ignorar el hallazgo.
 
 # ---------------------------------------------------------------------------
-FROM node:22-alpine AS construccion
+FROM node:24-alpine AS construccion
 
 # EL `WORKDIR` REPRODUCE LA DISPOSICION DE CLONES HERMANOS, Y NO ES COSMETICO (#55).
 #

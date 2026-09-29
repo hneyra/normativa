@@ -75,6 +75,42 @@ export const FRASES_DEL_INTERPRETE = {
   // La que haga falta entra con la hoja que la dibuje, que es cuando se puede medir que sale.
   pidiendo: 'Pidiendo al servidor…',
   reintentar: 'Reintentar',
+  // ── Las de la TABLA y sus mandos, desde #65 ──────────────────────────────────────────────────
+  //
+  // Ediciones pagina y ordena en el servidor, asi que el interprete dibuja ahora los dos mandos y
+  // dice sus palabras por su cuenta. Se declaran **las que se dibujan**, y se puede decir cuales
+  // son sin adivinar porque `MandosDeLaTabla.tsx` no tiene otra rama: el desplegable de orden con
+  // su rotulo oculto, el boton de sentido con su `title`, los dos de pagina con su motivo cuando
+  // no llevan a ninguna parte, el indicador y el desplegable de tamano.
+  //
+  // Las DOS FLECHAS no se declaran, y es la misma decision que `celdaSinDato`: son `↑` y `↓`, y
+  // traducir una flecha no significa nada. `todo-el-texto-se-traduce` las exime por eso, junto a
+  // la raya.
+  //
+  // `enEspera` tampoco: la lectura del detalle trae su propia espera en la definicion —«Elija una
+  // edicion…»—, que dice lo de esta hoja y no una frase generica. La del saco solo saldria si
+  // alguna hoja declarara una lectura en espera sin decir cual, y hoy no la hay.
+  ordenarLaLista: 'Ordenar la lista',
+  pasarAAscendente: 'Ordenar de menor a mayor',
+  pasarADescendente: 'Ordenar de mayor a menor',
+  paginaAnterior: 'Anterior',
+  paginaSiguiente: 'Siguiente',
+  pagina: 'Página {{pagina}}',
+  paginaDe: 'Página {{pagina}} de {{paginas}}',
+  yaEsLaPrimeraPagina: 'Ésta es la primera página: no hay ninguna antes.',
+  noHayMasPaginas: 'No hay ninguna página después de ésta.',
+  filasPorPagina: 'Cuántas filas por página',
+  mandosDeLaTabla: 'Mandos de «{{tabla}}»',
+  accionesDeLaFila: 'Acciones de «{{fila}}»',
+  // El motivo con que sale impedida una accion que nadie puede atender. Se dibujan en cuanto el
+  // marco no da navegacion —una pantalla montada suelta—, y entonces el boton de cada fila lo dice.
+  sinNavegacion: 'Esta pantalla no está dentro de un marco que sepa abrir otra hoja.',
+  hojaNoOfrecida: 'Esa hoja no está entre las que esta cuenta puede abrir.',
+  faltaElDato: 'Todavía no se sabe «{{nombre}}», y sin él no hay a dónde ir.',
+  // Y el que sale cuando una tabla llega vacia y su definicion no dice por que. Las dos de esta
+  // hoja lo dicen; se declara porque la que falta no avisa: saldria en castellano en un segundo
+  // idioma, y en verde.
+  tablaSinMotivo: 'Esta lista no tiene filas, y la definición de la pantalla no dice por qué.',
 } as const satisfies Record<keyof TextosDelInterprete, string> &
   Partial<Record<keyof TextosDeLasPiezas, string>>;
 
@@ -107,5 +143,47 @@ export const TEXTOS_DEL_INTERPRETE: Partial<TextosDeLaPantalla> = {
   },
   get reintentar() {
     return t(FRASES_DEL_INTERPRETE.reintentar);
+  },
+  // Las de la tabla (#65). Las que llevan un dato dentro entran por INTERPOLACION y no
+  // concatenando: con `Pagina ${n} de ${m}` la clave seria distinta en cada pagina y no habria
+  // locale que pudiera tenerlas todas — es el defecto que `rentas`#246 midio.
+  get ordenarLaLista() {
+    return t(FRASES_DEL_INTERPRETE.ordenarLaLista);
+  },
+  get pasarAAscendente() {
+    return t(FRASES_DEL_INTERPRETE.pasarAAscendente);
+  },
+  get pasarADescendente() {
+    return t(FRASES_DEL_INTERPRETE.pasarADescendente);
+  },
+  get paginaAnterior() {
+    return t(FRASES_DEL_INTERPRETE.paginaAnterior);
+  },
+  get paginaSiguiente() {
+    return t(FRASES_DEL_INTERPRETE.paginaSiguiente);
+  },
+  pagina: (pagina: number) => t(FRASES_DEL_INTERPRETE.pagina, { pagina }),
+  paginaDe: (pagina: number, paginas: number) =>
+    t(FRASES_DEL_INTERPRETE.paginaDe, { pagina, paginas }),
+  get yaEsLaPrimeraPagina() {
+    return t(FRASES_DEL_INTERPRETE.yaEsLaPrimeraPagina);
+  },
+  get noHayMasPaginas() {
+    return t(FRASES_DEL_INTERPRETE.noHayMasPaginas);
+  },
+  get filasPorPagina() {
+    return t(FRASES_DEL_INTERPRETE.filasPorPagina);
+  },
+  mandosDeLaTabla: (tabla: string) => t(FRASES_DEL_INTERPRETE.mandosDeLaTabla, { tabla }),
+  accionesDeLaFila: (fila: string) => t(FRASES_DEL_INTERPRETE.accionesDeLaFila, { fila }),
+  get sinNavegacion() {
+    return t(FRASES_DEL_INTERPRETE.sinNavegacion);
+  },
+  get hojaNoOfrecida() {
+    return t(FRASES_DEL_INTERPRETE.hojaNoOfrecida);
+  },
+  faltaElDato: (nombre: string) => t(FRASES_DEL_INTERPRETE.faltaElDato, { nombre }),
+  get tablaSinMotivo() {
+    return t(FRASES_DEL_INTERPRETE.tablaSinMotivo);
   },
 };

@@ -3,6 +3,7 @@ import type {
   Coordenada,
   DatoConNombre,
   DatosDeUnaTabla,
+  RutaDeLaHoja,
 } from '@kamayuk/ui';
 
 import type { ClaveDeHoja } from '../pantallas/arbol.ts';
@@ -51,7 +52,32 @@ export interface DeclaracionDeLectura {
   readonly clave: string;
   /** La clave de consulta de TanStack. Lleva la hoja dentro: dos hojas no comparten cache. */
   readonly consulta: readonly (string | number)[];
-  readonly pedir: (senal: AbortSignal) => Promise<unknown>;
+  /**
+   * **Los sitios de la RUTA que esta lectura lee** (#65): la pagina, el orden, el sujeto.
+   *
+   * Lo que valgan entra en la clave de consulta, y ese es el punto: sin eso, el mando de pagina
+   * mueve la direccion, `pedir` **no se vuelve a llamar** y la tabla dibuja la pagina 0 con el
+   * rotulo «Página 3» — en verde y sin un solo error.
+   *
+   * Sin declararlos, la lectura no depende de la ruta y se pide una sola vez, que es lo que hacen
+   * las cuatro lecturas de antes de #65.
+   */
+  readonly enLaRuta?: readonly string[];
+  /**
+   * **Cuando todavia no hay nada que pedir**, y por tanto no se pide (#65).
+   *
+   * Es el `en-espera` que `EstadoDeUnaLectura` de `@kamayuk/ui` ya nombra: «falta el sujeto para
+   * poder pedir». Sin esto, una hoja de detalle sin nada elegido pediria `/conjuntos/undefined/…`
+   * y dibujaria un 404 de ruta como si fuera una averia — cuando lo unico que pasa es que nadie ha
+   * elegido una fila todavia.
+   */
+  readonly enEsperaSi?: (ruta: RutaDeLaHoja) => boolean;
+  /**
+   * Pide. **La ruta entra por parametro** y no se lee de ningun sitio global: es lo que decide que
+   * ventana se pide y de que conjunto, y una lectura que la leyera por su cuenta no podria entrar
+   * en la clave de consulta.
+   */
+  readonly pedir: (senal: AbortSignal, ruta: RutaDeLaHoja) => Promise<unknown>;
 }
 
 /** Lo que una hoja saca de lo que llego. */

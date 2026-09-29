@@ -5,7 +5,7 @@
   "version": "0.1.0",
   "description": "normativa — interfaz web. El Armazon de @kamayuk/shell con las cuatro hojas del artboard V8 (#58), y todo su texto por i18next con el español como clave (#60).",
   "engines": {
-    "node": ">=22"
+    "node": ">=24"
   },
   "scripts": {
     "dev": "vite",

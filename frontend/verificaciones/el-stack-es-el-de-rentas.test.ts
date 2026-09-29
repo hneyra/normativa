@@ -129,8 +129,41 @@ const ENTRAN_DESPUES: Readonly<
   Record<string, { readonly seccion: Seccion; readonly rango: string; readonly issue: string }>
 > = {};
 
-/** El motor que `rentas` declara en `engines.node`, en el mismo `sha`. */
+/**
+ * El motor que `rentas` declara en `engines.node`, en el mismo `sha` — **y tambien hoy en su
+ * `origin/main`**, 111 commits despues (comprobado el 2026-09-20).
+ */
 const EL_MOTOR_DE_RENTAS = '>=22';
+
+/**
+ * **LA UNICA DIVERGENCIA DECLARADA CON `rentas`, y por que** (#90; decision del dueno del
+ * 2026-09-20).
+ *
+ * <h2>Quien pide 24, y desde cuando</h2>
+ *
+ * `kamayuk-lib` —de donde salen los SEIS `@kamayuk/*` de la lista de arriba— subio su raiz a
+ * `>=24` el 2026-09-16 (`kamayuk-lib`#90, PR #91), y con ella los tres `node-version` de su CI,
+ * incluido el del trabajo `consumidores`, que es el que corre **esta** suite. Durante cuatro dias
+ * este manifiesto siguio prometiendo `>=22` y la CI de aqui corriendo 22.14.0: lo que se enlaza
+ * exigia un motor que aqui no se usaba, y salia verde **por suerte** —la libreria viaja como
+ * fuente y todavia no ejerce nada que solo exista en 24— y no por diseno.
+ *
+ * <h2>Y por que esto no es aflojar la guarda</h2>
+ *
+ * Porque es UNA diferencia, escrita, con su medida y con el dia en que deja de existir. La
+ * comparacion dependencia a dependencia sigue entera: las 44 entradas, los mismos rangos y los
+ * mismos seis paquetes del hermano. Lo que se aparta es `engines.node`, que no es una
+ * dependencia: es con que motor se ejecuta lo que esa lista fija.
+ *
+ * Que la subida no rompe nada esta MEDIDO —los dos motores, antes y despues, con cifras— en
+ * `el-motor-que-se-promete-es-el-que-corre.test.ts`, y lo que la hizo posible es
+ * `request-del-arnes.ts`: con Node 24 y sin el, `yarn verificar` salia `Tests 2 failed | 574
+ * passed (576)` con 213 rechazos sin atender.
+ *
+ * **El dia que `rentas` suba tambien**, esto deja de ser una divergencia y la ultima prueba de
+ * este archivo sale roja para que se borre: dos numeros iguales no necesitan cuatro parrafos.
+ */
+const EL_MOTOR_DE_AQUI = '>=24';
 
 const AQUI = dirname(fileURLToPath(import.meta.url));
 const RAIZ = join(AQUI, '..');
@@ -254,11 +287,28 @@ describe(`el stack es el de rentas@${RENTAS_EN.slice(0, 7)}, version a version`,
     ).toEqual([]);
   });
 
-  it('el motor es el de rentas', () => {
+  it('el motor NO es el de rentas, y esa es la unica divergencia declarada (#90)', () => {
     expect(
       elManifiesto().engines?.node,
-      `«engines.node» tiene que ser «${EL_MOTOR_DE_RENTAS}», el de rentas@${RENTAS_EN.slice(0, 7)}.`,
-    ).toBe(EL_MOTOR_DE_RENTAS);
+      `«engines.node» tiene que ser «${EL_MOTOR_DE_AQUI}».\n\n` +
+        `  rentas@${RENTAS_EN.slice(0, 7)} declara «${EL_MOTOR_DE_RENTAS}» y este arbol se aparta\n` +
+        '  a proposito desde #90, porque `kamayuk-lib` —que entra por `link:`— pide «>=24» desde\n' +
+        '  el 2026-09-16 y su CI corre ESTA suite con 24. El motivo entero, la medida de los dos\n' +
+        '  motores y el dia en que la divergencia se borra estan en EL_MOTOR_DE_AQUI.\n' +
+        '  Volver a «>=22» no es «alinearse con rentas»: es prometer un motor que la libreria que\n' +
+        '  se enlaza ya no soporta.',
+    ).toBe(EL_MOTOR_DE_AQUI);
+  });
+
+  it('y la divergencia existe de verdad: el dia que rentas suba, esto se borra', () => {
+    // Sin esta linea, `EL_MOTOR_DE_AQUI` podria quedarse escrito —con sus cuatro parrafos— sobre
+    // una diferencia que ya no lo es: quien actualizara `EL_MOTOR_DE_RENTAS` con el `sha` nuevo
+    // no tiene por que acordarse de que aqui hay una excepcion que retirar.
+    expect(
+      EL_MOTOR_DE_AQUI,
+      'rentas ya declara este mismo motor: entonces no hay divergencia que declarar. Se borra\n' +
+        '  EL_MOTOR_DE_AQUI, esta prueba y la de arriba vuelve a comparar contra EL_MOTOR_DE_RENTAS.',
+    ).not.toBe(EL_MOTOR_DE_RENTAS);
   });
 
   it('y el gestor es yarn classic, con su candado v1', () => {

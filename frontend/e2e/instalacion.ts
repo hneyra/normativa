@@ -158,12 +158,35 @@ function formaDe(operacion: string): Record<string, unknown> {
   return forma as Record<string, unknown>;
 }
 
-/** Un cuerpo doblado, comprobado CAMPO A CAMPO contra la forma que el contrato publica. */
-function comoElContrato<T extends Record<string, unknown>>(operacion: string, cuerpo: T): T {
+/**
+ * Un cuerpo doblado, comprobado CAMPO A CAMPO contra la forma que el contrato publica.
+ *
+ * @param dentro el nombre de una LISTA de la forma, cuando lo que se comprueba es una de sus filas
+ *   (#65): `contenido` en una respuesta paginada, `parametros` en el contenido de un conjunto. Sin
+ *   el, se compara el cuerpo entero contra la forma de la operacion.
+ */
+function comoElContrato<T extends Record<string, unknown>>(
+  operacion: string,
+  cuerpo: T,
+  dentro?: string,
+): T {
+  const forma = formaDe(operacion);
+  const suya =
+    dentro === undefined
+      ? forma
+      : ((forma[dentro] as readonly unknown[] | undefined)?.[0] as Record<string, unknown> | undefined);
+  if (suya === undefined) {
+    throw new Error(
+      `El contrato no publica una lista «${String(dentro)}» dentro de «${operacion}», o la publica ` +
+        'vacia. Sin una fila de ejemplo no hay campos que comparar, y este arnes doblaria un cuerpo ' +
+        'que nada comprueba.',
+    );
+  }
   expect(
     Object.keys(cuerpo).sort(),
-    `El cuerpo doblado de «${operacion}» dejo de cuadrar con la forma publicada.`,
-  ).toEqual(Object.keys(formaDe(operacion)).sort());
+    `El cuerpo doblado de «${operacion}»${dentro === undefined ? '' : ` · ${dentro}`} dejo de ` +
+      'cuadrar con la forma publicada.',
+  ).toEqual(Object.keys(suya).sort());
   return cuerpo;
 }
 
@@ -259,6 +282,352 @@ export async function conLoDePublicacion(
       contentType: 'application/json',
       headers: cabeceras,
       body: cuerpo,
+    });
+  });
+  return { peticiones };
+}
+
+/* ── Lo que Cuadros pide (#66) ─────────────────────────────────────────────────────────────── */
+
+/**
+ * **El ejercicio al que este arnes mueve el reloj del navegador.**
+ *
+ * `2031` y no el de hoy, y a proposito: una guarda del ejercicio que **no mueva el reloj** pasa
+ * igual con un literal dentro, porque hoy el ano es el mismo. Mover el reloj es lo unico que la
+ * hace poder fallar.
+ *
+ * El instante es **mediodia UTC**, no medianoche: `ejercicioDe` lee el ano en la zona del puesto
+ * —el ejercicio tributario es una fecha civil de la municipalidad—, y a mediodia UTC el 1 de enero
+ * sigue siendo 2031 en cualquier zona del planeta. A medianoche no: en Lima seria todavia el 31 de
+ * diciembre de 2030, y este arnes saldria rojo o verde segun donde se corra.
+ */
+export const EJERCICIO_DEL_ARNES = 2031;
+export const RELOJ_DEL_ARNES = '2031-01-01T12:00:00Z';
+
+/** El documento fuente que traen las filas de cada cuadro. Es de prueba: no sale de ningun corpus. */
+export const FUENTE_DE_LOS_UNITARIOS = 'Documento de prueba · valores unitarios';
+export const FUENTE_DE_LA_DEPRECIACION = 'Documento de prueba · depreciación';
+export const FUENTE_DEL_VEHICULAR = 'Documento de prueba · anexo vehicular';
+
+/**
+ * **Las filas que este arnes sirve, y por que son las que son.**
+ *
+ * Ninguna cifra sale del corpus: lo que se mide es **como se lee una fila**, no cuanto vale un
+ * metro cuadrado. Lo que si esta elegido es la FORMA:
+ *
+ * · **dos tablas de depreciacion**, cada una con su tramo abierto, y **con topes distintos**. Con
+ *   una sola, una implementacion que buscara el maximo del cuadro entero pasaria igual; con dos, la
+ *   segunda tiene que decir el suyo y no el de la primera;
+ * · **un `anioConstruccionHasta: null`**, que es «Sin tope»;
+ * · **cifras con un decimal** —`11.5`—, para que se vea que se completan a dos y que lo que se
+ *   pinta no es lo que llego tal cual;
+ * · y **una cifra de siete digitos**, para que el separador de miles tenga algo que agrupar.
+ */
+export const UNITARIOS_SERVIDOS: readonly Record<string, unknown>[] = [
+  {
+    partida: 'MUROS',
+    categoria: 'A',
+    anioConstruccionDesde: 1990,
+    anioConstruccionHasta: 1999,
+    valorM2: '11.5',
+    documentoFuente: FUENTE_DE_LOS_UNITARIOS,
+  },
+  {
+    partida: 'TECHOS',
+    categoria: 'B',
+    anioConstruccionDesde: 2000,
+    anioConstruccionHasta: null,
+    valorM2: '2222333.4',
+    documentoFuente: FUENTE_DE_LOS_UNITARIOS,
+  },
+];
+
+export const DEPRECIACIONES_SERVIDAS: readonly Record<string, unknown>[] = [
+  {
+    uso: '01',
+    material: 'Concreto',
+    estadoConservacion: 'Muy Bueno',
+    antiguedadHasta: 5,
+    porcentaje: '0',
+    documentoFuente: FUENTE_DE_LA_DEPRECIACION,
+  },
+  {
+    uso: '01',
+    material: 'Concreto',
+    estadoConservacion: 'Muy Bueno',
+    antiguedadHasta: 30,
+    porcentaje: '12',
+    documentoFuente: FUENTE_DE_LA_DEPRECIACION,
+  },
+  {
+    uso: '01',
+    material: 'Concreto',
+    estadoConservacion: 'Muy Bueno',
+    antiguedadHasta: null,
+    porcentaje: '27',
+    documentoFuente: FUENTE_DE_LA_DEPRECIACION,
+  },
+  {
+    uso: '02',
+    material: 'Ladrillo',
+    estadoConservacion: 'Malo',
+    antiguedadHasta: null,
+    porcentaje: '60',
+    documentoFuente: FUENTE_DE_LA_DEPRECIACION,
+  },
+];
+
+/**
+ * El anexo vehicular, **de la medida que se le pida**.
+ *
+ * `54 129` es lo que mide el de 2026 (`ElEjercicio2026SeSellaTest.java:246`), y es la cifra con la
+ * que hay que medir la paginacion: con diez filas, una tabla sin paginar y una paginada se ven
+ * igual.
+ */
+export function vehicularesServidos(cuantos: number): readonly Record<string, unknown>[] {
+  return Array.from({ length: cuantos }, (_, i) => ({
+    ejercicio: EJERCICIO_DEL_ARNES,
+    categoria: i % 2 === 0 ? 'A1' : 'A2',
+    marca: 'MARCA DE PRUEBA',
+    modelo: i === 0 ? 'OTROS MODELOS' : `MODELO ${String(i)}`,
+    anioFabricacion: 2030 - (i % 20),
+    valor: `${String(1000 + i)}.5`,
+    documentoFuente: FUENTE_DEL_VEHICULAR,
+  }));
+}
+
+/** Lo que se le puede cambiar a lo que este arnes sirve. */
+export interface CuadrosServidos {
+  /** Cuantas filas trae el anexo vehicular. Por omision, dos. */
+  readonly vehiculares?: number;
+  /** Las celdas de valores unitarios que van en VALUACION. Por omision, las dos de arriba. */
+  readonly unitarios?: readonly Record<string, unknown>[];
+  /** Las de depreciacion. */
+  readonly depreciaciones?: readonly Record<string, unknown>[];
+}
+
+/** El cuerpo de un snapshot para Cuadros, comprobado campo a campo contra la forma publicada. */
+export function elSnapshotDeLosCuadros(
+  ambito: 'VALUACION' | 'OBLIGACION',
+  servido: CuadrosServidos = {},
+): Record<string, unknown> {
+  const laValuacion = ambito === 'VALUACION';
+  const unitarios = laValuacion ? (servido.unitarios ?? UNITARIOS_SERVIDOS) : [];
+  const depreciaciones = laValuacion ? (servido.depreciaciones ?? DEPRECIACIONES_SERVIDAS) : [];
+  const vehiculares = laValuacion ? [] : vehicularesServidos(servido.vehiculares ?? 2);
+  return comoElContrato('GET /conjuntos/{id}/snapshot', {
+    ...CONJUNTO_SERVIDO,
+    ejercicio: EJERCICIO_DEL_ARNES,
+    ambito,
+    filas: unitarios.length + depreciaciones.length + vehiculares.length,
+    parametros: [],
+    valoresUnitarios: unitarios,
+    depreciaciones,
+    valoresReferenciales: vehiculares,
+  });
+}
+
+/**
+ * Deja contestadas las dos lecturas de Cuadros, **con el reloj del navegador movido**, y cuenta lo
+ * que se pidio.
+ *
+ * El reloj se instala antes de navegar: `EJERCICIO_DE_TRABAJO` se lee **una vez al cargar el
+ * modulo**, asi que moverlo despues no cambiaria nada y esta guarda mediria el ano de hoy.
+ */
+export async function conLosCuadros(
+  pagina: Page,
+  servido: CuadrosServidos = {},
+): Promise<{ readonly peticiones: string[]; readonly cuerpos: Record<string, string> }> {
+  // `setFixedTime` y no `install()`: lo unico que hay que mover es lo que `new Date()` contesta.
+  // `install()` ademas **para los temporizadores**, y con ellos parados el planificador de React y
+  // los reintentos de TanStack se quedan esperando algo que nunca llega — un arnes colgado que no
+  // habla del ejercicio.
+  await pagina.clock.setFixedTime(RELOJ_DEL_ARNES);
+  const peticiones: string[] = [];
+  const cuerpos: Record<string, string> = {
+    VALUACION: JSON.stringify(elSnapshotDeLosCuadros('VALUACION', servido)),
+    OBLIGACION: JSON.stringify(elSnapshotDeLosCuadros('OBLIGACION', servido)),
+  };
+
+  await pagina.route(LECTURA_DEL_CONJUNTO, (ruta) => {
+    peticiones.push(ruta.request().url());
+    return ruta.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ ...elConjuntoVigente(), ejercicio: EJERCICIO_DEL_ARNES }),
+    });
+  });
+  await pagina.route(LECTURA_DEL_SNAPSHOT, (ruta) => {
+    const url = ruta.request().url();
+    peticiones.push(url);
+    const ambito = url.includes('ambito=OBLIGACION') ? 'OBLIGACION' : 'VALUACION';
+    return ruta.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: cuerpos[ambito] ?? '{}',
+    });
+  });
+  return { peticiones, cuerpos };
+}
+
+/* ── Lo que Ediciones pide (#65) ───────────────────────────────────────────────────────────── */
+
+/**
+ * La lectura del CONTENIDO de un conjunto: `GET /conjuntos/{id}/parametros` (#56).
+ *
+ * Sin `?` al final, a diferencia de las demas: esta operacion **no declara ni un parametro de
+ * consulta**, asi que la ruta termina en `/parametros`. Y `\d+` y no `.+`: lo que va en el camino
+ * es el identificador, y una ruta con `{id}` literal dentro —el sujeto que no se sustituyo— no
+ * casa aqui y se ve como la peticion sin contestar que es.
+ */
+export const LECTURA_DEL_CONTENIDO = /\/normativa\/api\/v1\/conjuntos\/\d+\/parametros(\?|$)/;
+
+/** Cuantos conjuntos tiene el padron que este arnes sirve. Mas de una pagina, a proposito. */
+export const CUANTAS_EDICIONES = 54;
+
+/**
+ * Una pagina de `GET /seguridad/parametros`, **compuesta con lo que la peticion pidio**.
+ *
+ * No es una respuesta fija: el arnes pagina y ordena de verdad sobre un padron de
+ * {@link CUANTAS_EDICIONES} filas, porque lo que hay que medir es que la pagina 2 traiga otras
+ * filas que la 1. Con un cuerpo fijo, pulsar «Siguiente» daria lo mismo y la prueba pasaria con
+ * una paginacion que no pagina, que es el defecto que su guarda de jsdom existe para cazar.
+ *
+ * El envoltorio se comprueba **campo a campo contra la forma publicada** —igual que los de
+ * Publicacion—, y las filas tambien: uno de mas o de menos pone rojo el arnes en vez de pasar en
+ * silencio.
+ */
+export function laPaginaDeEdiciones(url: string): Record<string, unknown> {
+  const consulta = new URL(url).searchParams;
+  const tamano = Number(consulta.get('tamano') ?? '20');
+  const pagina = Number(consulta.get('pagina') ?? '0');
+  const descendente = consulta.get('direccion') === 'DESCENDENTE';
+  const desde = pagina * tamano;
+
+  const todas = Array.from({ length: CUANTAS_EDICIONES }, (_, i) => unaEdicion(i + 1));
+  const ordenadas = descendente ? [...todas].reverse() : todas;
+  const contenido = ordenadas.slice(desde, desde + tamano).map((fila) => comoElContrato(
+    'GET /seguridad/parametros',
+    fila,
+    'contenido',
+  ));
+
+  return comoElContrato('GET /seguridad/parametros', {
+    contenido,
+    pagina,
+    tamano,
+    totalElementos: CUANTAS_EDICIONES,
+    totalPaginas: Math.ceil(CUANTAS_EDICIONES / tamano),
+    hayMas: desde + tamano < CUANTAS_EDICIONES,
+  });
+}
+
+/**
+ * Una fila del listado. Las IMPARES van SIN sellar, con sus dos nulos dentro.
+ *
+ * Los nulos no son decoracion: son el AC 5 —«un nulo no es un cero»— y la unica forma de medir en
+ * un navegador de verdad que la celda dice la palabra y no un `0` ni un blanco.
+ */
+export function unaEdicion(id: number): Record<string, unknown> {
+  const sellado = id % 2 === 0;
+  return {
+    id,
+    // Dos ejercicios, para que ordenar por `ejercicio` signifique algo.
+    ejercicio: 2026 + (id % 2),
+    version: id,
+    estado: sellado ? 'SELLADO' : 'ABIERTO',
+    fechaSellado: sellado ? '2026-09-06T14:12:03.512Z' : null,
+    usuarioSellado: sellado ? 'hneyra' : null,
+  };
+}
+
+/**
+ * El contenido de un conjunto: `GET /conjuntos/{id}/parametros`.
+ *
+ * Con **los seis campos nulables repartidos entre sus dos filas** —la UIT no lleva clave, no tiene
+ * valor de texto y no tiene fecha de fin; el plazo no es una cifra— y con la cifra **como cadena,
+ * con sus seis decimales**: es lo que el backend escribe con `toPlainString()`, y lo que hace
+ * visible que la interfaz no la pasa por `Number` (`5350.000000` volveria «5350»).
+ */
+export function elContenidoDelConjunto(id: number): Record<string, unknown> {
+  return comoElContrato('GET /conjuntos/{id}/parametros', {
+    conjunto: unaEdicion(id),
+    parametros: [
+      comoElContrato(
+        'GET /conjuntos/{id}/parametros',
+        {
+          id: 1,
+          tipo: 'UIT',
+          clave: null,
+          valorNumerico: '5350.000000',
+          valorTexto: null,
+          vigenciaDesde: '2026-01-01',
+          vigenciaHasta: null,
+          documentoFuente: 'Decreto Supremo N.° 260-2025-EF',
+        },
+        'parametros',
+      ),
+      comoElContrato(
+        'GET /conjuntos/{id}/parametros',
+        {
+          id: 2,
+          tipo: 'PLAZO',
+          clave: 'DECLARACION-JURADA',
+          valorNumerico: null,
+          valorTexto: 'último día hábil de febrero',
+          vigenciaDesde: '2004-11-15',
+          vigenciaHasta: '2026-12-31',
+          documentoFuente: 'TUO LTM (D.S. N.° 156-2004-EF)',
+        },
+        'parametros',
+      ),
+    ],
+  });
+}
+
+/** Como se contesta a una de las dos lecturas: con su cuerpo, o con un estado que no es 200. */
+export interface LoQueSeContesta {
+  readonly estado?: number;
+  readonly cuerpo?: unknown;
+}
+
+/**
+ * Deja contestadas las dos lecturas de Ediciones, y **apunta todas las URL que se pidieron**.
+ *
+ * El registro de URL es la mitad del criterio: lo que hay que poder afirmar es que el listado lleva
+ * exactamente los cuatro nombres del dialecto, que cambiar de pagina vuelve a pedir **una** vez, y
+ * que elegir una fila pide `/parametros` y **no** `/snapshot`.
+ */
+export async function conLoDeEdiciones(
+  pagina: Page,
+  cambios: { readonly listado?: LoQueSeContesta; readonly contenido?: LoQueSeContesta } = {},
+): Promise<{ readonly peticiones: string[] }> {
+  const peticiones: string[] = [];
+  // **Se apunta lo que SALE, no lo que se contesta.** Con un apunte por manejador de ruta, una
+  // peticion que la hoja no deberia hacer —el snapshot para el detalle, por ejemplo— no la recoge
+  // nadie: la contesta el 404 general de `conLaPuertaAgotada` y el rojo diria «no se pidio lo que
+  // esperaba» en vez de NOMBRAR la URL que se pidio. Escuchando la peticion, la dice.
+  pagina.on('request', (peticion) => {
+    const url = peticion.url();
+    if (url.includes('/normativa/api/v1/')) peticiones.push(url);
+  });
+  await pagina.route(LECTURA_DEL_LISTADO, (ruta) => {
+    const url = ruta.request().url();
+    const suyo = cambios.listado ?? {};
+    return ruta.fulfill({
+      status: suyo.estado ?? 200,
+      contentType: 'application/json',
+      body: JSON.stringify(suyo.cuerpo ?? laPaginaDeEdiciones(url)),
+    });
+  });
+  await pagina.route(LECTURA_DEL_CONTENIDO, (ruta) => {
+    const url = ruta.request().url();
+    const suyo = cambios.contenido ?? {};
+    const id = Number(/\/conjuntos\/(\d+)\/parametros/.exec(url)?.[1] ?? '0');
+    return ruta.fulfill({
+      status: suyo.estado ?? 200,
+      contentType: 'application/json',
+      body: JSON.stringify(suyo.cuerpo ?? elContenidoDelConjunto(id)),
     });
   });
   return { peticiones };
