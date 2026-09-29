@@ -22,9 +22,10 @@ import { describe, expect, it } from 'vitest';
  * Todas se caen en silencio, que es el motivo por el que se comprueban.
  *
  * **Desde #50 sigue a `rentas/frontend/verificaciones/andamiaje.test.ts` en `ac379ac`**, con lo
- * que aqui es propio y dicho: `.nvmrc` y `.npmrc`, que `rentas` no tiene (su CI fija
- * `node-version: "22"` como literal), la `base` de `vitest.config.ts` y los scripts que todavia
- * no tienen de que colgar.
+ * que aqui es propio y dicho: `.nvmrc` en `frontend/` y `.npmrc`, la `base` de `vitest.config.ts`
+ * y los scripts que todavia no tienen de que colgar. (`rentas` no tenia `.nvmrc` y su CI fijaba
+ * `node-version: "22"` como literal; desde su #289 lo tiene en la RAIZ y lo lee con
+ * `node-version-file`. `.npmrc` sigue sin tenerlo.)
  *
  * **Y desde #55, lo que el clon hermano obliga**: `preserveSymlinks` —que `rentas` exige y #50
  * dejo fuera a proposito—, el checkout del anfitrion en `path: normativa` con `kamayuk-lib` al
@@ -181,16 +182,18 @@ describe('el paquete se identifica y fija con que Node se instala', () => {
   });
 
   it('declara la version de Node que necesita', () => {
-    // **`>=24` desde #90**, por la decision del dueno del 2026-09-20: lo que este frontend enlaza
-    // por `link:` pide `>=24` desde el 2026-09-16, y la CI de la libreria corre con 24 tambien
-    // ESTA suite. Los dos motores se midieron antes de subir, y las cifras estan en
-    // `el-motor-que-se-promete-es-el-que-corre.test.ts`.
-    expect(paquete.engines?.['node']).toBe('>=24');
+    // **`^24.21.0` desde #96**, que es el de `rentas` desde su #289. De #90 a #96 fue `>=24` —lo
+    // que este frontend enlaza por `link:` pide `>=24` desde el 2026-09-16— y era una divergencia
+    // declarada con `rentas`, que seguia en `>=22`; ya no lo es. Los dos motores se midieron antes
+    // de subir, y las cifras estan en `el-motor-que-se-promete-es-el-que-corre.test.ts`.
+    expect(paquete.engines?.['node']).toBe('^24.21.0');
   });
 
   it('y `.nvmrc` dice CUAL, que es de donde la toma la CI', () => {
-    // **Diferencia declarada con `rentas`** (#50): alli no hay `.nvmrc` y su CI escribe
-    // `node-version: "22"`. Aqui se conserva, porque sin el la CI y quien clona son dos numeros.
+    // Aqui desde #50, cuando `rentas` no lo tenia y su CI escribia `node-version: "22"`. Desde
+    // `rentas`#289 lo tiene en la RAIZ —tres de sus cinco `setup-node` no son del frontend— y
+    // aqui sigue en `frontend/`: el unico flujo que lo lee es `frontend.yml`. Sin el, la CI y
+    // quien clona son dos numeros.
     // Dos mitades de la misma afirmacion: `engines` acota, `.nvmrc` elige. Si la CI
     // llevara el numero escrito a mano, serian dos que pueden separarse sin que nada
     // lo diga.

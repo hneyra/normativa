@@ -48,13 +48,16 @@ import { raizDelClon, remedioDelEnlace } from './remedio.mjs';
  * issue dice: **hoy sale verde por suerte y no por diseno**, y el dia que deje de salir, el rojo
  * no hablaria de motores. La tercera regla de `motor.ts` es la que convierte esa suerte en aviso.
  *
- * <h2>Y el precio, declarado: esto DIVERGE del stack de `rentas`</h2>
+ * <h2>Y el precio que se declaro, que ya no se paga (#96)</h2>
  *
- * `rentas` declara `>=22` en el `ac379ac` que `el-stack-es-el-de-rentas.test.ts` fija y tambien
- * hoy en su `origin/main` (111 commits despues, comprobado el 2026-09-20), igual que `catastro` y
- * `ciudadano`; en `>=24` estan `kamayuk-lib` y `caja`. Alinearse con la libreria es apartarse de
- * la referencia del stack **a proposito**, y ese apartamiento esta escrito en la guarda que lo
- * vigila, con su motivo y su medida, sin aflojarle nada mas.
+ * Cuando se subio, `rentas` declaraba `>=22`, y alinearse con la libreria fue apartarse de la
+ * referencia del stack **a proposito**: la divergencia quedo escrita en
+ * `el-stack-es-el-de-rentas.test.ts`, con su motivo, su medida y una prueba que la borraba el dia
+ * que `rentas` subiera. **Subio el 2026-09-23** —`^24.21.0`, `rentas`#289, `ba15d76c`— y esa
+ * prueba no se entero, porque compara contra un `sha` fijo. #96 movio el `sha` a `9964a08`, borro
+ * la divergencia y trajo aqui `^24.21.0` y `.nvmrc` `24.21.0`, que es lo que obligo a
+ * {@link cumple} a leer `^`: con `>=` solo, el manifiesto de `rentas` copiado tal cual salia rojo
+ * por no saberse leer, y `24.14.1` —el `.nvmrc` de entonces— tampoco lo cumple.
  */
 
 const AQUI = dirname(fileURLToPath(import.meta.url));
@@ -119,7 +122,7 @@ describe('el motor que se promete es el que corre', () => {
     // de tener `FROM node:` o un clon hermano ausente darian `undefined` en todas partes, y una
     // lista vacia de enlazados no tiene nada que desmentir.
     const motores = loQueDiceElDisco();
-    expect(motores.promete, 'este package.json declara `engines.node`').toMatch(/^>=\d/);
+    expect(motores.promete, 'este package.json declara `engines.node`').toMatch(/^(?:>=|\^)\d/);
     expect(motores.elige, '`.nvmrc` dice una version entera').toMatch(/^\d+\.\d+\.\d+$/);
     expect(motores.imagen, 'el Dockerfile construye sobre una imagen de node').toBeDefined();
     expect(motores.enlazados.map((e) => e.paquete).sort(), 'los seis `@kamayuk/*`').toEqual([
@@ -164,8 +167,8 @@ describe('el motor que se promete es el que corre', () => {
 /** Un disco de mentira: lo que hoy dice el de verdad, con lo que se le cambie encima. */
 function comoSiFuera(cambios: Partial<Motores>): Motores {
   return {
-    promete: '>=24',
-    elige: '24.14.1',
+    promete: '^24.21.0',
+    elige: '24.21.0',
     imagen: '24-alpine',
     enlazados: [
       { paquete: '@kamayuk/api', pide: undefined },
@@ -191,7 +194,17 @@ describe('LA MUESTRA: la guarda muerde, sitio por sitio', () => {
 
     expect(resto).toEqual([]);
     expect(primero?.donde).toBe('.nvmrc');
-    expect(primero?.que).toBe('elige Node 24.14.1, y este package.json promete «>=26».');
+    expect(primero?.que).toBe('elige Node 24.21.0, y este package.json promete «>=26».');
+  });
+
+  it('1b. y con `^` tambien: el `.nvmrc` de antes de #96 no cumple lo que `rentas` promete', () => {
+    // Es la rotura exacta de #96: copiar `^24.21.0` de `rentas` y dejar `.nvmrc` en `24.14.1`.
+    // Misma mayor —asi que la imagen no dice nada—, y aun asi fuera del rango.
+    const [primero, ...resto] = desacuerdos(comoSiFuera({ elige: '24.14.1' }), LA_LIBRERIA_PEDIA);
+
+    expect(resto).toEqual([]);
+    expect(primero?.donde).toBe('.nvmrc');
+    expect(primero?.que).toBe('elige Node 24.14.1, y este package.json promete «^24.21.0».');
   });
 
   it('2. si la imagen construye con otra mayor, tambien — y es la que se publica', () => {
@@ -201,7 +214,7 @@ describe('LA MUESTRA: la guarda muerde, sitio por sitio', () => {
 
     expect(resto).toEqual([]);
     expect(primero?.donde).toBe('Dockerfile');
-    expect(primero?.que).toBe('construye sobre «node:22-alpine» y «.nvmrc» elige «24.14.1».');
+    expect(primero?.que).toBe('construye sobre «node:22-alpine» y «.nvmrc» elige «24.21.0».');
   });
 
   it('3. Y LA QUE IMPORTA: un paquete ENLAZADO que pide mas de lo que aqui se corre', () => {
@@ -221,7 +234,7 @@ describe('LA MUESTRA: la guarda muerde, sitio por sitio', () => {
 
     expect(todos).toHaveLength(1);
     expect(todos[0]?.donde).toBe('@kamayuk/ui');
-    expect(todos[0]?.que).toBe('pide «>=26» y aqui se corre Node 24.14.1.');
+    expect(todos[0]?.que).toBe('pide «>=26» y aqui se corre Node 24.21.0.');
     expect(todos[0]?.remedio).toContain('lo que este frontend ENLAZA pide un motor');
   });
 
@@ -243,11 +256,14 @@ describe('LA MUESTRA: la guarda muerde, sitio por sitio', () => {
 
   it('un rango que esta guarda no sabe leer NO se interpreta: sale rojo y lo lee una persona', () => {
     // `^24 || >=22.5 <23` no se adivina. Lo que se juega es autorizar un motor que nadie midio.
-    expect(cumple('24.14.1', '^24 || >=22.5')).toBeNull();
+    expect(cumple('24.21.0', '^24 || >=22.5')).toBeNull();
+    // Ni el `~`, ni el `^` con la mayor en cero, que en semver quiere decir otra cosa.
+    expect(cumple('24.21.0', '~24.21.0')).toBeNull();
+    expect(cumple('0.3.5', '^0.3.1')).toBeNull();
 
-    const [primero] = desacuerdos(comoSiFuera({ promete: '^24' }), LA_LIBRERIA_PEDIA);
+    const [primero] = desacuerdos(comoSiFuera({ promete: '~24.21.0' }), LA_LIBRERIA_PEDIA);
     expect(primero?.donde).toBe('.nvmrc contra engines.node');
-    expect(primero?.que).toBe('no se sabe leer «24.14.1» contra «^24».');
+    expect(primero?.que).toBe('no se sabe leer «24.21.0» contra «~24.21.0».');
   });
 
   it('y el Dockerfile sin `FROM node:` no pasa por alto: se queda sin sujeto y lo dice', () => {
@@ -267,6 +283,17 @@ describe('las tres piezas puras, una a una', () => {
     ['24.14.1', '>=24', true],
     ['24.14.1', '>=22', true],
     ['22', '>=22', true],
+    // `^` desde #96, que es lo que `rentas` declara desde su #289.
+    ['24.21.0', '^24.21.0', true],
+    ['24.21.1', '^24.21.0', true],
+    ['24.30.0', '^24.21.0', true],
+    ['24.14.1', '^24.21.0', false],
+    ['24.20.9', '^24.21.0', false],
+    ['22.14.0', '^24.21.0', false],
+    // Y es un PIN de mayor, no un suelo abierto: la 25 no la admite.
+    ['25.0.0', '^24.21.0', false],
+    ['24.0.0', '^24', true],
+    ['25.1.0', '^24', false],
   ])('«%s» contra «%s» da %s', (version, rango, esperado) => {
     expect(cumple(version, rango)).toBe(esperado);
   });

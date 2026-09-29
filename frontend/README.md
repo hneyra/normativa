@@ -57,17 +57,19 @@ yarn i18n:regenerar   # reescribe `src/i18n/locales/es.json`
 yarn dev              # sólo para mirar
 ```
 
-Hace falta **Node 24** (`.nvmrc`, hoy `24.14.1`) y el clon hermano `kamayuk-lib` **al lado** de
+Hace falta **Node 24** (`.nvmrc`, hoy `24.21.0`) y el clon hermano `kamayuk-lib` **al lado** de
 este repositorio: los cinco `@kamayuk/*` entran por `link:../../kamayuk-lib/paquetes/*`.
 
 ## El motor: Node 24 desde [#90](https://github.com/hneyra/normativa/issues/90)
 
-`engines.node` promete `>=24`, `.nvmrc` elige `24.14.1`, la CI toma ese archivo
+`engines.node` promete `^24.21.0`, `.nvmrc` elige `24.21.0`, la CI toma ese archivo
 (`node-version-file`, en sus **dos** trabajos) y el `Dockerfile` construye sobre `node:24-alpine`.
 Que los cuatro digan lo mismo lo comprueba `verificaciones/motor.ts`, y con `.npmrc`
-(`engine-strict=true`) instalar con Node 22 **falla** en vez de avisar.
+(`engine-strict=true`) instalar con Node 22 —o con un 24 anterior a `24.21.0`— **falla** en vez de
+avisar.
 
 Se subió porque lo que entra por `link:` —`kamayuk-lib`— declara `>=24` desde el 2026-09-16, y su
-CI corre esta misma suite con 24. Es una **divergencia declarada** con `rentas`, que sigue en
-`>=22`: está escrita, con su medida y con el día en que se borra, en
-`verificaciones/el-stack-es-el-de-rentas.test.ts`.
+CI corre esta misma suite con 24. Fue una **divergencia declarada** con `rentas`, que entonces
+seguía en `>=22`, hasta que `rentas` subió a `^24.21.0` ([`rentas`#289](https://github.com/hneyra/rentas/issues/289)):
+desde [#96](https://github.com/hneyra/normativa/issues/96) el motor es **el mismo que el de
+`rentas`**, y `verificaciones/el-stack-es-el-de-rentas.test.ts` lo compara como una dependencia más.
