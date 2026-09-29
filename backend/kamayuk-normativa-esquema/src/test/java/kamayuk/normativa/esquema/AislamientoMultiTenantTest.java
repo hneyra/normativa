@@ -418,6 +418,61 @@ class AislamientoMultiTenantTest {
         }
 
         @Test
+        @DisplayName("la misma Idempotency-Key en dos municipalidades son dos conjuntos (V3, #59)")
+        void laMismaClaveEnDosMunicipalidadesSonDosConjuntos() throws SQLException {
+            String clave = literal(DatosDePrueba.CLAVE_DE_IDEMPOTENCIA);
+
+            // Como superusuario, que omite RLS: es la unica forma de ver las dos a la vez.
+            assertThat(
+                            consultarTextos(
+                                    "SELECT municipalidad_id FROM conjunto_parametros"
+                                            + " WHERE clave_idempotencia = "
+                                            + clave
+                                            + " ORDER BY municipalidad_id"))
+                    .as(
+                            "ADR-0043 §5: el ambito de la clave es la municipalidad. DatosDePrueba"
+                                    + " siembra la MISMA clave en las dos, y las dos filas existen:"
+                                    + " si `conjunto_idempotencia_uq` no llevara municipalidad_id, la"
+                                    + " siembra de B habria fallado")
+                    .containsExactly(
+                            String.valueOf(municipalidadA), String.valueOf(municipalidadB));
+
+            try (Connection app = base.conexion(BaseDeDatosDePrueba.APP)) {
+                ContextoDeTenant.fijar(app, municipalidadA);
+                assertThat(
+                                contar(
+                                        app,
+                                        "SELECT count(*) FROM conjunto_parametros"
+                                                + " WHERE clave_idempotencia = "
+                                                + clave))
+                        .as(
+                                "y desde A, buscar por la clave encuentra UNO: el suyo. El de B es"
+                                        + " otra peticion, y RLS no lo deja ver")
+                        .isEqualTo(1);
+
+                // Y dentro de A la clave sigue siendo unica: el indice es parcial, no ausente.
+                String estado =
+                        estadoSqlDelFallo(
+                                () ->
+                                        actualizar(
+                                                app,
+                                                "INSERT INTO conjunto_parametros (municipalidad_id,"
+                                                        + " ejercicio, version, clave_idempotencia)"
+                                                        + " VALUES ("
+                                                        + municipalidadA
+                                                        + ", 2027, 1, "
+                                                        + clave
+                                                        + ")"));
+                assertThat(estado)
+                        .as(
+                                "la misma clave dos veces en la MISMA municipalidad es un"
+                                        + " unique_violation de conjunto_idempotencia_uq")
+                        .isEqualTo("23505");
+                app.rollback();
+            }
+        }
+
+        @Test
         @DisplayName("una consulta sin contexto falla, no devuelve vacio")
         void consultaSinContextoFalla() {
             SoftAssertions verificaciones = new SoftAssertions();

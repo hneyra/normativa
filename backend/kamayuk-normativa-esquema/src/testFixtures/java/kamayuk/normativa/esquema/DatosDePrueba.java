@@ -29,6 +29,17 @@ public final class DatosDePrueba {
     private static final short EJERCICIO = 2026;
 
     /**
+     * La {@code Idempotency-Key} con la que se siembra el conjunto de <b>cada</b> municipalidad: la
+     * misma cadena en las dos, a proposito (V3, #59).
+     *
+     * <p>El ambito de la clave es la municipalidad —{@code conjunto_idempotencia_uq} lleva {@code
+     * municipalidad_id} delante—, asi que la misma clave en dos municipalidades son dos peticiones
+     * distintas y abren dos conjuntos. Sembrarla igual en las dos es lo que permite medirlo: si el
+     * indice no llevara la municipalidad, la siembra de la segunda fallaria aqui mismo.
+     */
+    public static final String CLAVE_DE_IDEMPOTENCIA = "siembra-de-la-prueba-de-aislamiento";
+
+    /**
      * El modelo minimo que {@code documento_emitido.datos} admite: un {@code ModeloDeDocumento}.
      */
     private static final String MODELO_DE_DOCUMENTO =
@@ -148,10 +159,11 @@ public final class DatosDePrueba {
         long conjuntoId =
                 insertar(
                         app,
-                        "INSERT INTO conjunto_parametros (municipalidad_id, ejercicio, version)"
-                                + " VALUES (?, ?, 1) RETURNING id",
+                        "INSERT INTO conjunto_parametros (municipalidad_id, ejercicio, version,"
+                                + " clave_idempotencia) VALUES (?, ?, 1, ?) RETURNING id",
                         muni,
-                        EJERCICIO);
+                        EJERCICIO,
+                        CLAVE_DE_IDEMPOTENCIA);
         ejecutar(
                 app,
                 "INSERT INTO conjunto_parametro_detalle (municipalidad_id, conjunto_id,"
