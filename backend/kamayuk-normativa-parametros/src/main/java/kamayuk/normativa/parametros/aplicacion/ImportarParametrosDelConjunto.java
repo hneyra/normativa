@@ -63,19 +63,29 @@ public class ImportarParametrosDelConjunto {
                 continue;
             }
             try {
-                administrar.agregarParametroPublicado(conjuntoId, llave, observacion);
-                nuevas++;
+                ParametroIncorporado incorporado =
+                        administrar.agregarParametroPublicado(conjuntoId, llave, observacion);
+                if (incorporado.yaEstaba()) {
+                    // Desde #59 agregar es idempotente por su estado (ADR-0043 §5): lo que ya
+                    // esta no se escribe ni se audita, y no lanza. Para el informe de este
+                    // proceso sigue siendo una fila que no entro, y dice por que: un archivo que
+                    // nombra dos veces el mismo parametro, o que se corre dos veces sobre el
+                    // mismo conjunto, es algo que quien lo corre tiene que ver.
+                    rechazadas.add(yaEstaba(fila, llave));
+                } else {
+                    nuevas++;
+                }
             } catch (ProblemaDeNegocio | IllegalArgumentException e) {
                 rechazadas.add(FilaRechazada.de(fila.numeroDeLinea(), e));
             } catch (DuplicateKeyException e) {
-                rechazadas.add(
-                        new FilaRechazada(
-                                fila.numeroDeLinea(),
-                                "El parametro " + llave + " ya estaba en este conjunto"));
+                // La carrera: otro lo agrego entre la comprobacion y el INSERT.
+                rechazadas.add(yaEstaba(fila, llave));
             } catch (DataAccessException e) {
                 // La causa mas probable, sin repetir el mensaje crudo de la base (ARQ-04 §5): el
                 // disparador de V9 rechazando la escritura porque el conjunto ya esta sellado.
-                // La violacion de unicidad se distingue arriba.
+                // La violacion de unicidad se distingue arriba. Desde #59 ese rechazo llega casi
+                // siempre como ProblemaDeNegocio —el caso de uso lo comprueba antes, y traduce
+                // el del disparador—; esta rama queda para lo que no se espera.
                 rechazadas.add(
                         new FilaRechazada(
                                 fila.numeroDeLinea(),
@@ -87,6 +97,11 @@ public class ImportarParametrosDelConjunto {
         }
 
         return new InformeDeImportacion(filas.size(), nuevas, rechazadas);
+    }
+
+    private static FilaRechazada yaEstaba(FilaCsv fila, LlaveDeParametro llave) {
+        return new FilaRechazada(
+                fila.numeroDeLinea(), "El parametro " + llave + " ya estaba en este conjunto");
     }
 
     private static List<FilaCsv> leer(Reader archivo) {

@@ -42,11 +42,32 @@ public interface ParametrosRepository {
 
     ConjuntoDeParametros crear(ConjuntoDeParametros conjunto);
 
+    /**
+     * Crea el conjunto guardando la {@code Idempotency-Key} con la que se pidio (ADR-0043 §5).
+     *
+     * <p>Lo que impide que la misma clave abra dos conjuntos es el indice {@code
+     * conjunto_idempotencia_uq} de V3, no quien llama: si otra peticion la guardo antes, esto falla
+     * con un {@code unique_violation} y quien llama lo atiende.
+     */
+    ConjuntoDeParametros crear(ConjuntoDeParametros conjunto, ClaveDeIdempotencia clave);
+
+    /**
+     * El conjunto que esa clave abrio en esta municipalidad, en su estado de ahora —abierto o ya
+     * sellado—, o vacio si no abrio ninguno.
+     */
+    Optional<ConjuntoDeParametros> abiertoConLaClave(ClaveDeIdempotencia clave);
+
     /** Sella el conjunto. Falla si ya estaba sellado: lo impide un disparador de la base. */
     ConjuntoDeParametros sellar(long conjuntoId, Instant cuando, String quien);
 
     /** Agrega un parametro ya publicado al conjunto. Falla si el conjunto esta sellado. */
     void agregarParametro(long conjuntoId, long parametroId);
+
+    /**
+     * Si el parametro ya esta en el conjunto. Es lo que hace idempotente agregar: lo que ya esta
+     * dentro no se vuelve a escribir ni a auditar (ADR-0043 §5).
+     */
+    boolean contiene(long conjuntoId, long parametroId);
 
     List<ParametroTributario> parametrosDe(long conjuntoId);
 

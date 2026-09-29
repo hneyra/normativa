@@ -17,6 +17,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -140,7 +141,44 @@ class ElBordeContestaLoMismoTest {
     }
 
     @Test
-    @DisplayName("y ninguna de las cinco escribe una incidencia en el registro de errores")
+    @DisplayName("falta una cabecera obligatoria: 422, y dice cual (#59)")
+    void faltaUnaCabecera() throws Exception {
+        MvcResult respuesta =
+                mvc.perform(
+                                post("/sonda/con-cabecera")
+                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .content("{\"valor\":\"x\"}"))
+                        .andReturn();
+
+        assertThat(respuesta.getResponse().getStatus())
+                .as(
+                        "hasta #59 caia en el manejador de todo lo demas: 500 con incidencia, justo"
+                                + " cuando `POST /conjuntos` estrenaba la primera cabecera"
+                                + " obligatoria de este backend (ADR-0043 §7)")
+                .isEqualTo(422);
+        assertThat(respuesta.getResponse().getContentAsString()).contains("Idempotency-Key");
+    }
+
+    @Test
+    @DisplayName("un cuerpo que no se declara JSON: 422, y dice que tipo llego (#59)")
+    void elCuerpoNoEsJson() throws Exception {
+        MvcResult respuesta =
+                mvc.perform(
+                                post("/sonda/cuerpo")
+                                        .contentType(MediaType.TEXT_PLAIN)
+                                        .content("valor=x"))
+                        .andReturn();
+
+        assertThat(respuesta.getResponse().getStatus())
+                .as("el cuerpo ilegible es de la peticion, no del servidor (ADR-0043 §7)")
+                .isEqualTo(422);
+        assertThat(respuesta.getResponse().getContentAsString())
+                .contains("application/json")
+                .contains("text/plain");
+    }
+
+    @Test
+    @DisplayName("y ninguna de las siete escribe una incidencia en el registro de errores")
     void ningunaEnsuciaElRegistro() throws Exception {
         ch.qos.logback.classic.Logger registro =
                 (ch.qos.logback.classic.Logger)
@@ -157,6 +195,11 @@ class ElBordeContestaLoMismoTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("{no-json"));
             mvc.perform(get("/sonda/paginado").param("orden", "codigo"));
+            mvc.perform(
+                    post("/sonda/con-cabecera")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"valor\":\"x\"}"));
+            mvc.perform(post("/sonda/cuerpo").contentType(MediaType.TEXT_PLAIN).content("valor=x"));
         } finally {
             registro.detachAppender(anotados);
         }
@@ -166,7 +209,8 @@ class ElBordeContestaLoMismoTest {
                         "con el defecto, cuatro peticiones mal tecleadas dejaban cuatro incidencias"
                                 + " ERROR con su UUID; asi el registro deja de servir para encontrar"
                                 + " defectos de verdad. La quinta —el parametro desconocido de"
-                                + " #539— tampoco puede dejar rastro: la escribe el cliente")
+                                + " #539— tampoco puede dejar rastro: la escribe el cliente, igual"
+                                + " que la cabecera que falta y el cuerpo que no es JSON (#59)")
                 .isEmpty();
     }
 
@@ -202,6 +246,12 @@ class ElBordeContestaLoMismoTest {
         @PostMapping("/sonda/cuerpo")
         String cuerpo(@RequestBody Cuerpo cuerpo) {
             return String.valueOf(cuerpo.valor());
+        }
+
+        @PostMapping("/sonda/con-cabecera")
+        String conCabecera(
+                @RequestHeader("Idempotency-Key") String clave, @RequestBody Cuerpo cuerpo) {
+            return clave + cuerpo.valor();
         }
 
         @GetMapping("/sonda/revienta")

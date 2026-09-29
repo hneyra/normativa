@@ -56,11 +56,31 @@ import org.springframework.web.bind.annotation.ValueConstants;
  *       required = true} y sin {@code defaultValue}, mas los {@code params = "..."} del mapeo.
  *   <li>{@code algunoDeEstos}, {@code condicionales} y {@code enElCuerpo} — lo que el controlador
  *       exige <b>en el cuerpo del metodo</b>, declarado aqui porque una anotacion no lo sabe decir.
- *       <b>Hoy los tres estan vacios, y esta medido</b>: ningun controlador de este backend escribe
- *       «falta «X»». Se conservan con su escaner porque #56 y #59 anaden operaciones, y la guarda
- *       tiene que estar puesta el dia que la primera exija algo asi, no despues.
+ *       Los dos primeros siguen vacios. {@code enElCuerpo} dejo de estarlo con #59: las tres
+ *       escrituras del conjunto exigen campos de su cuerpo JSON, y el escaner de abajo ata lo que
+ *       se declara a los mensajes con que el controlador los exige.
  *   <li>{@code opcionales} — el resto de los de consulta, derivados del mismo recorrido.
  * </ul>
+ *
+ * <h2>El cuerpo como cuerpo y la cabecera como cabecera (#59, AC 11)</h2>
+ *
+ * <p>Tres claves mas, <b>derivadas de la firma</b> como {@code obligatorios}, que {@code rentas}
+ * tampoco tiene:
+ *
+ * <ul>
+ *   <li>{@code opcionalesEnElCuerpo} — los componentes del {@code record} del {@code @RequestBody}
+ *       que no estan en {@code enElCuerpo}: los que el cuerpo admite y no exige. Es {@code clave}
+ *       en {@code POST /conjuntos/{id}/parametros}, que va nula para el tipo de un solo valor.
+ *   <li>{@code cabecerasObligatorias} y {@code cabecerasOpcionales} — los {@code @RequestHeader},
+ *       partidos como los de consulta: {@code required} y sin {@code defaultValue}, o no. Es {@code
+ *       Idempotency-Key} en {@code POST /conjuntos}.
+ * </ul>
+ *
+ * <p>Sin ellas la interfaz tendria que copiar a mano que campos manda una escritura y que cabecera
+ * lleva —la leccion de la V6 otra vez—, y lo unico que {@code parametros-de-la-api.json} diria de
+ * un {@code POST} seria que no lleva nada en la consulta. {@link
+ * #todoLoExigidoEnElCuerpoEsDelCuerpo} impide ademas declarar exigido un campo que el cuerpo no
+ * tiene.
  *
  * <p>El recorrido excluye {@code @PathVariable}, {@code @RequestBody} y {@code @RequestHeader}
  * <b>por su cuenta</b>, como hace {@code rentas}. No se usa {@code
@@ -108,10 +128,13 @@ class ParametrosDeLaApiTest {
                     + " required=true sin defaultValue; «algunoDeEstos» son grupos de los que hay"
                     + " que mandar al menos uno; «condicionales» son los que solo hacen falta segun"
                     + " el cuerpo de la peticion; «opcionales» es el resto, y «enElCuerpo» son los"
-                    + " que el controlador exige en el cuerpo JSON y NO en la URL. Las operaciones"
-                    + " paginadas llevan ademas «ordenarPorAdmitidos», leido del OrdenSeguro del"
-                    + " repositorio que las sirve —otro campo contesta 422 ORDEN_NO_ADMITIDO—, y"
-                    + " «tamanoMaximo», el tope de Paginacion (#49).";
+                    + " que el controlador exige en el cuerpo JSON y NO en la URL;"
+                    + " «opcionalesEnElCuerpo» son los demas campos de ese cuerpo, que admite y no"
+                    + " exige; «cabecerasObligatorias» y «cabecerasOpcionales» salen de"
+                    + " @RequestHeader como los de consulta (#59). Las operaciones paginadas llevan"
+                    + " ademas «ordenarPorAdmitidos», leido del OrdenSeguro del repositorio que las"
+                    + " sirve —otro campo contesta 422 ORDEN_NO_ADMITIDO—, y «tamanoMaximo», el"
+                    + " tope de Paginacion (#49).";
 
     /**
      * Los grupos de nombres de los que hay que mandar al menos uno. Vacio: medido en #49, ningun
@@ -119,8 +142,22 @@ class ParametrosDeLaApiTest {
      */
     private static final Map<String, List<List<String>>> ALGUNO_DE_ESTOS = Map.of();
 
-    /** Lo que el controlador exige y no viaja en la URL. Vacio: no hay escrituras todavia. */
-    private static final Map<String, List<String>> EXIGIDOS_EN_EL_CUERPO = Map.of();
+    /**
+     * Lo que el controlador exige y no viaja en la URL: los campos obligatorios del cuerpo JSON de
+     * las tres escrituras del conjunto (#59, ADR-0043 §1).
+     *
+     * <p>Cada nombre tiene su {@code falta «nombre»} en {@code EscriturasDelConjuntoController}, y
+     * {@link #ningunParametroExigidoEnElCuerpoSeQuedaSinDeclarar} lo comprueba en los dos sentidos.
+     * {@code observacion} va en las tres: la regla 10 la exige en toda escritura.
+     */
+    private static final Map<String, List<String>> EXIGIDOS_EN_EL_CUERPO =
+            Map.of(
+                    "POST /conjuntos",
+                    List.of("ejercicio", "observacion"),
+                    "POST /conjuntos/{id}/parametros",
+                    List.of("observacion", "tipo", "vigenciaDesde"),
+                    "POST /conjuntos/{id}/sellar",
+                    List.of("arancelDeLaMunicipalidad", "observacion"));
 
     /** Los que solo hacen falta segun el cuerpo. Vacio por lo mismo. */
     private static final Map<String, List<String>> CONDICIONALES = Map.of();
@@ -454,6 +491,64 @@ class ParametrosDeLaApiTest {
         assertThat(todosLosDeConsulta(escritura))
                 .containsExactlyInAnyOrder("ambito", "direccion", "ordenarPor", "pagina", "tamano");
         assertThat(obligatoriosDeLaFirma(escritura)).containsExactly("ambito");
+        // Y lo que se excluyo de la consulta se publica donde viaja (#59, AC 11).
+        assertThat(camposDelCuerpo(escritura))
+                .as("el cuerpo como cuerpo")
+                .containsExactly("observacion");
+        assertThat(cabeceras(escritura, true))
+                .as("y la cabecera como cabecera")
+                .containsExactly("Idempotency-Key");
+        assertThat(cabeceras(escritura, false)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("las escrituras del conjunto publican su cuerpo y su cabecera, y nada en la URL")
+    void lasEscriturasPublicanSuCuerpoYSuCabecera() {
+        // El contraste de #59: sin esto, un generador que dejara las tres claves nuevas vacias
+        // produciria un archivo estable y la comparacion de archivos pasaria en verde.
+        Map<String, Map<String, Object>> parametros = parametrosPorOperacion();
+
+        assertThat(listaDe(parametros, "POST /conjuntos", "enElCuerpo"))
+                .containsExactly("ejercicio", "observacion");
+        assertThat(listaDe(parametros, "POST /conjuntos", "cabecerasObligatorias"))
+                .as("ADR-0043 §5: obligatoria al abrir")
+                .containsExactly("Idempotency-Key");
+        assertThat(listaDe(parametros, "POST /conjuntos", "opcionales"))
+                .as("ni el cuerpo ni la cabecera son parametros de consulta")
+                .isEmpty();
+        assertThat(listaDe(parametros, "POST /conjuntos/{id}/parametros", "enElCuerpo"))
+                .containsExactly("observacion", "tipo", "vigenciaDesde");
+        assertThat(listaDe(parametros, "POST /conjuntos/{id}/parametros", "opcionalesEnElCuerpo"))
+                .as("la clave va nula para el tipo de un solo valor, como la UIT")
+                .containsExactly("clave");
+        assertThat(listaDe(parametros, "POST /conjuntos/{id}/parametros", "cabecerasObligatorias"))
+                .as("agregar es idempotente por su estado: no lee Idempotency-Key")
+                .isEmpty();
+        assertThat(listaDe(parametros, "POST /conjuntos/{id}/sellar", "enElCuerpo"))
+                .containsExactly("arancelDeLaMunicipalidad", "observacion");
+    }
+
+    @Test
+    @DisplayName("todo lo que se declara exigido en el cuerpo es un campo de ese cuerpo")
+    void todoLoExigidoEnElCuerpoEsDelCuerpo() {
+        Map<String, Method> publicadas = EndpointsPublicados.porOperacion();
+        List<String> fuera = new ArrayList<>();
+        for (Map.Entry<String, List<String>> exigidos : EXIGIDOS_EN_EL_CUERPO.entrySet()) {
+            Method metodo = publicadas.get(exigidos.getKey());
+            assertThat(metodo).as("«%s» no esta publicada", exigidos.getKey()).isNotNull();
+            Set<String> delCuerpo = camposDelCuerpo(metodo);
+            for (String nombre : exigidos.getValue()) {
+                if (!delCuerpo.contains(nombre)) {
+                    fuera.add(
+                            exigidos.getKey() + " exige «" + nombre + "» y su cuerpo no lo tiene");
+                }
+            }
+        }
+        assertThat(fuera)
+                .as(
+                        "un campo exigido que el record del cuerpo no tiene no llega nunca: Jackson"
+                                + " lo descarta, y la operacion contesta 422 siempre")
+                .isEmpty();
     }
 
     // ------------------------------------------------------------------
@@ -501,12 +596,14 @@ class ParametrosDeLaApiTest {
             declarado.put("algunoDeEstos", grupos);
             declarado.put("condicionales", new ArrayList<>(new TreeSet<>(condicionales)));
             declarado.put("opcionales", new ArrayList<>(opcionales));
-            declarado.put(
-                    "enElCuerpo",
-                    new ArrayList<>(
-                            new TreeSet<>(
-                                    EXIGIDOS_EN_EL_CUERPO.getOrDefault(
-                                            endpoint.getKey(), List.of()))));
+            Set<String> exigidosEnElCuerpo =
+                    new TreeSet<>(EXIGIDOS_EN_EL_CUERPO.getOrDefault(endpoint.getKey(), List.of()));
+            Set<String> opcionalesEnElCuerpo = new TreeSet<>(camposDelCuerpo(metodo));
+            opcionalesEnElCuerpo.removeAll(exigidosEnElCuerpo);
+            declarado.put("enElCuerpo", new ArrayList<>(exigidosEnElCuerpo));
+            declarado.put("opcionalesEnElCuerpo", new ArrayList<>(opcionalesEnElCuerpo));
+            declarado.put("cabecerasObligatorias", new ArrayList<>(cabeceras(metodo, true)));
+            declarado.put("cabecerasOpcionales", new ArrayList<>(cabeceras(metodo, false)));
             OrigenDelOrden orden = ORDEN_DE_CADA_LISTADO.get(endpoint.getKey());
             if (orden != null) {
                 declarado.put("ordenarPorAdmitidos", new ArrayList<>(camposAdmitidos(orden)));
@@ -612,6 +709,56 @@ class ParametrosDeLaApiTest {
                 }
             } else if (esSimple(parametro.getType())) {
                 nombres.add(parametro.getName());
+            }
+        }
+        return nombres;
+    }
+
+    /**
+     * Los campos del cuerpo JSON: los componentes del {@code record} que lleva
+     * {@code @RequestBody}.
+     *
+     * <p>Vacio si la operacion no tiene cuerpo. Un cuerpo que no fuera un {@code record} no tendria
+     * campos que leer por reflexion con este recorrido, y se rechaza en vez de publicarlo vacio.
+     */
+    private static Set<String> camposDelCuerpo(Method metodo) {
+        Set<String> nombres = new TreeSet<>();
+        for (Parameter parametro : metodo.getParameters()) {
+            if (!AnnotatedElementUtils.hasAnnotation(parametro, RequestBody.class)) {
+                continue;
+            }
+            if (!parametro.getType().isRecord()) {
+                throw new IllegalStateException(
+                        metodo
+                                + " recibe un cuerpo que no es un record: sus campos no se pueden"
+                                + " publicar desde la firma");
+            }
+            for (var componente : parametro.getType().getRecordComponents()) {
+                nombres.add(componente.getName());
+            }
+        }
+        return nombres;
+    }
+
+    /**
+     * Las cabeceras que la firma lee, obligatorias u opcionales: {@code required} y sin {@code
+     * defaultValue}, exactamente como los de consulta.
+     */
+    private static Set<String> cabeceras(Method metodo, boolean obligatorias) {
+        Set<String> nombres = new TreeSet<>();
+        for (Parameter parametro : metodo.getParameters()) {
+            RequestHeader anotacion =
+                    AnnotatedElementUtils.findMergedAnnotation(parametro, RequestHeader.class);
+            if (anotacion == null) {
+                continue;
+            }
+            boolean esObligatoria =
+                    anotacion.required()
+                            && ValueConstants.DEFAULT_NONE.equals(anotacion.defaultValue());
+            if (esObligatoria == obligatorias) {
+                String declarado =
+                        anotacion.name().isEmpty() ? anotacion.value() : anotacion.name();
+                nombres.add(declarado.isEmpty() ? parametro.getName() : declarado);
             }
         }
         return nombres;

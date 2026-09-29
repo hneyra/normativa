@@ -1,25 +1,34 @@
 {
-  "_": "ARCHIVO GENERADO — no editar a mano. Lo produce ParametrosDeLaApiTest de la FIRMA de cada controlador; se regenera con -Dkamayuk.formas.regenerar=true. Dice que hace falta para PEDIR cada operacion: «obligatorios» sale de @RequestParam required=true sin defaultValue; «algunoDeEstos» son grupos de los que hay que mandar al menos uno; «condicionales» son los que solo hacen falta segun el cuerpo de la peticion; «opcionales» es el resto, y «enElCuerpo» son los que el controlador exige en el cuerpo JSON y NO en la URL. Las operaciones paginadas llevan ademas «ordenarPorAdmitidos», leido del OrdenSeguro del repositorio que las sirve —otro campo contesta 422 ORDEN_NO_ADMITIDO—, y «tamanoMaximo», el tope de Paginacion (#49).",
+  "_": "ARCHIVO GENERADO — no editar a mano. Lo produce ParametrosDeLaApiTest de la FIRMA de cada controlador; se regenera con -Dkamayuk.formas.regenerar=true. Dice que hace falta para PEDIR cada operacion: «obligatorios» sale de @RequestParam required=true sin defaultValue; «algunoDeEstos» son grupos de los que hay que mandar al menos uno; «condicionales» son los que solo hacen falta segun el cuerpo de la peticion; «opcionales» es el resto, y «enElCuerpo» son los que el controlador exige en el cuerpo JSON y NO en la URL; «opcionalesEnElCuerpo» son los demas campos de ese cuerpo, que admite y no exige; «cabecerasObligatorias» y «cabecerasOpcionales» salen de @RequestHeader como los de consulta (#59). Las operaciones paginadas llevan ademas «ordenarPorAdmitidos», leido del OrdenSeguro del repositorio que las sirve —otro campo contesta 422 ORDEN_NO_ADMITIDO—, y «tamanoMaximo», el tope de Paginacion (#49).",
   "GET /conjuntos": {
     "obligatorios": ["ejercicio"],
     "algunoDeEstos": [],
     "condicionales": [],
     "opcionales": [],
-    "enElCuerpo": []
+    "enElCuerpo": [],
+    "opcionalesEnElCuerpo": [],
+    "cabecerasObligatorias": [],
+    "cabecerasOpcionales": []
   },
   "GET /conjuntos/{id}/parametros": {
     "obligatorios": [],
     "algunoDeEstos": [],
     "condicionales": [],
     "opcionales": [],
-    "enElCuerpo": []
+    "enElCuerpo": [],
+    "opcionalesEnElCuerpo": [],
+    "cabecerasObligatorias": [],
+    "cabecerasOpcionales": []
   },
   "GET /conjuntos/{id}/snapshot": {
     "obligatorios": ["ambito"],
     "algunoDeEstos": [],
     "condicionales": [],
     "opcionales": [],
-    "enElCuerpo": []
+    "enElCuerpo": [],
+    "opcionalesEnElCuerpo": [],
+    "cabecerasObligatorias": [],
+    "cabecerasOpcionales": []
   },
   "GET /parametros": {
     "obligatorios": [],
@@ -27,6 +36,9 @@
     "condicionales": [],
     "opcionales": ["direccion", "ordenarPor", "pagina", "tamano"],
     "enElCuerpo": [],
+    "opcionalesEnElCuerpo": [],
+    "cabecerasObligatorias": [],
+    "cabecerasOpcionales": [],
     "ordenarPorAdmitidos": ["clave", "id", "tipo", "vigenciaDesde", "vigencia_desde"],
     "tamanoMaximo": 500
   },
@@ -36,6 +48,9 @@
     "condicionales": [],
     "opcionales": ["direccion", "ordenarPor", "pagina", "tamano"],
     "enElCuerpo": [],
+    "opcionalesEnElCuerpo": [],
+    "cabecerasObligatorias": [],
+    "cabecerasOpcionales": [],
     "ordenarPorAdmitidos": ["codigo", "id", "nombre", "tipo"],
     "tamanoMaximo": 500
   },
@@ -45,6 +60,9 @@
     "condicionales": [],
     "opcionales": ["direccion", "ordenarPor", "pagina", "tamano"],
     "enElCuerpo": [],
+    "opcionalesEnElCuerpo": [],
+    "cabecerasObligatorias": [],
+    "cabecerasOpcionales": [],
     "ordenarPorAdmitidos": ["codigo", "id", "nombre", "orden"],
     "tamanoMaximo": 500
   },
@@ -54,6 +72,9 @@
     "condicionales": [],
     "opcionales": ["direccion", "ordenarPor", "pagina", "tamano"],
     "enElCuerpo": [],
+    "opcionalesEnElCuerpo": [],
+    "cabecerasObligatorias": [],
+    "cabecerasOpcionales": [],
     "ordenarPorAdmitidos": ["ejercicio", "estado", "id", "version"],
     "tamanoMaximo": 500
   },
@@ -62,27 +83,69 @@
     "algunoDeEstos": [],
     "condicionales": [],
     "opcionales": [],
-    "enElCuerpo": []
+    "enElCuerpo": [],
+    "opcionalesEnElCuerpo": [],
+    "cabecerasObligatorias": [],
+    "cabecerasOpcionales": []
   },
   "GET /seguridad/sesion": {
     "obligatorios": [],
     "algunoDeEstos": [],
     "condicionales": [],
     "opcionales": [],
-    "enElCuerpo": []
+    "enElCuerpo": [],
+    "opcionalesEnElCuerpo": [],
+    "cabecerasObligatorias": [],
+    "cabecerasOpcionales": []
   },
   "GET /seguridad/sesion/municipalidad": {
     "obligatorios": [],
     "algunoDeEstos": [],
     "condicionales": [],
     "opcionales": [],
-    "enElCuerpo": []
+    "enElCuerpo": [],
+    "opcionalesEnElCuerpo": [],
+    "cabecerasObligatorias": [],
+    "cabecerasOpcionales": []
   },
   "GET /seguridad/sesion/permisos": {
     "obligatorios": [],
     "algunoDeEstos": [],
     "condicionales": [],
     "opcionales": [],
-    "enElCuerpo": []
+    "enElCuerpo": [],
+    "opcionalesEnElCuerpo": [],
+    "cabecerasObligatorias": [],
+    "cabecerasOpcionales": []
+  },
+  "POST /conjuntos": {
+    "obligatorios": [],
+    "algunoDeEstos": [],
+    "condicionales": [],
+    "opcionales": [],
+    "enElCuerpo": ["ejercicio", "observacion"],
+    "opcionalesEnElCuerpo": [],
+    "cabecerasObligatorias": ["Idempotency-Key"],
+    "cabecerasOpcionales": []
+  },
+  "POST /conjuntos/{id}/parametros": {
+    "obligatorios": [],
+    "algunoDeEstos": [],
+    "condicionales": [],
+    "opcionales": [],
+    "enElCuerpo": ["observacion", "tipo", "vigenciaDesde"],
+    "opcionalesEnElCuerpo": ["clave"],
+    "cabecerasObligatorias": [],
+    "cabecerasOpcionales": []
+  },
+  "POST /conjuntos/{id}/sellar": {
+    "obligatorios": [],
+    "algunoDeEstos": [],
+    "condicionales": [],
+    "opcionales": [],
+    "enElCuerpo": ["arancelDeLaMunicipalidad", "observacion"],
+    "opcionalesEnElCuerpo": [],
+    "cabecerasObligatorias": [],
+    "cabecerasOpcionales": []
   }
 }

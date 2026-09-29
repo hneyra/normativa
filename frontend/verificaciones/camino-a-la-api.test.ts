@@ -133,7 +133,7 @@ function admitidos(operacion: string): readonly string[] {
 /* ── 1 y 6 — las operaciones existen, y su forma es una FORMA ──────────────────────────────── */
 
 describe('AC 3 — lo que se pide es una operacion del contrato', () => {
-  it('EL CENTINELA: los dos JSON estan, y publican las ONCE operaciones de hoy', () => {
+  it('EL CENTINELA: los dos JSON estan, y publican las CATORCE operaciones de hoy', () => {
     // Sin esto, un archivo vacio o con solo la nota dejaria todo lo de abajo pasando sobre el
     // conjunto vacio: cero operaciones comparadas, en verde.
     //
@@ -144,6 +144,11 @@ describe('AC 3 — lo que se pide es una operacion del contrato', () => {
     // sesion, de que municipalidad y que puede—. La lista se escribe entera a proposito: una
     // operacion que aparezca o desaparezca del contrato tiene que salir nombrada aqui, no colarse
     // en un `length`. Sube con el backend, no con la hoja que la lea.
+    //
+    // **CATORCE desde #59**: las tres primeras ESCRITURAS de este backend, las filas 1, 2 y 3 de
+    // ADR-0043 §1 —abrir una version, agregarle un parametro publicado y sellarla—. Ninguna hoja
+    // las compone todavia (eso es #68), y por eso no estan en `PETICIONES`: lo que se afirma aqui
+    // es que el contrato las publica, con su cuerpo y su cabecera en `parametros-de-la-api.json`.
     const publicadas = [...operacionesDelContrato()].sort();
     expect(publicadas).toEqual([
       'GET /conjuntos',
@@ -157,6 +162,9 @@ describe('AC 3 — lo que se pide es una operacion del contrato', () => {
       'GET /seguridad/sesion',
       'GET /seguridad/sesion/municipalidad',
       'GET /seguridad/sesion/permisos',
+      'POST /conjuntos',
+      'POST /conjuntos/{id}/parametros',
+      'POST /conjuntos/{id}/sellar',
     ]);
     expect(Object.keys(parametros()).filter((c) => c !== NOTA).sort()).toEqual(publicadas);
     // Y que `src/datos/**` pida algo: con `PETICIONES` vacia no habria nada que contrastar.
@@ -432,19 +440,32 @@ function controladores(): readonly { readonly ruta: string; readonly texto: stri
     .map((nombre) => ({ ruta: nombre, texto: readFileSync(join(base, nombre), 'utf8') }));
 }
 
-/** Lo que cada `@RequiereAcceso` del backend exige, con el `@GetMapping` de al lado. */
+/**
+ * Lo que cada `@RequiereAcceso` del backend exige, con el mapeo de al lado, por **verbo y ruta**.
+ *
+ * Por verbo y no solo por ruta desde #59: `POST /conjuntos` y `GET /conjuntos` son la misma ruta y
+ * dos operaciones, igual que `POST` y `GET /conjuntos/{id}/parametros`. Con la ruta sola como clave,
+ * la escritura pisaba a la lectura en el mapa —o al reves, segun el orden del archivo— y el
+ * centinela de abajo no podia decir que las tres escrituras existen.
+ */
 function accesosDelJava(): ReadonlyMap<string, string> {
   const salida = new Map<string, string>();
+  const verbos: Readonly<Record<string, string>> = {
+    GetMapping: 'GET',
+    PostMapping: 'POST',
+    PutMapping: 'PUT',
+  };
   for (const { texto } of controladores()) {
     const raiz = /@RequestMapping\(Api\.RAIZ \+ "([^"]*)"\)/.exec(texto)?.[1] ?? '';
     // `@GetMapping(...)` seguido de `@RequiereAcceso(acceso = ...)`, en cualquiera de los dos
     // ordenes en que se escriben.
     const bloques = texto.matchAll(
-      /@(?:GetMapping|PostMapping|PutMapping)(?:\("([^"]*)"\))?\s*\n\s*@RequiereAcceso\(acceso = (?:"([^"]+)"|RequiereAcceso\.(\w+))/g,
+      /@(GetMapping|PostMapping|PutMapping)(?:\("([^"]*)"\))?\s*\n\s*@RequiereAcceso\(acceso = (?:"([^"]+)"|RequiereAcceso\.(\w+))/g,
     );
     for (const bloque of bloques) {
-      const camino = `${raiz}${bloque[1] ?? ''}`;
-      salida.set(camino === '' ? '/' : camino, bloque[2] ?? bloque[3] ?? '');
+      const camino = `${raiz}${bloque[2] ?? ''}`;
+      const verbo = verbos[bloque[1] ?? ''] ?? '?';
+      salida.set(`${verbo} ${camino === '' ? '/' : camino}`, bloque[3] ?? bloque[4] ?? '');
     }
   }
   return salida;
@@ -459,19 +480,35 @@ describe('AC 3 — el arbol, y lo que el Java exige para cada operacion', () => 
       [...accesos.keys()].sort(),
       'No se pudo leer ningun `@RequiereAcceso` de los controladores.',
     ).toEqual([
-      // Las dos primeras las anade #56: `GET /conjuntos/{id}/parametros` —el contenido de un
-      // conjunto, ABIERTO o sellado, que es lo que el snapshot se niega a servir— y
-      // `GET /parametros` —los publicados que se le pueden agregar—, las filas 4 y 5 de ADR-0043
-      // §1. Las sirve un controlador nuevo, `ContenidoDelConjuntoController.java`, y esta lista es
-      // de rutas y no de archivos: si no se actualizara, el centinela diria que el Java no se
-      // pudo leer cuando lo que paso es que publica dos operaciones mas.
-      '/conjuntos',
-      '/conjuntos/{id}/parametros',
-      '/conjuntos/{id}/snapshot',
-      '/parametros',
-      '/seguridad/parametros',
-      '/seguridad/parametros/ejercicios/{ejercicio}',
+      // Las dos de #56: `GET /conjuntos/{id}/parametros` —el contenido de un conjunto, ABIERTO o
+      // sellado, que es lo que el snapshot se niega a servir— y `GET /parametros` —los publicados
+      // que se le pueden agregar—, las filas 4 y 5 de ADR-0043 §1. Esta lista es de operaciones y
+      // no de archivos: si no se actualizara, el centinela diria que el Java no se pudo leer
+      // cuando lo que paso es que publica operaciones nuevas.
+      'GET /conjuntos',
+      'GET /conjuntos/{id}/parametros',
+      'GET /conjuntos/{id}/snapshot',
+      'GET /parametros',
+      'GET /seguridad/parametros',
+      'GET /seguridad/parametros/ejercicios/{ejercicio}',
+      // Y las tres escrituras de #59, las filas 1, 2 y 3 de ADR-0043 §1, en
+      // `EscriturasDelConjuntoController.java`.
+      'POST /conjuntos',
+      'POST /conjuntos/{id}/parametros',
+      'POST /conjuntos/{id}/sellar',
     ]);
+  });
+
+  it('las tres escrituras exigen `conjuntos`, la opcion del modulo NORMATIVA (#59)', () => {
+    // ADR-0043 §2: las escrituras nacen sobre `conjuntos` y SIN `oTambien` —que este analisis no
+    // lee, y no tiene que leer: lo que compara es la opcion propia—. Una escritura que exigiera
+    // `parametros` se la daria a todo el que la tiene en el modulo Seguridad, y el grupo de
+    // administracion tiene los siete privilegios sobre todas las opciones.
+    const accesos = accesosDelJava();
+
+    expect(accesos.get('POST /conjuntos')).toBe('conjuntos');
+    expect(accesos.get('POST /conjuntos/{id}/parametros')).toBe('conjuntos');
+    expect(accesos.get('POST /conjuntos/{id}/sellar')).toBe('conjuntos');
   });
 
   it('el listado exige una opcion del catalogo y el estado del ejercicio NO', () => {
@@ -487,8 +524,8 @@ describe('AC 3 — el arbol, y lo que el Java exige para cada operacion', () => 
     // compara es CUAL autorizacion exige cada ruta, no quien la pasa.
     const accesos = accesosDelJava();
 
-    expect(accesos.get('/seguridad/parametros')).toBe('conjuntos');
-    expect(accesos.get('/seguridad/parametros/ejercicios/{ejercicio}')).toBe('SESION_PROPIA');
+    expect(accesos.get('GET /seguridad/parametros')).toBe('conjuntos');
+    expect(accesos.get('GET /seguridad/parametros/ejercicios/{ejercicio}')).toBe('SESION_PROPIA');
   });
 
   it('las rutas que el ARBOL declara son operaciones del contrato, con su verbo', () => {
