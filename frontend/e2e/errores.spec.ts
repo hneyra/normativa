@@ -43,20 +43,21 @@ import {
  * `instalacion.ts` comprueba campo a campo que el cuerpo doblado tenga exactamente esas llaves. Un
  * cuerpo con un campo de mas o de menos pone rojo este arnes, no lo pasa en silencio.
  *
- * <h2>Los dos 422 ya NO comparten peldano: `kamayuk-lib`#52 se mezclo</h2>
+ * <h2>Los dos 422 ya NO comparten peldano: `kamayuk-lib`#52 se mezclo (corregido el 2026-09-29)</h2>
  *
- * Hasta `kamayuk-lib`#52, `peldanoDe()` clasificaba `VALIDACION` y `ORDEN_NO_ADMITIDO` como el
- * mismo `no-valido` —mismo titulo, mismo remedio— y con el mismo mensaje inyectado **sus dos
- * pantallas eran identicas**. Eso se afirmaba aqui en vez de rodearse, porque un `switch` sobre el
- * codigo en `normativa` seria la traduccion paralela que el propio AC 4 prohibe, y la afirmacion
- * decia que hacer el dia que la escalera aprendiera: mover el par a la lista de los distintos.
+ * Hasta `kamayuk-lib`#52 —PR `kamayuk-lib`#96, mezcla `a6ea6fa`, el 2026-09-22—, `peldanoDe()`
+ * clasificaba `VALIDACION` y `ORDEN_NO_ADMITIDO` como el mismo `no-valido` —mismo titulo, mismo
+ * remedio— y con el mismo mensaje inyectado **sus dos pantallas eran identicas**. Eso se afirmaba
+ * aqui en vez de rodearse, porque un `switch` sobre el codigo en `normativa` seria la traduccion
+ * paralela que el propio AC 4 prohibe, y la afirmacion decia que hacer el dia que la escalera
+ * aprendiera: mover el par a la lista de los distintos.
  *
  * Ese dia llego sin tocar este arbol —la CI clona `kamayuk-lib` en su rama principal—: la escalera
  * gano el peldano `orden-no-admitido` por `codigo` (`escalera.ts`, `{ estado: 422, codigo:
- * 'ORDEN_NO_ADMITIDO' }`) y la afirmacion salio roja en `kamayuk-lib@da5e3d9`, leyendo
- * «No se puede ordenar por ese campo … Ordene por otra columna y avise de esto a quien la
- * mantiene» donde el 422 `VALIDACION` lee «Lo que se mando no cumple una regla …». Asi que ahora
- * son **los siete** los que se comparan entre si.
+ * 'ORDEN_NO_ADMITIDO' }`) y la afirmacion salio roja en `kamayuk-lib@da5e3d9`, medido el
+ * 2026-09-29, leyendo «No se puede ordenar por ese campo … Ordene por otra columna y avise de esto
+ * a quien la mantiene» donde el 422 `VALIDACION` lee «Lo que se mando no cumple una regla …». Asi
+ * que ahora son **los siete** los que se comparan entre si.
  */
 
 /** El mismo mensaje en los siete: si la pantalla pintara esto, las siete se verian iguales. */
