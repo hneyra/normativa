@@ -12,6 +12,7 @@ import kamayuk.normativa.compartido.Paginacion;
 import kamayuk.normativa.dominio.Ejercicio;
 import kamayuk.normativa.dominio.ValorNormativo;
 import kamayuk.normativa.dominio.Vigencia;
+import kamayuk.normativa.parametros.dominio.ClaveDeIdempotencia;
 import kamayuk.normativa.parametros.dominio.ConjuntoDeParametros;
 import kamayuk.normativa.parametros.dominio.EstadoDelConjunto;
 import kamayuk.normativa.parametros.dominio.LlaveDeParametro;
@@ -143,10 +144,50 @@ public class ParametrosRepositoryJdbc extends RepositorioJdbc implements Paramet
     }
 
     @Override
+    public ConjuntoDeParametros crear(ConjuntoDeParametros conjunto, ClaveDeIdempotencia clave) {
+        // Sin comprobar antes si la clave ya existe: esa lectura la hace el caso de uso, y lo que
+        // decide entre dos peticiones a la vez es `conjunto_idempotencia_uq` (V3), no una
+        // lectura que otra transaccion puede adelantar.
+        Long id =
+                jdbc().sql(
+                                "INSERT INTO conjunto_parametros (municipalidad_id, ejercicio,"
+                                        + " version, estado, clave_idempotencia) VALUES ("
+                                        + MUNICIPALIDAD_ACTUAL
+                                        + ", :ejercicio, :version, 'ABIERTO', :clave) RETURNING id")
+                        .param("ejercicio", conjunto.ejercicio().valor())
+                        .param("version", conjunto.version())
+                        .param("clave", clave.valor())
+                        .query(Long.class)
+                        .single();
+        return new ConjuntoDeParametros(
+                id,
+                conjunto.ejercicio(),
+                conjunto.version(),
+                EstadoDelConjunto.ABIERTO,
+                null,
+                null);
+    }
+
+    @Override
+    public Optional<ConjuntoDeParametros> abiertoConLaClave(ClaveDeIdempotencia clave) {
+        // La municipalidad no se nombra: la pone la politica `conjunto_parametros_tenant`, y es
+        // la misma columna que encabeza `conjunto_idempotencia_uq`. La misma clave en otra
+        // municipalidad es otra peticion y aqui no se ve.
+        return jdbc().sql(
+                        "SELECT "
+                                + COLUMNAS_CONJUNTO
+                                + " FROM conjunto_parametros WHERE clave_idempotencia = :clave")
+                .param("clave", clave.valor())
+                .query(ParametrosRepositoryJdbc::mapearConjunto)
+                .optional();
+    }
+
+    @Override
     public ConjuntoDeParametros sellar(long conjuntoId, Instant cuando, String quien) {
         // El disparador de V9 rechaza el UPDATE si ya estaba sellado, asi que no hace
         // falta comprobarlo antes. Comprobarlo aqui ademas seria una carrera: entre la
-        // lectura y la escritura cabe otra transaccion.
+        // lectura y la escritura cabe otra transaccion. Su restrict_violation lo traduce a
+        // 409 el caso de uso, por su SQLState y su funcion (#59, ADR-0043 §7).
         jdbc().sql(
                         "UPDATE conjunto_parametros"
                                 + " SET estado = 'SELLADO', fecha_sellado = :cuando,"
@@ -174,6 +215,20 @@ public class ParametrosRepositoryJdbc extends RepositorioJdbc implements Paramet
                 .param("conjunto", conjuntoId)
                 .param("parametro", parametroId)
                 .update();
+    }
+
+    @Override
+    public boolean contiene(long conjuntoId, long parametroId) {
+        Boolean esta =
+                jdbc().sql(
+                                "SELECT EXISTS (SELECT 1 FROM conjunto_parametro_detalle"
+                                        + " WHERE conjunto_id = :conjunto"
+                                        + "   AND parametro_id = :parametro)")
+                        .param("conjunto", conjuntoId)
+                        .param("parametro", parametroId)
+                        .query(Boolean.class)
+                        .single();
+        return Boolean.TRUE.equals(esta);
     }
 
     @Override

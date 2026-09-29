@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import kamayuk.normativa.auditoria.Auditoria;
 import kamayuk.normativa.auditoria.Operacion;
 import kamayuk.normativa.auditoria.OrigenContext;
@@ -15,13 +16,16 @@ import kamayuk.normativa.compartido.Pagina;
 import kamayuk.normativa.compartido.Paginacion;
 import kamayuk.normativa.dominio.Ejercicio;
 import kamayuk.normativa.dominio.Observacion;
+import kamayuk.normativa.parametros.dominio.ClaveDeIdempotencia;
 import kamayuk.normativa.parametros.dominio.ConjuntoDeParametros;
+import kamayuk.normativa.parametros.dominio.DeclaracionDelArancel;
 import kamayuk.normativa.parametros.dominio.LlaveDeParametro;
 import kamayuk.normativa.parametros.dominio.ParametroTributario;
 import kamayuk.normativa.parametros.dominio.ParametrosRepository;
 import kamayuk.normativa.web.CodigoDeError;
 import kamayuk.normativa.web.ProblemaDeNegocio;
 import org.jspecify.annotations.Nullable;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,6 +42,14 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Service
 public class AdministrarParametros {
+
+    /**
+     * Las dos funciones de disparador de V1 que hacen inmutable lo sellado. Sus rechazos —y ningun
+     * otro— se traducen a 409, cada uno en la operacion que lo puede producir (ADR-0043 §7).
+     */
+    private static final String DISPARADOR_DEL_DETALLE = "detalle_de_conjunto_sellado_es_inmutable";
+
+    private static final String DISPARADOR_DEL_CONJUNTO = "conjunto_sellado_es_inmutable";
 
     private final ParametrosRepository repositorio;
     private final Auditoria auditoria;
@@ -218,11 +230,200 @@ public class AdministrarParametros {
         return creado;
     }
 
-    /** Agrega al conjunto un parametro ya publicado. Falla si el conjunto esta sellado. */
+    /**
+     * Abre una version nueva del ejercicio por HTTP, o devuelve la que esa clave ya abrio (ADR-0043
+     * §5).
+     *
+     * <p><b>El reintento no escribe.</b> La clave se busca <b>antes</b> de calcular la version: si
+     * ya abrio un conjunto del mismo ejercicio, se devuelve ese —mismo {@code id}, misma {@code
+     * version}, en su estado de ahora— sin tocar la base ni la bitacora, y la observacion de este
+     * reenvio se ignora: la auditada es la de la primera vez. Con otro ejercicio es una clave
+     * reusada, y contesta 409.
+     *
+     * <p><b>Lo que no resuelve esta lectura</b> son dos peticiones a la vez: las dos pueden no
+     * encontrar la clave y seguir. Eso lo resuelve el indice {@code conjunto_idempotencia_uq} (y
+     * {@code conjunto_uq}, si calcularon la misma version): la segunda falla con un {@code
+     * unique_violation}, y lo atiende {@link EscriturasDelConjunto#abrir}, desde fuera de esta
+     * transaccion, que ya quedo abortada.
+     *
+     * @throws ProblemaDeNegocio {@code CONFLICTO} si la clave ya abrio un conjunto de otro
+     *     ejercicio
+     */
+    @Transactional
+    public ConjuntoDeParametros abrirVersion(
+            Ejercicio ejercicio, ClaveDeIdempotencia clave, Observacion observacion) {
+        Optional<ConjuntoDeParametros> yaAbierto = repositorio.abiertoConLaClave(clave);
+        if (yaAbierto.isPresent()) {
+            return elQueEsaClaveAbrio(yaAbierto.get(), ejercicio, clave);
+        }
+
+        int siguiente = repositorio.ultimaVersionDe(ejercicio) + 1;
+        ConjuntoDeParametros creado =
+                repositorio.crear(ConjuntoDeParametros.nuevo(ejercicio, siguiente), clave);
+
+        auditar(creado, Operacion.ALTA, observacion);
+        return creado;
+    }
+
+    /**
+     * El conjunto que esa clave abrio en esta municipalidad, leido en su propia transaccion.
+     *
+     * <p>Es la relectura de ADR-0043 §5 tras un choque en un indice unico: la transaccion que choco
+     * esta abortada y no admite ni una consulta mas.
+     */
+    @Transactional(readOnly = true)
+    public Optional<ConjuntoDeParametros> abiertoConLaClave(ClaveDeIdempotencia clave) {
+        return repositorio.abiertoConLaClave(clave);
+    }
+
+    /**
+     * Lo que se contesta cuando la clave ya abrio un conjunto: ese mismo, si es del ejercicio que
+     * se pide; si no, 409.
+     *
+     * <p>Devolverle el conjunto de otro ejercicio le haria componer el ano equivocado: no es un
+     * reintento sino una clave reusada (ADR-0043 §5, el precedente de {@code
+     * RegistrarPreconvenio.ClaveDeOtraPeticion} en {@code rentas}).
+     */
+    static ConjuntoDeParametros elQueEsaClaveAbrio(
+            ConjuntoDeParametros abierto, Ejercicio pedido, ClaveDeIdempotencia clave) {
+        if (abierto.ejercicio().equals(pedido)) {
+            return abierto;
+        }
+        throw new ProblemaDeNegocio(
+                CodigoDeError.CONFLICTO,
+                "La clave de idempotencia '"
+                        + clave
+                        + "' ya abrio el conjunto "
+                        + abierto.id()
+                        + " (ejercicio "
+                        + abierto.ejercicio()
+                        + ", version "
+                        + abierto.version()
+                        + "), y esta peticion pide el ejercicio "
+                        + pedido
+                        + ": no es un reintento sino una clave reusada. Mande una clave nueva");
+    }
+
+    /**
+     * Agrega al conjunto un parametro ya publicado, por su identificador. Falla con 409 si el
+     * conjunto esta sellado.
+     *
+     * <p><b>Ninguna ruta HTTP lo llama, y ninguna debe</b> (ADR-0043 §1 y Consecuencias): la clave
+     * foranea de {@code conjunto_parametro_detalle} se comprueba sin RLS, asi que un identificador
+     * que viniera del cliente podria meter en el conjunto un parametro de otra municipalidad, que
+     * la lectura del conjunto esconderia. Por HTTP se agrega por llave, con {@link
+     * #agregarParametroPublicado}.
+     */
     @Transactional
     public void agregarParametro(long conjuntoId, long parametroId, Observacion observacion) {
+        incorporar(conjunto(conjuntoId), parametroId, observacion);
+    }
+
+    /**
+     * Agrega al conjunto el parametro publicado que responde a esa llave, nombrandolo por lo que es
+     * y no por su identificador.
+     *
+     * <p>Es lo que hace posible componer un conjunto desde un archivo de operacion que valga igual
+     * en {@code stg} y en {@code prod} (ver {@link LlaveDeParametro}), y es la unica forma de
+     * agregar por HTTP (ADR-0043 §1, fila 2). La resolucion y el alta van en la <b>misma</b>
+     * transaccion: entre leer el identificador y usarlo cabe otra escritura, y lo que se estaria
+     * incorporando ya no seria lo que se leyo.
+     *
+     * <h2>Idempotente por su estado (ADR-0043 §5)</h2>
+     *
+     * <p>Si el parametro ya esta en el conjunto, se contesta que esta —{@link
+     * ParametroIncorporado#yaEstaba()}— <b>sin escribir ni auditar</b>: la composicion es un
+     * conjunto, no una lista, y un reintento tras un tiempo de espera no debe leerse como un error.
+     * Y eso se contesta <b>antes</b> que «esta sellado»: si ya esta dentro y el conjunto se sello
+     * despues, lo que se pidio —que este— es verdad. Si no esta y el conjunto esta sellado, 409.
+     *
+     * @throws ProblemaDeNegocio {@code NO_ENCONTRADO} si el conjunto no existe o es de otra
+     *     municipalidad, o si no hay ningun parametro publicado con esa llave; {@code CONFLICTO} si
+     *     hay mas de uno —elegir en silencio uno de dos homonimos sellaria un valor que nadie
+     *     escogio— o si el conjunto esta sellado y el parametro no esta dentro
+     */
+    @Transactional
+    public ParametroIncorporado agregarParametroPublicado(
+            long conjuntoId, LlaveDeParametro llave, Observacion observacion) {
         ConjuntoDeParametros conjunto = conjunto(conjuntoId);
-        repositorio.agregarParametro(conjuntoId, parametroId);
+        ParametroTributario parametro = elPublicadoCon(llave);
+        long parametroId =
+                Objects.requireNonNull(parametro.id(), "Un parametro leido de la base tiene id");
+
+        if (repositorio.contiene(conjuntoId, parametroId)) {
+            return ParametroIncorporado.queYaEstaba(parametro);
+        }
+        incorporar(conjunto, parametroId, observacion);
+        return ParametroIncorporado.nuevo(parametro);
+    }
+
+    /**
+     * El parametro con esa llave, si ya esta en el conjunto; leido en su propia transaccion.
+     *
+     * <p>Es la relectura de ADR-0043 §7 cuando otro agrego el mismo parametro a la vez y el {@code
+     * INSERT} de esta peticion choco con {@code conjunto_detalle_pk}.
+     */
+    @Transactional(readOnly = true)
+    public Optional<ParametroTributario> incorporadoConLaLlave(
+            long conjuntoId, LlaveDeParametro llave) {
+        List<ParametroTributario> encontrados = repositorio.publicados(llave);
+        if (encontrados.size() != 1) {
+            return Optional.empty();
+        }
+        ParametroTributario parametro = encontrados.get(0);
+        Long parametroId = parametro.id();
+        return parametroId != null && repositorio.contiene(conjuntoId, parametroId)
+                ? Optional.of(parametro)
+                : Optional.empty();
+    }
+
+    /** El unico parametro publicado con esa llave; si no hay ninguno o hay mas de uno, falla. */
+    private ParametroTributario elPublicadoCon(LlaveDeParametro llave) {
+        List<ParametroTributario> encontrados = repositorio.publicados(llave);
+        if (encontrados.isEmpty()) {
+            throw new ProblemaDeNegocio(
+                    CodigoDeError.NO_ENCONTRADO,
+                    "No hay ningun parametro publicado con la llave "
+                            + llave
+                            + ". Publicarlo es trabajo de rol_carga_parametros, antes de componer"
+                            + " el conjunto (REQ-03)");
+        }
+        if (encontrados.size() > 1) {
+            throw new ProblemaDeNegocio(
+                    CodigoDeError.CONFLICTO,
+                    "Hay "
+                            + encontrados.size()
+                            + " parametros publicados con la llave "
+                            + llave
+                            + ": quedarse con uno seria sellar un valor que nadie eligio");
+        }
+        return encontrados.get(0);
+    }
+
+    /**
+     * Escribe el parametro en el conjunto y lo audita.
+     *
+     * <p><b>El sellado se comprueba dos veces, y las dos hacen falta</b> (ADR-0043 §7). La
+     * comprobacion de aqui contesta bien sin llegar a la base; pero entre leer el estado y escribir
+     * cabe que otro selle, y entonces lo rechaza el disparador {@code
+     * detalle_de_conjunto_sellado_inmutable} con un {@code restrict_violation}. Ese rechazo, y
+     * <b>solo</b> ese —por su {@code SQLState} y por la funcion que lo lanzo—, se traduce al mismo
+     * 409; cualquier otro rechazo de la base sigue su camino hasta el 500 con incidencia.
+     */
+    private void incorporar(
+            ConjuntoDeParametros conjunto, long parametroId, Observacion observacion) {
+        long conjuntoId = Objects.requireNonNull(conjunto.id(), "Un conjunto leido tiene id");
+        if (conjunto.estaSellado()) {
+            throw selladoNoCambiaSuContenido(conjuntoId);
+        }
+        try {
+            repositorio.agregarParametro(conjuntoId, parametroId);
+        } catch (DataAccessException rechazo) {
+            if (CausaEnLaBase.loRechazoElDisparador(rechazo, DISPARADOR_DEL_DETALLE)) {
+                throw selladoNoCambiaSuContenido(conjuntoId);
+            }
+            throw rechazo;
+        }
 
         auditoria.registrar(
                 RegistroDeAuditoria.enLaFechaDe(
@@ -242,49 +443,13 @@ public class AdministrarParametros {
                                         + "}"));
     }
 
-    /**
-     * Agrega al conjunto el parametro publicado que responde a esa llave, nombrandolo por lo que es
-     * y no por su identificador.
-     *
-     * <p>Es lo que hace posible componer un conjunto desde un archivo de operacion que valga igual
-     * en {@code stg} y en {@code prod} (ver {@link LlaveDeParametro}). La resolucion y el alta van
-     * en la <b>misma</b> transaccion: entre leer el identificador y usarlo cabe otra escritura, y
-     * lo que se estaria incorporando ya no seria lo que se leyo.
-     *
-     * @throws ProblemaDeNegocio si no hay ningun parametro publicado con esa llave, o si hay mas de
-     *     uno: elegir en silencio uno de dos homonimos sellaria un valor que nadie escogio
-     */
-    @Transactional
-    public ParametroTributario agregarParametroPublicado(
-            long conjuntoId, LlaveDeParametro llave, Observacion observacion) {
-        List<ParametroTributario> encontrados = repositorio.publicados(llave);
-        if (encontrados.isEmpty()) {
-            throw new ProblemaDeNegocio(
-                    CodigoDeError.NO_ENCONTRADO,
-                    "No hay ningun parametro publicado con la llave "
-                            + llave
-                            + ". Publicarlo es trabajo de rol_carga_parametros, antes de componer"
-                            + " el conjunto (REQ-03)");
-        }
-        if (encontrados.size() > 1) {
-            throw new ProblemaDeNegocio(
-                    CodigoDeError.CONFLICTO,
-                    "Hay "
-                            + encontrados.size()
-                            + " parametros publicados con la llave "
-                            + llave
-                            + ": quedarse con uno seria sellar un valor que nadie eligio");
-        }
-
-        ParametroTributario parametro = encontrados.get(0);
-        // Llamada a un metodo propio: no pasa por el proxy, pero la transaccion de este metodo ya
-        // esta abierta y es la que se quiere. Lo que importa aqui es que las dos operaciones sean
-        // una sola, no que haya dos anotaciones.
-        agregarParametro(
-                conjuntoId,
-                Objects.requireNonNull(parametro.id(), "Un parametro leido de la base tiene id"),
-                observacion);
-        return parametro;
+    private static ProblemaDeNegocio selladoNoCambiaSuContenido(long conjuntoId) {
+        return new ProblemaDeNegocio(
+                CodigoDeError.CONFLICTO,
+                "El conjunto de parametros "
+                        + conjuntoId
+                        + " esta sellado: su contenido no cambia, y corregirlo exige una version"
+                        + " nueva (ADR-0007)");
     }
 
     /**
@@ -294,7 +459,10 @@ public class AdministrarParametros {
      * queda con fecha y con nombre, y por eso el rechazo de un segundo sellado <b>del mismo
      * conjunto</b> no depende de esta comprobacion sino del disparador {@code
      * conjunto_sellado_inmutable}: entre leer el estado y escribirlo cabe otra transaccion, y el
-     * disparador rechaza el UPDATE igual.
+     * disparador rechaza el UPDATE igual. <b>Desde #59 ese rechazo se traduce</b> —y solo ese, por
+     * su {@code SQLState} y la funcion que lo lanzo— al mismo 409 de «ya esta sellado» que da la
+     * comprobacion: es la carrera de dos sellos a la vez, y quien la pierde no tiene un defecto que
+     * reportar sino un sello que ya hizo otro (ADR-0043 §7).
      *
      * <p><b>Lo que este javadoc decia y el esquema no dice:</b> que ademas lo sujetaba «el indice
      * unico de la base (V9)». {@code conjunto_sellado_uq} <b>no existe</b>, y no se perdio al
@@ -305,17 +473,50 @@ public class AdministrarParametros {
      * README de {@code valores-normativos/publicacion/} ya trae esta correccion con su medida; este
      * javadoc se habia quedado atras, que es peor que no decir nada: lo lee quien va a cambiar el
      * metodo.
+     *
+     * <p>Es el sellado del proceso {@code batch}, que no pregunta por el arancel: su auditoria no
+     * lleva declaracion, porque nadie la hizo. El de HTTP es {@link #sellar(long, Observacion,
+     * DeclaracionDelArancel)}.
+     *
+     * @throws ProblemaDeNegocio {@code CONFLICTO} si ya esta sellado o si esta vacio, con dos
+     *     mensajes distintos: el primero se corrige con una version nueva, el segundo agregando
      */
     @Transactional
     public ConjuntoDeParametros sellar(long conjuntoId, Observacion observacion) {
+        return sellarConLaDeclaracion(conjuntoId, observacion, null);
+    }
+
+    /**
+     * Sella el conjunto con lo que quien sella declara sobre el arancel de su municipalidad: el
+     * punto 3 de «Antes de sellar» (ADR-0043 §8).
+     *
+     * <p><b>Normativa no puede comprobar si esta cargado, y no lo va a comprobar: la tabla es de
+     * catastro.</b> {@code arancel} es de {@code catastro} y la undecima regla prohibe consultarla
+     * desde aqui; ninguna ruta de este sistema llama a otro <b>para sellar</b>. Asi que la
+     * declaracion no es una verificacion: queda en el {@code datos_nuevos} de la fila {@code
+     * MODIFICACION} de la auditoria, junto a {@code "comprobadoPorNormativa":false}, que vale
+     * siempre {@code false} para que quien lea la fila sin haber leido el ADR no la tome por una.
+     * <b>No</b> va en {@code conjunto_parametros} ni en el snapshot: no es una propiedad del
+     * conjunto sino lo que alguien dijo al sellarlo. Prueba quien dijo que, cuando y con que
+     * observacion — no que el arancel este cargado.
+     *
+     * @throws ProblemaDeNegocio lo mismo que {@link #sellar(long, Observacion)}
+     */
+    @Transactional
+    public ConjuntoDeParametros sellar(
+            long conjuntoId, Observacion observacion, DeclaracionDelArancel arancel) {
+        return sellarConLaDeclaracion(
+                conjuntoId,
+                observacion,
+                Objects.requireNonNull(
+                        arancel, "Sellar por HTTP exige la declaracion del arancel (ADR-0043 §8)"));
+    }
+
+    private ConjuntoDeParametros sellarConLaDeclaracion(
+            long conjuntoId, Observacion observacion, @Nullable DeclaracionDelArancel arancel) {
         ConjuntoDeParametros conjunto = conjunto(conjuntoId);
         if (conjunto.estaSellado()) {
-            throw new ProblemaDeNegocio(
-                    CodigoDeError.CONFLICTO,
-                    "El conjunto "
-                            + conjuntoId
-                            + " ya esta sellado; corregirlo exige una version"
-                            + " nueva (ADR-0007)");
+            throw yaEstaSellado(conjuntoId);
         }
         if (repositorio.parametrosDe(conjuntoId).isEmpty()) {
             // Un conjunto vacio sellado es peor que ninguno: la pantalla diria que el
@@ -330,10 +531,55 @@ public class AdministrarParametros {
 
         Instant cuando = Instant.now(reloj);
         String quien = OrigenContext.actual().usuario();
-        ConjuntoDeParametros sellado = repositorio.sellar(conjuntoId, cuando, quien);
+        ConjuntoDeParametros sellado;
+        try {
+            sellado = repositorio.sellar(conjuntoId, cuando, quien);
+        } catch (DataAccessException rechazo) {
+            if (CausaEnLaBase.loRechazoElDisparador(rechazo, DISPARADOR_DEL_CONJUNTO)) {
+                throw yaEstaSellado(conjuntoId);
+            }
+            throw rechazo;
+        }
 
-        auditar(sellado, Operacion.MODIFICACION, observacion);
+        auditoria.registrar(
+                RegistroDeAuditoria.enLaFechaDe(
+                                LocalDate.now(reloj),
+                                "conjunto_parametros",
+                                String.valueOf(sellado.id()),
+                                Operacion.MODIFICACION,
+                                observacion)
+                        .con(null, datosDelSellado(sellado, arancel)));
         return sellado;
+    }
+
+    private static ProblemaDeNegocio yaEstaSellado(long conjuntoId) {
+        return new ProblemaDeNegocio(
+                CodigoDeError.CONFLICTO,
+                "El conjunto "
+                        + conjuntoId
+                        + " ya esta sellado; corregirlo exige una version"
+                        + " nueva (ADR-0007)");
+    }
+
+    /**
+     * Lo que la fila {@code MODIFICACION} del sellado guarda como {@code datos_nuevos}.
+     *
+     * <p>Sin declaracion —el {@code batch}—, lo de siempre. Con ella, ademas lo declarado y {@code
+     * "comprobadoPorNormativa":false}, siempre {@code false}: ver {@link #sellar(long, Observacion,
+     * DeclaracionDelArancel)}.
+     */
+    private static String datosDelSellado(
+            ConjuntoDeParametros sellado, @Nullable DeclaracionDelArancel arancel) {
+        String deSiempre = datosDe(sellado);
+        if (arancel == null) {
+            return deSiempre;
+        }
+        return deSiempre.substring(0, deSiempre.length() - 1)
+                + ",\""
+                + DeclaracionDelArancel.CAMPO
+                + "\":\""
+                + arancel.name()
+                + "\",\"comprobadoPorNormativa\":false}";
     }
 
     private ConjuntoDeParametros conjunto(long id) {
@@ -374,14 +620,16 @@ public class AdministrarParametros {
                                 String.valueOf(conjunto.id()),
                                 operacion,
                                 observacion)
-                        .con(
-                                null,
-                                "{\"ejercicio\":"
-                                        + conjunto.ejercicio().valor()
-                                        + ",\"version\":"
-                                        + conjunto.version()
-                                        + ",\"estado\":\""
-                                        + conjunto.estado()
-                                        + "\"}"));
+                        .con(null, datosDe(conjunto)));
+    }
+
+    private static String datosDe(ConjuntoDeParametros conjunto) {
+        return "{\"ejercicio\":"
+                + conjunto.ejercicio().valor()
+                + ",\"version\":"
+                + conjunto.version()
+                + ",\"estado\":\""
+                + conjunto.estado()
+                + "\"}";
     }
 }

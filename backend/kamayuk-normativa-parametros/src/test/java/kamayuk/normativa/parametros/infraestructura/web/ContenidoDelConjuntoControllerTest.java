@@ -27,6 +27,7 @@ import kamayuk.normativa.dominio.Ejercicio;
 import kamayuk.normativa.dominio.ValorNormativo;
 import kamayuk.normativa.dominio.Vigencia;
 import kamayuk.normativa.parametros.aplicacion.AdministrarParametros;
+import kamayuk.normativa.parametros.dominio.ClaveDeIdempotencia;
 import kamayuk.normativa.parametros.dominio.ConjuntoDeParametros;
 import kamayuk.normativa.parametros.dominio.EstadoDelConjunto;
 import kamayuk.normativa.parametros.dominio.LlaveDeParametro;
@@ -447,6 +448,22 @@ class ContenidoDelConjuntoControllerTest {
 
         @Override
         public List<ParametroTributario> publicados(LlaveDeParametro llave) {
+            throw new UnsupportedOperationException("no lo usa esta prueba");
+        }
+
+        @Override
+        public ConjuntoDeParametros crear(
+                ConjuntoDeParametros conjunto, ClaveDeIdempotencia clave) {
+            throw new UnsupportedOperationException("no lo usa esta prueba");
+        }
+
+        @Override
+        public Optional<ConjuntoDeParametros> abiertoConLaClave(ClaveDeIdempotencia clave) {
+            throw new UnsupportedOperationException("no lo usa esta prueba");
+        }
+
+        @Override
+        public boolean contiene(long conjuntoId, long parametroId) {
             throw new UnsupportedOperationException("no lo usa esta prueba");
         }
     }

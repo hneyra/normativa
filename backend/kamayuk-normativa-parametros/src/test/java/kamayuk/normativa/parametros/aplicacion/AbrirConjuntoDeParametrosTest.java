@@ -270,6 +270,46 @@ class AbrirConjuntoDeParametrosTest {
         }
 
         @Test
+        @DisplayName(
+                "una fila repetida se informa como rechazada, y no escribe ni audita dos veces")
+        void unaFilaRepetidaSeInforma() throws IOException, SQLException {
+            // #59 hizo agregar idempotente por su estado (ADR-0043 §5): lo que ya esta dentro no
+            // lanza, contesta que ya estaba. Por HTTP eso es un 201; para el informe de este
+            // proceso tiene que seguir siendo una fila que no entro, y decir por que: un archivo
+            // que nombra dos veces el mismo parametro es algo que quien lo corre tiene que ver.
+            publicar("REPETIDA");
+            String archivo =
+                    escribir(
+                            "repetida.csv",
+                            """
+                            tipo,clave,vigenciaDesde
+                            FICTICIO,REPETIDA,2026-01-01
+                            FICTICIO,REPETIDA,2026-01-01
+                            """);
+            ListAppender<ILoggingEvent> registro = escuchar();
+
+            proceso(datos(2031, 0, archivo, false)).run(null);
+
+            long conjunto = ultimoConjuntoDe(2031);
+            assertThat(lineas(registro))
+                    .as("la segunda fila no entro, y el informe dice por que")
+                    .anyMatch(
+                            linea ->
+                                    linea.startsWith("Parametro de la fila 3 rechazado")
+                                            && linea.contains("ya estaba en este conjunto"))
+                    .anyMatch(linea -> linea.contains("1 incorporada(s), 1 rechazada(s)"));
+            assertThat(parametrosDe(conjunto)).containsExactly("FICTICIO:REPETIDA");
+            assertThat(
+                            dato(
+                                    "SELECT count(*) FROM auditoria WHERE tabla ="
+                                            + " 'conjunto_parametro_detalle' AND clave LIKE '"
+                                            + conjunto
+                                            + ":%'"))
+                    .as("lo que ya estaba no se vuelve a auditar")
+                    .isEqualTo("1");
+        }
+
+        @Test
         @DisplayName("dos parametros homonimos rechazan la fila en vez de elegir uno")
         void dosHomonimosRechazanLaFila() throws IOException, SQLException {
             publicar("HOMONIMA");
@@ -326,7 +366,9 @@ class AbrirConjuntoDeParametrosTest {
                                             conjunto,
                                             new LlaveDeParametro("FICTICIO", "SELLADA_2", DESDE),
                                             Observacion.de("Intento de agregar a un sellado")))
-                    .as("lo impide el disparador de V9, no la aplicacion")
+                    .as(
+                            "lo impide la comprobacion del caso de uso (#59) y, detras de ella y"
+                                    + " por si otro sella a la vez, el disparador de V9")
                     .hasMessageContaining("sellado");
         }
 
