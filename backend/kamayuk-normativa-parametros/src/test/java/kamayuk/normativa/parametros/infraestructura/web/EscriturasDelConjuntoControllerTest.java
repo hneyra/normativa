@@ -120,22 +120,27 @@ class EscriturasDelConjuntoControllerTest {
     //  AC 4 — la observacion nunca da 500
     // ------------------------------------------------------------------
 
-    /** Las cinco maneras de no traer una observacion valida, como fragmento del cuerpo JSON. */
-    private static final List<String> OBSERVACIONES_QUE_NO_VALEN =
+    /** Las cinco maneras de no traer una observacion valida, con su nombre y su fragmento JSON. */
+    private static final List<List<String>> OBSERVACIONES_QUE_NO_VALEN =
             List.of(
-                    "",
-                    "\"observacion\":null",
-                    "\"observacion\":\"     \"",
-                    "\"observacion\":\"abcd\"",
-                    "\"observacion\":\"" + "a".repeat(501) + "\"");
+                    List.of("ausente", ""),
+                    List.of("nula", "\"observacion\":null"),
+                    List.of("en blanco", "\"observacion\":\"     \""),
+                    List.of("de 4 caracteres", "\"observacion\":\"abcd\""),
+                    List.of("de 501 caracteres", "\"observacion\":\"" + "a".repeat(501) + "\""));
 
     static Stream<Arguments> lasTresRutasPorLasCincoObservaciones() {
         List<Arguments> casos = new ArrayList<>();
-        for (String observacion : OBSERVACIONES_QUE_NO_VALEN) {
-            casos.add(Arguments.of("POST /conjuntos", abrir("\"ejercicio\":2027", observacion)));
+        for (List<String> caso : OBSERVACIONES_QUE_NO_VALEN) {
+            String nombre = caso.get(0);
+            String observacion = caso.get(1);
+            casos.add(
+                    Arguments.of(
+                            "POST /conjuntos", nombre, abrir("\"ejercicio\":2027", observacion)));
             casos.add(
                     Arguments.of(
                             "POST /conjuntos/{id}/parametros",
+                            nombre,
                             agregar(
                                     "\"tipo\":\"FICTICIO\",\"clave\":\"A\","
                                             + "\"vigenciaDesde\":\"2026-01-01\"",
@@ -143,23 +148,25 @@ class EscriturasDelConjuntoControllerTest {
             casos.add(
                     Arguments.of(
                             "POST /conjuntos/{id}/sellar",
+                            nombre,
                             sellar("\"arancelDeLaMunicipalidad\":\"SIN_CARGAR\"", observacion)));
         }
         return casos.stream();
     }
 
-    @ParameterizedTest(name = "{0} con {1}")
+    @ParameterizedTest(name = "{0} con la observacion {1}")
     @MethodSource("lasTresRutasPorLasCincoObservaciones")
     @DisplayName("ausente, nula, en blanco, corta o larga: 422 nombrando la observacion")
-    void laObservacionNuncaDa500(String ruta, MockHttpServletRequestBuilder peticion)
+    void laObservacionNuncaDa500(String ruta, String caso, MockHttpServletRequestBuilder peticion)
             throws Exception {
         MvcResult resultado = mvc.perform(peticion).andReturn();
 
         assertThat(resultado.getResponse().getStatus())
                 .as(
-                        "%s: ADR-0043 §6 — la observacion es del cliente, y lo que le falta a su"
-                                + " peticion no es una incidencia del servidor. Contesto: %s",
-                        ruta, resultado.getResponse().getContentAsString())
+                        "%s con la observacion %s: ADR-0043 §6 — la observacion es del"
+                                + " cliente, y lo que le falta a su peticion no es una incidencia"
+                                + " del servidor. Contesto: %s",
+                        ruta, caso, resultado.getResponse().getContentAsString())
                 .isEqualTo(422);
         assertThat(resultado.getResponse().getContentAsString())
                 .contains("VALIDACION")

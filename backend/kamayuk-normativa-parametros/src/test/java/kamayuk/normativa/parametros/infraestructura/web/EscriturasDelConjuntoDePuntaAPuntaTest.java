@@ -297,7 +297,7 @@ class EscriturasDelConjuntoDePuntaAPuntaTest {
         }
 
         @Test
-        @DisplayName("A LA VEZ, y la segunda calcula despues de que la primera sello: una sola")
+        @DisplayName("A LA VEZ, y la segunda calcula despues de que la primera termino: una sola")
         void aLaVezLaSegundaLlegaTarde() throws Exception {
             // Las dos buscan la clave y no la encuentran; la segunda espera a que la primera
             // termine ENTERA antes de calcular su version, asi que calcula `1 + 1` y no choca en
