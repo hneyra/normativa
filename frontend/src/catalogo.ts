@@ -32,11 +32,12 @@ import { pantallaDe } from './pantallas/definiciones/index.ts';
  * deberia hacer editable la hoja. No se arregla aqui con una excepcion escrita a mano, porque una
  * excepcion asi no la veria ninguna guarda; se arregla cuando H14a llegue.
  *
- * <h2>Lo que este archivo NO hace</h2>
+ * <h2>Y desde #64, lo que la cuenta PUEDE abrir de el</h2>
  *
- * **Filtrar por permisos** (#64) — traducir sus rotulos ya lo hace, desde #60. El armazon recibe el catalogo YA
- * filtrado —lo dice su javadoc— y quien lo filtra es quien sabe que puede abrir la cuenta, que es
- * quien tiene la sesion.
+ * El armazon recibe el catalogo YA filtrado —lo dice su javadoc—. Quien lo filtra es
+ * `src/datos/useCatalogoPermitido.ts`, con las tres lecturas de `/seguridad` y `componer` de
+ * `src/permisos.ts`, a partir de ESTE catalogo; y lo que se ve mientras tanto,
+ * {@link EsperaDelCatalogo}, entra por aqui. Ver el final del archivo.
  *
  * <h2>El icono se DEDUCE del trazo, y no se escribe</h2>
  *
@@ -98,10 +99,10 @@ export const CATALOGO: Catalogo = ARBOL.map(
     // del arranque. `clave`, `slug` e `icono` NO pasan por `t()` y no deben: son identificadores
     // —el slug viaja al hash— y traducirlos cambiaria la direccion de cada hoja.
     //
-    // **Diferencia declarada con `rentas`**: alli los rotulos de los modulos los pisa
-    // `GET /seguridad/modulos` y por eso NO se traducen (`traducirCatalogo`, `rentas`#105). Aqui el
-    // catalogo sale entero del artboard V8 y no hay backend que lo pise —eso es #64—, asi que el
-    // rotulo es texto de este sistema y se traduce como el resto.
+    // **Desde #64 este rotulo solo se lee si el backend no publica el modulo**, que es cuando no se
+    // ofrece: `componer` (`src/permisos.ts`) lo pisa con el `nombre` de `GET /seguridad/modulos`, que
+    // es dato y NO se traduce —como en `rentas`#105—. La nota y las hojas si siguen traduciendose:
+    // son de este sistema, y `componer` conserva sus captadores.
     get rotulo() {
       return t(modulo.rotulo);
     },
@@ -146,3 +147,15 @@ export const CATALOGO: Catalogo = ARBOL.map(
 export const CODIGO_POR_CLAVE: ReadonlyMap<string, string> = new Map(
   ARBOL.map((modulo) => [modulo.slug, modulo.codigo]),
 );
+
+/**
+ * **Lo que se ve mientras no hay catalogo que ofrecer** (#64, AC 4): averiguando, el fallo con su
+ * peldano, o la cuenta que no puede abrir nada. Ver `src/datos/EsperaDelCatalogo.tsx`.
+ *
+ * Entra por esta costura porque es la otra cara del catalogo: lo que se dibuja cuando no lo hay. Lo
+ * que lo PIDE —y compone lo que la cuenta puede abrir con {@link CATALOGO}— es
+ * `src/datos/useCatalogoPermitido.ts`, que es costura propia y no sale de aqui: este archivo lo
+ * leen guardas que corren sin DOM, y el cliente de la API no carga sin `window`. El motivo entero,
+ * con los dos rojos medidos, esta en la cabecera de aquel archivo.
+ */
+export { EsperaDelCatalogo } from './datos/EsperaDelCatalogo.tsx';

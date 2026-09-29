@@ -17,15 +17,17 @@ import { expect, type Page } from '@playwright/test';
  * El arnes que SI necesita la instalacion —entrar por el formulario de Keycloak, con PKCE y
  * canje— es otro, y es #69. Queda declarado.
  *
- * <h2>Y aqui hay MENOS que interceptar que en `rentas`, porque no hay de que</h2>
+ * <h2>Lo que se contesta: las cinco de `/seguridad`, con las capturas del backend (#64)</h2>
  *
- * `rentas` contesta `/seguridad/modulos`, `/seguridad/accesos` y `/seguridad/sesion/permisos` con
- * respuestas medidas de su instalacion (`seguridadMedida.ts`). **Esta interfaz no pide nada**:
- * Hasta #63 `src/datos/proveedor.tsx` no montaba ni un `QueryClient` —no habia una sola lectura— y el
- * catalogo del carril es `src/catalogo.ts`, un dato de este repositorio. Asi que lo que hay que
- * contestar es exactamente cero, y lo que se deja preparado es el 404 de abajo: el dia que #63
- * encienda la primera lectura, una peticion sin contestar tiene que verse **como el error que
- * es**, y no inventada.
+ * Como `rentas` con su `seguridadMedida.ts`, y desde #64 por el mismo motivo: el menu se compone con
+ * lo que contestan `GET /seguridad/{modulos,accesos}` y `/seguridad/sesion/permisos`, y la barra con
+ * `/seguridad/sesion` y `/seguridad/sesion/municipalidad`. Sin ellas no hay armazon que mirar. Se
+ * contestan **con los JSON que deja el backend en `docs/50-api/seguridad/`** —medidos de HTTP a
+ * PostgreSQL por `LecturasDeSeguridadDePuntaAPuntaTest`—, leidos del disco y no escritos aqui. Ver
+ * {@link conLaSeguridadMedida}.
+ *
+ * Todo lo demas cae en el 404 de abajo: una peticion de hoja sin contestar tiene que verse **como el
+ * error que es**, y no inventada.
  */
 
 /**
@@ -59,10 +61,55 @@ export async function conLaPuertaAgotada(pagina: Page): Promise<void> {
     [IDAS, String(TOPE_DE_IDAS)] as const,
   );
 
-  // Ver el javadoc: hoy no hay ni una lectura, y lo que llegue no se inventa.
+  // Ver el javadoc: lo que no se declara no se inventa, y sale como el 404 que es.
   await pagina.route('**/normativa/api/v1/**', (ruta) =>
     ruta.fulfill({ status: 404, contentType: 'application/json', body: '{}' }),
   );
+  // Y DESPUES —en Playwright gana la ruta declarada mas tarde— las cinco de `/seguridad`.
+  await conLaSeguridadMedida(pagina);
+}
+
+/** Las cinco de `/seguridad`, por su camino bajo la raiz de la API, con el archivo que las guarda. */
+export const LAS_CINCO_DE_SEGURIDAD = {
+  '/seguridad/modulos': 'modulos.json',
+  '/seguridad/accesos': 'accesos.json',
+  '/seguridad/sesion/permisos': 'sesion-permisos.json',
+  '/seguridad/sesion': 'sesion.json',
+  '/seguridad/sesion/municipalidad': 'sesion-municipalidad.json',
+} as const;
+
+/** Una captura de `docs/50-api/seguridad/`, tal cual la dejo el backend. Se lee al llamar. */
+export function capturaDeSeguridad(archivo: string): string {
+  return readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), '../../docs/50-api/seguridad', archivo),
+    'utf8',
+  );
+}
+
+/**
+ * **Contesta las cinco lecturas de `/seguridad` con lo que el backend CONTESTA** (#64).
+ *
+ * Una sola ruta y no cinco: se compara el CAMINO entero —sin la consulta—, porque
+ * `/seguridad/sesion` es prefijo de las otras dos de la sesion y un globo las confundiria. Lo que
+ * no es una de las cinco se deja pasar a la ruta anterior, que es el 404.
+ *
+ * @param cambios lo que contesta alguna de las cinco en vez de su captura: otro cuerpo o un estado.
+ */
+export async function conLaSeguridadMedida(
+  pagina: Page,
+  cambios: Partial<Record<keyof typeof LAS_CINCO_DE_SEGURIDAD, { estado?: number; cuerpo?: unknown }>> = {},
+): Promise<void> {
+  await pagina.route(/\/normativa\/api\/v1\/seguridad\//, (ruta) => {
+    const camino = new URL(ruta.request().url()).pathname.replace(/^\/normativa\/api\/v1/, '');
+    const archivo = LAS_CINCO_DE_SEGURIDAD[camino as keyof typeof LAS_CINCO_DE_SEGURIDAD];
+    if (archivo === undefined) return ruta.fallback();
+    const cambio = cambios[camino as keyof typeof LAS_CINCO_DE_SEGURIDAD];
+    return ruta.fulfill({
+      status: cambio?.estado ?? 200,
+      contentType: 'application/json',
+      body: cambio?.cuerpo === undefined ? capturaDeSeguridad(archivo) : JSON.stringify(cambio.cuerpo),
+    });
+  });
 }
 
 /** La lectura del LISTADO de conjuntos. Expresion y no globo: lleva consulta, y `?` es un comodin. */

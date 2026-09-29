@@ -2,12 +2,14 @@ import { peldanoDe } from '@kamayuk/sesion';
 import { TEXTOS_DEL_ARMAZON, type TextosDelArmazon } from '@kamayuk/shell';
 import { ProveedorDeTema, TEXTOS_DE_LA_UI } from '@kamayuk/ui';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
+import { MUNICIPALIDAD_MEDIDA, SESION_MEDIDA } from '../desarrollo/sesionMedida.ts';
 import { Aplicacion } from '../src/aplicacion.tsx';
 import { CATALOGO } from '../src/catalogo.ts';
 import { AMBITOS } from '../src/datos/lecturas.ts';
 import { CONSUMIDORES } from '../src/datos/publicacion.ts';
+import { MODULOS_MEDIDOS } from '../src/datos/seguridadMedida.ts';
 import i18n, { ABRE, CIERRA, IDIOMA_MARCADO, IDIOMA_POR_OMISION } from '../src/i18n/i18n.ts';
 import { TEXTOS_DEL_MARCO } from '../src/i18n/armazon.ts';
 import { FRASES_DEL_INTERPRETE } from '../src/i18n/textosDelInterprete.ts';
@@ -16,7 +18,9 @@ import { PANTALLAS } from '../src/pantallas/definiciones/index.ts';
 import type { Pantalla } from '../src/pantallas/tipos.ts';
 import { MandoDeTema } from '../src/preferencias/MandoDeTema.tsx';
 import { AvisoDeLaPuerta } from '../src/puerta/AvisoDeLaPuerta.tsx';
+import { inicialesDe } from '../src/sesion.ts';
 import { artboardDeclarado } from './artboards.ts';
+import { NADIE_CONTESTA, contestarLaSeguridad } from './la-seguridad-contestada.ts';
 
 /**
  * **Ninguna cadena llega al DOM sin pasar por `t()`** (#60, AC 5).
@@ -57,21 +61,25 @@ import { artboardDeclarado } from './artboards.ts';
 /**
  * Lo que puede aparecer sin marcar sin que sea un defecto.
  *
- * **Cuatro separadores y nada mas, y aqui esta la diferencia con `rentas`**: la suya exime ademas
- * `'J. Cardenas Vega'` y `'JC'`, que son el nombre y las iniciales de la cuenta de su captura. Aqui
- * no hay ninguna cuenta escrita —G2 (#52) lo prohibe, y `src/sesion.ts` pone dos puntos medios que
- * no son las iniciales de nadie—, asi que esas dos exenciones no viajan: copiarlas seria dejar
- * abierta la puerta por la que volveria a entrar un nombre propio.
+ * **Separadores y nada mas, y aqui esta la diferencia con `rentas`**: la suya exime ademas
+ * `'J. Cardenas Vega'` y `'JC'` ESCRITOS, que son el nombre y las iniciales de la cuenta de su
+ * captura. Aqui ninguna cuenta se escribe —G2 (#52) lo prohibe—, y desde #64 la barra dice la que
+ * CONTESTA `GET /seguridad/sesion`: lo que se exime de eso lo calcula {@link losDeLaCaptura} de la
+ * captura misma, y ningun nombre de persona que no venga de ella (AC 5 de #64).
  *
- * Los cuatro que quedan son separadores que el propio artboard dibuja —la raya de un dato vacio, la
- * barra de la miga— y el circulo de la cuenta. Traducir una raya no significa nada.
+ * **Y desde #64 ya no esta `··`**, los dos puntos medios del circulo sin iniciales: `abrir` espera a
+ * que la sesion conteste, asi que el circulo lleva las iniciales de la captura y el marcador no se
+ * llega a dibujar. Eximirlo seria eximir algo que no se mide.
+ *
+ * Los que quedan son separadores que el propio artboard dibuja —la raya de un dato vacio, la barra
+ * de la miga, el punto medio—. Traducir una raya no significa nada.
  *
  * **Y desde #65, las DOS FLECHAS del mando de orden**, por lo mismo: `↑` y `↓` son
  * `textos.flechaAscendente` y `flechaDescendente` de `@kamayuk/ui`, y no hay idioma en que se
  * escriban de otra forma. Lo que SI se traduce de ese boton es su `title` y su `aria-label` —«Ordenar
  * de mayor a menor»—, que son los que se leen en voz alta, y esos se miden como todo lo demas.
  */
-const NO_ES_TEXTO = new Set(['—', '/', '·', '··', ':', '↑', '↓']);
+const NO_ES_TEXTO = new Set(['—', '/', '·', ':', '↑', '↓']);
 
 /**
  * Los atributos que LLEVAN TEXTO, que son los que nadie mira.
@@ -149,11 +157,31 @@ const DESTINOS = CATALOGO.flatMap((modulo) => modulo.destinos.map((destino) => d
  * Se computa llamando a `peldanoDe` y **no copiando sus frases**: una que la libreria reescriba
  * entra sola, y esta guarda no se queda vieja afirmando la de ayer.
  */
-const NO_CONTESTO = new TypeError('el arnes no deja salir ninguna peticion');
-
 function loQueDiceLaEscalera(): ReadonlySet<string> {
-  const peldano = peldanoDe(NO_CONTESTO);
+  const peldano = peldanoDe(NADIE_CONTESTA);
   return new Set([peldano.titulo, peldano.detalle, peldano.remedio]);
+}
+
+/**
+ * **Lo que la SESION contesta, y por que se exime** (#64, AC 5).
+ *
+ * Desde #64 la barra dice la municipalidad y la cuenta que contesta `/seguridad/sesion…`, y el
+ * carril el rotulo del modulo que publica `GET /seguridad/modulos`. Los tres son DATO del backend:
+ * un nombre de persona no se traduce, el de una municipalidad tampoco, y el rotulo de un modulo lo
+ * pone quien administra el catalogo (`rentas`#105).
+ *
+ * Se calculan **de la captura** que el arnes contesta, y no se escriben: asi la exencion no puede
+ * cubrir un nombre que no venga de la sesion. Uno escrito en `src/` saldria aqui sin marcar y sin
+ * eximir — que es exactamente lo que el AC 5 pide que se vea.
+ */
+function losDeLaCaptura(): ReadonlySet<string> {
+  return new Set([
+    SESION_MEDIDA.nombre,
+    SESION_MEDIDA.cuenta,
+    inicialesDe(SESION_MEDIDA.nombre),
+    MUNICIPALIDAD_MEDIDA.nombre,
+    ...MODULOS_MEDIDOS.contenido.map((modulo) => modulo.nombre),
+  ]);
 }
 
 /**
@@ -238,12 +266,16 @@ beforeAll(async () => {
   // Ninguna peticion sale de aqui, y la que se intente falla IGUAL SIEMPRE. Sin esto, las dos
   // lecturas del Panel corren contra `fetch` de Node y la pantalla se mide unas veces «pidiendo» y
   // otras «fallo»: una guarda que depende de quien gane la carrera no dice nada de la pantalla.
-  globalThis.fetch = (() => Promise.reject(NO_CONTESTO)) as typeof fetch;
+  //
+  // **Salvo las cinco de `/seguridad` (#64)**, que contestan las capturas del backend: sin ellas no
+  // hay armazon que medir —lo que se veria es la espera del catalogo, y no las cuatro hojas—.
+  contestarLaSeguridad();
 
   await i18n.changeLanguage(IDIOMA_MARCADO);
 });
 
 afterAll(async () => {
+  vi.unstubAllGlobals();
   await i18n.changeLanguage(IDIOMA_POR_OMISION);
 });
 
@@ -268,6 +300,9 @@ async function abrir(slug: string): Promise<void> {
   await waitFor(() => {
     expect(document.querySelector('[data-slot="barra-global"], header, nav')).not.toBeNull();
     expect(document.querySelector('[data-estado-de-la-lectura="pidiendo"]')).toBeNull();
+    // Y la barra con lo que contesto la sesion: con las dos lecturas en vuelo diria «Averiguando…»,
+    // que tambien se traduce, pero no seria el estado que se viene a medir.
+    expect(screen.getAllByText(MUNICIPALIDAD_MEDIDA.nombre).length).toBeGreaterThan(0);
   });
 }
 
@@ -291,7 +326,7 @@ describe('ninguna cadena llega al DOM sin pasar por `t()`', () => {
     await abrir(slug);
     const escapadas = sinTraducir(
       document.body,
-      new Set([...loQueDiceLaEscalera(), ...losIdentificadores()]),
+      new Set([...loQueDiceLaEscalera(), ...losIdentificadores(), ...losDeLaCaptura()]),
     );
     expect(
       escapadas,
@@ -311,7 +346,10 @@ describe('ninguna cadena llega al DOM sin pasar por `t()`', () => {
       expect(screen.getByRole('dialog')).toBeTruthy();
     });
 
-    const escapadas = sinTraducir(document.body, loQueDiceLaEscalera());
+    const escapadas = sinTraducir(
+      document.body,
+      new Set([...loQueDiceLaEscalera(), ...losDeLaCaptura()]),
+    );
     expect(
       escapadas,
       'La paleta de mando dibuja texto que no paso por «t()»:\n' +
