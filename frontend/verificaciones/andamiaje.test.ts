@@ -144,14 +144,17 @@ describe('«yarn verificar» encadena las cuatro comprobaciones', () => {
     // la comprobacion del puerto va DELANTE de `playwright test` y no dentro del `webServer`— lo
     // mide `el-puerto-del-arnes-sale-del-arbol.test.ts`.
     //
-    // **Y `capturas:regenerar` con #64**, que no esta en `rentas` porque alli las capturas se
-    // copiaron de un `curl`: aqui se GENERAN de `docs/50-api/seguridad/` y regenerarlas es, como el
-    // locale, un acto deliberado que deja un diff.
+    // **Y con #64 los dos que faltaban de la siembra**: `dev:con-plataforma`, el de `rentas`, que
+    // apaga la siembra para trabajar contra la plataforma levantada —su valor exacto lo fija
+    // `la-siembra-es-solo-de-desarrollo.test.ts`—, y `capturas:regenerar`, que no esta en `rentas`
+    // porque alli las capturas se copiaron de un `curl`: aqui se GENERAN de `docs/50-api/seguridad/`
+    // y regenerarlas es, como el locale, un acto deliberado que deja un diff.
     expect(Object.keys(scripts).sort()).toEqual(
       [
         'build',
         'capturas:regenerar',
         'dev',
+        'dev:con-plataforma',
         'e2e',
         'e2e:navegador',
         'i18n',

@@ -99,6 +99,14 @@ RUN yarn install --frozen-lockfile
 
 COPY . .
 
+# LA SIEMBRA DE DESARROLLO NO SE CONSTRUYE (#64). Es la primera de las tres vallas: esta bandera
+# la enciende `.env.development` para que `yarn dev` recorra las hojas sin plataforma, y aqui se
+# apaga de forma EXPLICITA antes de construir. Las otras dos son el `.env*` de `.dockerignore`
+# —ese archivo ni siquiera entra en el contexto— y el `import.meta.env.DEV` que va delante en
+# `src/arranque.ts`, que por si solo ya pliega el `import()` en `vite build`. Nombrarla aqui es lo
+# que hace que, si un dia se quita una de las otras dos, esta siga diciendo lo que se quiere.
+ENV VITE_KAMAYUK_SIN_PLATAFORMA=false
+
 RUN yarn build
 
 # LOS MAPAS DE FUENTE NO SE PUBLICAN, y es una decision con dos motivos, el segundo MEDIDO AQUI.

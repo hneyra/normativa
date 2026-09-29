@@ -5,7 +5,9 @@ y el intérprete de `@kamayuk/ui`. El contexto entero —qué hay, qué no, y qu
 [`CLAUDE.md`](../CLAUDE.md) del repositorio y en la épica
 [#47](https://github.com/hneyra/normativa/issues/47).
 
-Este archivo dice **una sola cosa**: cómo se regenera el locale, y por qué no se escribe a mano.
+Este archivo dice **dos cosas que son la misma**: cómo se regeneran el locale y las capturas de
+`/seguridad`, y por qué ninguno de los dos se escribe a mano. Y cómo se mira la interfaz sin nada
+levantado.
 
 ## El texto: el español es la clave
 
@@ -46,15 +48,39 @@ git add src/i18n/locales/es.json
 
 Después, `yarn verificar`. Si el locale quedó mal, sale rojo nombrando qué clave falta o sobra.
 
+## Las capturas de `/seguridad` TAMBIÉN se regeneran ([#64](https://github.com/hneyra/normativa/issues/64))
+
+```bash
+yarn capturas:regenerar
+```
+
+El menú se compone con lo que contestan las cinco lecturas de `/seguridad`, y para mirarlo sin
+backend —y para probarlo— hacen falta sus respuestas. **No se escriben ni se copian de `rentas`**:
+las deja el backend en `docs/50-api/seguridad/`, medidas de HTTP a PostgreSQL por
+`LecturasDeSeguridadDePuntaAPuntaTest`, y esta orden las convierte en `src/datos/seguridadMedida.ts`
+(el catálogo) y `desarrollo/sesionMedida.ts` (la cuenta y la municipalidad, fuera de `src/` porque
+llevan el nombre de una municipalidad). `verificaciones/las-capturas-son-las-de-docs.test.ts` las
+compara byte a byte en cada `yarn verificar`.
+
+## Mirar la interfaz: `yarn dev` a secas no necesita nada levantado
+
+`.env.development` enciende `VITE_KAMAYUK_SIN_PLATAFORMA`: el arranque siembra las cinco lecturas de
+`/seguridad` con esas capturas y esquiva la puerta de identidad, así que las cuatro hojas se
+recorren **sin PostgreSQL, Keycloak ni backend**. No se siembra ningún dato de hoja: las cuatro piden
+y enseñan su error, que es la verdad. Contra la plataforma levantada, `yarn dev:con-plataforma`. Los
+dos niveles, en [DEV-01 §3](../docs/D0-desarrollo/entorno-local.md).
+
 ## Las órdenes
 
 ```bash
 yarn install --frozen-lockfile
-yarn verificar        # lint, tipos, i18n y pruebas. La misma que corre la CI
-yarn build            # el bundle. Un `tsc` en verde no demuestra que Vite empaquete
-yarn i18n             # las claves que el código usa y el locale no tiene. Va dentro de `verificar`
-yarn i18n:regenerar   # reescribe `src/i18n/locales/es.json`
-yarn dev              # sólo para mirar
+yarn verificar            # lint, tipos, i18n y pruebas. La misma que corre la CI
+yarn build                # el bundle. Un `tsc` en verde no demuestra que Vite empaquete
+yarn i18n                 # las claves que el código usa y el locale no tiene. Va dentro de `verificar`
+yarn i18n:regenerar       # reescribe `src/i18n/locales/es.json`
+yarn capturas:regenerar   # reescribe las capturas de `/seguridad` desde `docs/50-api/seguridad/`
+yarn dev                  # para mirar, sin nada levantado: el catálogo va sembrado
+yarn dev:con-plataforma   # para mirar contra la plataforma y el backend
 ```
 
 Hace falta **Node 24** (`.nvmrc`, hoy `24.14.1`) y el clon hermano `kamayuk-lib` **al lado** de

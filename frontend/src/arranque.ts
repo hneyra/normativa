@@ -2,11 +2,26 @@ import { anotarLaVuelta, fijarElPorQue } from './puerta/falla.ts';
 import { identidad } from './sesion.ts';
 
 /**
+ * **Siembra el catalogo y esquiva la puerta, si y solo si se pidio en desarrollo** (#64).
+ *
+ * Devuelve si se sembro, que es lo que decide si hay que ir a la puerta. Las dos condiciones son
+ * constantes al construir a proposito: ver «la SIEMBRA de desarrollo» en {@link arrancar}.
+ */
+async function seSembroElCatalogo(): Promise<boolean> {
+  if (!import.meta.env.DEV) return false;
+  if (import.meta.env.VITE_KAMAYUK_SIN_PLATAFORMA !== 'true') return false;
+
+  const { sembrarElCatalogo } = await import('../desarrollo/sembrarElCatalogo.ts');
+  sembrarElCatalogo();
+  return true;
+}
+
+/**
  * **El arranque de `normativa-web`: primero quien pregunta, y solo entonces quien dibuja** (#57).
  *
  * Sobre `rentas/frontend/src/arranque.ts@ac379ac` (168 l), con `@kamayuk/sesion` en lugar de su
- * copia y **sin la siembra del catalogo**, que alli existe porque `rentas` tiene cuarenta pantallas
- * que mirar sin plataforma; aqui no hay ninguna hasta #58.
+ * copia. **La siembra del catalogo entro con #64** —hasta #58 no habia ni una pantalla que mirar sin
+ * plataforma—: ver {@link seSembroElCatalogo} y la seccion del final.
  *
  * <h2>El montaje entra como ARGUMENTO, y eso es lo que lo hace util</h2>
  *
@@ -70,6 +85,29 @@ import { identidad } from './sesion.ts';
  * montarse nada.
  *
  * **La condicion se lee al reves de lo que parece**: `null` es que todo fue bien y la pagina se va.
+ *
+ * <h2>Y la SIEMBRA de desarrollo: `yarn dev` sin plataforma (#64)</h2>
+ *
+ * Desde #64 el menu llega de la red —las tres lecturas de `/seguridad`— y sin ellas no hay ni un
+ * destino que abrir: lo que se lee es «No se pudo saber que modulos puede abrir esta cuenta…».
+ * Ese mensaje es correcto; lo que costaba era **mirar la interfaz**: PostgreSQL, Keycloak, Traefik
+ * y el backend levantados para comprobar el color de una cabecera.
+ *
+ * Con `VITE_KAMAYUK_SIN_PLATAFORMA=true` —lo pone `.env.development`, y `yarn dev:con-plataforma`
+ * lo apaga— se siembran las cinco lecturas de `/seguridad` con las capturas medidas y **se esquiva
+ * la puerta**. No se siembra ni un dato de hoja: las que piden salen a la red y fallan de verdad.
+ * Lo que se siembra, y por que vive fuera de `src/`, en `desarrollo/sembrarElCatalogo.ts`.
+ *
+ * **Las dos condiciones son CONSTANTES AL CONSTRUIR, y de eso depende que no viaje nada.** Vite
+ * sustituye `import.meta.env.DEV` por `false` y cada `import.meta.env.VITE_*` por su literal al
+ * construir, asi que Rollup pliega la condicion y se lleva por delante el `import()` dinamico
+ * entero, capturas incluidas. Detras de una funcion, de `configuracion()` o de `globalThis`, el
+ * modulo VIAJA — medido en `rentas` con el proxy de la V6: 227 205 bytes con las cifras dentro
+ * frente a 193 592 sin ellas, y `yarn dev` igual de verde. `import.meta.env.DEV` va primero y no
+ * sobra: con el delante, `yarn build` sale limpio **haga lo que haga el entorno**. Las otras dos
+ * vallas: el `ENV` explicito del `Dockerfile` y el `.env*` del `.dockerignore`. Lo miden
+ * `verificaciones/la-siembra-es-solo-de-desarrollo.test.ts` sobre el texto y
+ * `e2e/la-siembra-no-viaja-al-bundle.spec.ts` sobre el `dist/`.
  */
 export async function arrancar(montar: () => void): Promise<void> {
   fijarElPorQue(null);
@@ -78,6 +116,15 @@ export async function arrancar(montar: () => void): Promise<void> {
   // volviendo a la puerta: el emisor devolveria el mismo error, y a la tercera el tope pararia sin
   // una palabra de la causa. Se anota el motivo, se monta, y la puerta caida lo dice.
   const noDejoEntrar = anotarLaVuelta(await identidad.canjearSiVuelve());
+
+  // La siembra va DESPUES del canje y ANTES de la puerta, y las dos cosas importan. Despues, porque
+  // quien vuelve de Keycloak con un `?code=` en la barra tiene que ver su URL limpia aunque la
+  // bandera este encendida; antes, porque esquivar la puerta es la mitad de lo que la bandera hace
+  // — sin eso, `yarn dev` sin Keycloak se queda en la puerta caida.
+  if (await seSembroElCatalogo()) {
+    montar();
+    return;
+  }
 
   if (
     !noDejoEntrar &&
