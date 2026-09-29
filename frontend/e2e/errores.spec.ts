@@ -43,15 +43,20 @@ import {
  * `instalacion.ts` comprueba campo a campo que el cuerpo doblado tenga exactamente esas llaves. Un
  * cuerpo con un campo de mas o de menos pone rojo este arnes, no lo pasa en silencio.
  *
- * <h2>Lo que hoy NO se puede demostrar, medido y dicho</h2>
+ * <h2>Los dos 422 ya NO comparten peldano: `kamayuk-lib`#52 se mezclo</h2>
  *
- * **Los dos 422 comparten peldano.** `peldanoDe()` clasifica `VALIDACION` y `ORDEN_NO_ADMITIDO`
- * como el mismo `no-valido` —mismo titulo, mismo remedio— y solo los separa el `detalle`, que es el
- * texto del backend. Con el mismo mensaje inyectado, **sus dos pantallas son identicas**, y eso se
- * afirma abajo en vez de rodearse: un `switch` sobre el codigo en `normativa` seria la traduccion
- * paralela que el propio AC 4 prohibe, y serian cuatro en cuanto los otros tres sistemas hicieran
- * lo mismo. Le toca a `kamayuk-lib`#52, que gana un peldano por `codigo` — y ese dia esta prueba
- * sale roja y hay que moverla a la lista de las distintas.
+ * Hasta `kamayuk-lib`#52, `peldanoDe()` clasificaba `VALIDACION` y `ORDEN_NO_ADMITIDO` como el
+ * mismo `no-valido` —mismo titulo, mismo remedio— y con el mismo mensaje inyectado **sus dos
+ * pantallas eran identicas**. Eso se afirmaba aqui en vez de rodearse, porque un `switch` sobre el
+ * codigo en `normativa` seria la traduccion paralela que el propio AC 4 prohibe, y la afirmacion
+ * decia que hacer el dia que la escalera aprendiera: mover el par a la lista de los distintos.
+ *
+ * Ese dia llego sin tocar este arbol —la CI clona `kamayuk-lib` en su rama principal—: la escalera
+ * gano el peldano `orden-no-admitido` por `codigo` (`escalera.ts`, `{ estado: 422, codigo:
+ * 'ORDEN_NO_ADMITIDO' }`) y la afirmacion salio roja en `kamayuk-lib@da5e3d9`, leyendo
+ * «No se puede ordenar por ese campo … Ordene por otra columna y avise de esto a quien la
+ * mantiene» donde el 422 `VALIDACION` lee «Lo que se mando no cumple una regla …». Asi que ahora
+ * son **los siete** los que se comparan entre si.
  */
 
 /** El mismo mensaje en los siete: si la pantalla pintara esto, las siete se verian iguales. */
@@ -175,9 +180,7 @@ test.describe('los siete fallos del listado se ven distintos', () => {
     });
   }
 
-  test('y los siete textos son distintos entre si, salvo el par de 422 que hoy comparte peldano', async ({
-    page,
-  }) => {
+  test('y los siete textos son distintos entre si', async ({ page }) => {
     const leidos = new Map<string, string>();
     for (const caso of CASOS) {
       const pagina = await page.context().newPage();
@@ -186,8 +189,9 @@ test.describe('los siete fallos del listado se ven distintos', () => {
       await pagina.close();
     }
 
-    // Los SEIS que si se distinguen: se comparan entre si, y no contra un texto escrito aqui.
-    const distintos = CASOS.map((c) => c.nombre).filter((n) => n !== '422 ORDEN_NO_ADMITIDO');
+    // Los SIETE, desde `kamayuk-lib`#52 (ver la cabecera): se comparan entre si, y no contra un
+    // texto escrito aqui.
+    const distintos = CASOS.map((c) => c.nombre);
     const textos = distintos.map((nombre) => leidos.get(nombre) ?? '');
     expect(
       new Set(textos).size,
@@ -196,14 +200,6 @@ test.describe('los siete fallos del listado se ven distintos', () => {
         '\n\n  Los siete casos llevan EL MISMO mensaje dentro, asi que si dos coinciden es que la\n' +
         '  pantalla esta pintando el mensaje del servidor en vez del peldano de la escalera.',
     ).toBe(distintos.length);
-
-    // Y el par que NO se distingue, afirmado en vez de rodeado. Ver la cabecera: es `kamayuk-lib`#52.
-    expect(
-      leidos.get('422 ORDEN_NO_ADMITIDO'),
-      'Los dos 422 ya NO se leen igual: la escalera de `@kamayuk/sesion` aprendio a distinguirlos\n' +
-        '  por `codigo` (`kamayuk-lib`#52). Esto es una buena noticia y esta prueba se queda vieja:\n' +
-        '  mueve «422 ORDEN_NO_ADMITIDO» a la lista de los distintos y borra esta afirmacion.',
-    ).toBe(leidos.get('422 VALIDACION'));
   });
 
   test('reintentar vuelve a pedir LAS DOS lecturas, y no solo la que fallo', async ({ page }) => {
