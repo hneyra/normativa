@@ -244,8 +244,9 @@ describe('AC 3 — todo parametro que se compone lo admite esa operacion', () =>
   it('el `ordenarPor` del listado esta en la lista blanca que publica el contrato', () => {
     // La lista blanca es `OrdenSeguro.sobre("ejercicio", "version", "estado", "id")` del
     // repositorio, y #49 la publica como `ordenarPorAdmitidos`. Otro campo es un 422
-    // `ORDEN_NO_ADMITIDO`, que la escalera de hoy no distingue del otro 422 — razon de mas para que
-    // no llegue a salir al cable.
+    // `ORDEN_NO_ADMITIDO`: desde `kamayuk-lib`#52 (corregido el 2026-09-29, #97) la escalera lo
+    // dice como lo que es —«el orden lo pidio la pantalla»—, y aun asi es un defecto de esta
+    // interfaz que quien esta delante no puede corregir. Razon de mas para que no salga al cable.
     const suyos = parametros()['GET /seguridad/parametros'] ?? {};
     const admite = suyos['ordenarPorAdmitidos'];
 

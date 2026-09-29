@@ -24,27 +24,33 @@ import { CONECTORES } from './conectores.ts';
  *
  * `peldanoDe()` de `@kamayuk/sesion` traduce un fallo a que decir y a quien, y **aqui no hay una
  * traduccion paralela**: ni un `switch` sobre el estado, ni un mapa de codigos a frases. Lo que este
- * archivo anade son las dos decisiones que la escalera deja al que dibuja, y las dos salen de su
- * `esAveria`:
+ * archivo anade son las dos decisiones que la escalera deja al que dibuja, cada una con el campo
+ * del peldano que la contesta:
  *
- *   · **el tono** — `mal` cuando es una averia, `atencion` cuando no. Un 403 `SIN_PRIVILEGIO`
- *     pintado de rojo de «algo se rompio» manda a mirar un despliegue cuando lo que falta es una
- *     fila en una tabla de permisos;
- *   · **si se ofrece reintentar** — solo donde reintentar puede cambiar algo. Un privilegio que
- *     falta sale igual las veces que se pulse.
+ *   · **el tono**, de `esAveria` — `mal` cuando es una averia, `atencion` cuando no. Un 403
+ *     `SIN_PRIVILEGIO` pintado de rojo de «algo se rompio» manda a mirar un despliegue cuando lo
+ *     que falta es una fila en una tabla de permisos;
+ *   · **si se ofrece reintentar**, de `reintentable` — solo donde reintentar puede cambiar algo. Un
+ *     privilegio que falta sale igual las veces que se pulse.
  *
- * <h2>Lo que hoy NO distingue, medido y no supuesto</h2>
+ * <h2>Lo que la escalera distingue desde `kamayuk-lib`#52 (corregido el 2026-09-29, #97)</h2>
  *
- * **Los dos 422 comparten peldano.** `VALIDACION` y `ORDEN_NO_ADMITIDO` son los dos `no-valido`
- * —mismo titulo, mismo remedio— y solo los separa el `detalle`, que es el texto del backend
- * (`kamayuk-lib@origin/main:paquetes/sesion/escalera.ts:167-186`). Con el **mismo** mensaje
- * inyectado, sus dos pantallas son identicas. **Y un 409 no tiene peldano**: cae en `averia`, o sea
- * «Reintente en unos segundos», que para un conflicto de estado es un consejo falso.
+ * Hasta el 2026-09-29 aqui ponia que **los dos 422 compartian peldano** y que **un 409 no tenia
+ * ninguno** —caia en `averia`, «Reintente en unos segundos», que para un conflicto de estado es un
+ * consejo falso—, y que las dos cosas eran de `kamayuk-lib`#52. Las dos dejaron de ser verdad con
+ * su mezcla (PR `kamayuk-lib`#96, `a6ea6fa`, 2026-09-22). Medido sobre `kamayuk-lib@da5e3d9`:
  *
- * Ninguna de las dos se arregla aqui: la primera es de `kamayuk-lib`#52 —que gana un peldano por
- * `codigo`— y la segunda tambien. Resolverlas con un `switch` en este archivo seria la traduccion
- * paralela que el AC 4 prohibe, y ademas serian **cuatro** traducciones paralelas en cuanto los
- * otros tres sistemas hicieran lo mismo.
+ *   · el 422 `ORDEN_NO_ADMITIDO` tiene su peldano, `orden-no-admitido`, antes que el 422 generico
+ *     (`paquetes/sesion/escalera.ts:210` y `:217`), y `e2e/errores.spec.ts` compara ya **los siete**
+ *     fallos entre si, sin excepcion;
+ *   · el 409 tiene `conflicto` (`:203`), que no es averia **y tampoco es reintentable**: por eso el
+ *     boton sale de `reintentable` y no de `esAveria`. Hoy las dos coinciden en todos los peldanos;
+ *     la escalera las separa porque son dos preguntas, y aqui se contesta cada una con la suya.
+ *
+ * Nada de eso se resolvio aqui con un `switch`, que habria sido la traduccion paralela que el AC 4
+ * prohibe —y **cuatro** en cuanto los otros tres sistemas hicieran lo mismo—: se espero a la
+ * libreria. Y lo que NO es un fallo tampoco entra aqui: «ese ejercicio no esta publicado» llega a
+ * Cuadros y a Publicacion como respuesta, desde `./sinPublicar.ts`.
  *
  * <h2>Por que no se reintenta solo</h2>
  *
@@ -69,8 +75,8 @@ function falloDe(error: unknown, reintentar: (() => void) | undefined): EstadoDe
       detalle: peldano.detalle,
       remedio: peldano.remedio,
     },
-    // `mal` solo cuando el sistema esta roto. Los tres peldanos de autorizacion y el 422 son el
-    // sistema funcionando, y se dicen en `atencion`.
+    // `mal` solo cuando el sistema esta roto. Los tres peldanos de autorizacion, el 404, el 409 y
+    // los dos 422 son el sistema funcionando, y se dicen en `atencion`.
     tono: peldano.esAveria ? 'mal' : 'atencion',
     ...(reintentar === undefined ? {} : { reintentar }),
   };
@@ -145,8 +151,7 @@ export function useDatosDeLaHoja(
       return;
     }
     if (resultado.isError) {
-      const esAveria = peldanoDe(resultado.error).esAveria;
-      const ofrece = esAveria && !yaHayBoton;
+      const ofrece = peldanoDe(resultado.error).reintentable && !yaHayBoton;
       if (ofrece) yaHayBoton = true;
       lecturas.set(lectura.clave, falloDe(resultado.error, ofrece ? volverAPedir : undefined));
       return;

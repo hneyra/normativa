@@ -311,8 +311,9 @@ describe('el orden y el tamano que se OFRECEN los admite el backend (#65, AC 1)'
       rechazados,
       'La tabla ofrece ordenar por un campo que el backend rechaza:\n' +
         `${rechazados.join('\n')}\n\n` +
-        '  `OrdenSeguro` contesta **422 ORDEN_NO_ADMITIDO**, y la escalera de hoy no lo distingue\n' +
-        '  del otro 422: la pantalla lo dibuja como una averia suya. El desplegable se mueve y la\n' +
+        '  `OrdenSeguro` contesta **422 ORDEN_NO_ADMITIDO**. La escalera lo dice como lo que es\n' +
+        '  —«el orden lo pidio la pantalla»— desde `kamayuk-lib`#52, pero sigue siendo un defecto\n' +
+        '  de esta interfaz que quien esta delante no puede corregir: el desplegable se mueve y la\n' +
         '  tabla se rompe.',
     ).toEqual([]);
   });

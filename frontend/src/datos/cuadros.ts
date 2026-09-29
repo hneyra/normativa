@@ -4,6 +4,13 @@ import { cliente } from '../api/cliente.ts';
 import { t } from '../i18n/i18n.ts';
 import type { Conector, Reparto } from './conectores.ts';
 import {
+  AUSENCIA_SIN_PUBLICAR,
+  elEjercicioSinPublicar,
+  esSinPublicar,
+  pedirElConjuntoVigente,
+  type EjercicioSinPublicar,
+} from './sinPublicar.ts';
+import {
   AMBITOS,
   CLAVE_DE_LAS_DEPRECIACIONES,
   CLAVE_DE_LOS_CUADROS,
@@ -69,13 +76,16 @@ import {
  *   vuelve a pedir nada — y no tiene por que, porque los dos ambitos ya estan pedidos.
  * · **No hay pestanas con conteo** (H20). Los tres cuadros son tres bloques del artboard V8, uno
  *   debajo de otro, y no tres pestanas como en la V6.
- * · **«Ese ejercicio no esta publicado» no se distingue de un 404 de ruta.** El discriminador es el
- *   miembro `parametroQueFalta` del `problem+json` —lo pone `FaltaPublicar.noEncontrado` y un 404
- *   de ruta no lo lleva—, y `CuerpoDeProblema` de `@kamayuk/api` **no lo conserva**
- *   (`kamayuk-lib@origin/main:paquetes/api/errores.ts`), asi que `ErrorDeLaApi` llega con los dos
- *   404 marcados `codigo: 'NO_ENCONTRADO'`. Leerlo del `mensaje` en castellano seria exactamente lo
- *   que el catalogo de errores prohibe. Lo pide `kamayuk-lib`#52, y hasta que se mezcle ese criterio
- *   espera — igual que espero el AC 8 de #67.
+ *
+ * <h2>«Ese ejercicio no esta publicado» es una respuesta (AC 6, desde el 2026-09-29, #97)</h2>
+ *
+ * Hasta esa fecha este docblock decia que no se podia distinguir del 404 de ruta, y era verdad: el
+ * discriminador es el miembro `parametroQueFalta` y `ErrorDeLaApi` lo tiraba. Lo conserva desde
+ * `kamayuk-lib`#52 (mezcla `a6ea6fa`, 2026-09-22), y la decision —leer el miembro y nunca el
+ * `mensaje`, y que sea una respuesta y no un fallo— vive en `./sinPublicar.ts`, **la misma para
+ * esta hoja y para Publicacion**. Aqui solo se reparte: la frase de arriba en `atencion`, «sin
+ * conjunto sellado» en cada hueco, el ejercicio que dijo el miembro en el documento fuente de cada
+ * cuadro, y ni una peticion de snapshot.
  */
 
 /* ── Los tres cuadros, como dato ───────────────────────────────────────────────────────────── */
@@ -498,11 +508,15 @@ export interface LoDeLosCuadros {
   readonly porAmbito: ReadonlyMap<Ambito, SnapshotResource>;
 }
 
-/** La identidad y los dos snapshots, en ese orden: sin el `conjuntoId` no hay que pedir. */
-async function pedirLosCuadros(senal: AbortSignal): Promise<LoDeLosCuadros> {
-  const vigente = await cliente.solicitar<ConjuntoVigenteResource>(rutaDe(CONJUNTO_VIGENTE), {
-    senal,
-  });
+/**
+ * La identidad y los dos snapshots, en ese orden: sin el `conjuntoId` no hay que pedir.
+ *
+ * Y si el ejercicio no tiene conjunto sellado, **esa es la respuesta** y no se pide nada mas: ver
+ * `./sinPublicar.ts`.
+ */
+async function pedirLosCuadros(senal: AbortSignal): Promise<LoDeLosCuadros | EjercicioSinPublicar> {
+  const vigente = await pedirElConjuntoVigente(senal);
+  if (esSinPublicar(vigente)) return vigente;
   const snapshots = await Promise.all(
     AMBITOS.map((ambito) =>
       cliente.solicitar<SnapshotResource>(
@@ -589,7 +603,10 @@ export const CUADROS: Conector = {
   ],
 
   repartir: (llegado): Reparto => {
-    const lo = llegado.get(CLAVE_DE_LOS_CUADROS) as LoDeLosCuadros | undefined;
+    const lo = llegado.get(CLAVE_DE_LOS_CUADROS) as
+      | LoDeLosCuadros
+      | EjercicioSinPublicar
+      | undefined;
 
     const valores = new Map<Coordenada, string>();
     const ausenciaPorCampo = new Map<Coordenada, string>();
@@ -601,6 +618,20 @@ export const CUADROS: Conector = {
     for (const cuadro of CUADROS_DE_VALUACION) {
       valores.set(coordenada(cuadro.bloque, TABLA_DE_LA_BASE), cuadro.tabla);
       valores.set(coordenada(cuadro.bloque, AMBITO_QUE_LA_LLEVA), cuadro.ambito);
+    }
+
+    // El ejercicio no tiene conjunto sellado: la hoja CONTESTO, y lo que contesto es que no hay
+    // cuadros que ensenar. Ninguna tabla se rellena —no se pidio ningun snapshot—, asi que las tres
+    // dicen «sin conjunto sellado», y el documento fuente de cada cuadro nombra el ejercicio que
+    // dijo el miembro. No es `lo === undefined`: eso es «se esta pidiendo o fallo».
+    if (esSinPublicar(lo)) {
+      for (const cuadro of CUADROS_DE_VALUACION) {
+        valores.set(
+          coordenada(cuadro.bloque, DOCUMENTO_FUENTE),
+          elEjercicioSinPublicar(lo.sinPublicar),
+        );
+      }
+      return { valores, tablas, ausenciaPorCampo, ausencia: AUSENCIA_SIN_PUBLICAR };
     }
 
     if (lo === undefined) {
