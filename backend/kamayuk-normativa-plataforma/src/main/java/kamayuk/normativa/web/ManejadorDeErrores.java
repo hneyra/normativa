@@ -123,20 +123,41 @@ public class ManejadorDeErrores {
      */
     @ExceptionHandler({
         org.springframework.web.bind.MissingServletRequestParameterException.class,
+        org.springframework.web.bind.MissingRequestHeaderException.class,
         org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class,
         org.springframework.validation.BindException.class,
-        org.springframework.http.converter.HttpMessageNotReadableException.class
+        org.springframework.http.converter.HttpMessageNotReadableException.class,
+        org.springframework.web.HttpMediaTypeNotSupportedException.class
     })
     public ResponseEntity<ProblemDetail> peticionQueNoSePuedeLeer(Exception error) {
         return respuesta(CodigoDeError.VALIDACION, motivoDe(error), List.of());
     }
 
-    /** El motivo, escrito para quien integra y sin una sola palabra del esquema. */
+    /**
+     * El motivo, escrito para quien integra y sin una sola palabra del esquema.
+     *
+     * <p><b>Las dos ultimas ramas son de #59</b>, y cierran el mismo hueco que #486 cerro para las
+     * otras tres, justo cuando este backend publico sus primeras escrituras: una cabecera
+     * obligatoria que no llega —{@code Idempotency-Key} en {@code POST /conjuntos}— y un cuerpo que
+     * no es JSON —{@code Content-Type: text/plain}— caian en {@link #cualquierOtra} y salian como
+     * 500 con incidencia. ADR-0043 §7 las pone en 422: la cabecera ausente o fuera de forma y el
+     * cuerpo ilegible son de la peticion, no del servidor. La cabecera se nombra; el tipo recibido
+     * tambien, que es del propio cliente.
+     */
     private static String motivoDe(Exception error) {
         if (error
                 instanceof
                 org.springframework.web.bind.MissingServletRequestParameterException falta) {
             return "Falta el parametro obligatorio '" + falta.getParameterName() + "'";
+        }
+        if (error instanceof org.springframework.web.bind.MissingRequestHeaderException falta) {
+            return "Falta la cabecera obligatoria '" + falta.getHeaderName() + "'";
+        }
+        if (error instanceof org.springframework.web.HttpMediaTypeNotSupportedException tipo) {
+            return "El cuerpo de la peticion tiene que ser JSON (Content-Type: application/json)"
+                    + (tipo.getContentType() == null
+                            ? ""
+                            : ", y llego '" + tipo.getContentType() + "'");
         }
         if (error
                 instanceof

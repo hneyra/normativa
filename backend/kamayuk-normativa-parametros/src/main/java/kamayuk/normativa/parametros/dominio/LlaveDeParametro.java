@@ -1,7 +1,6 @@
 package kamayuk.normativa.parametros.dominio;
 
 import java.time.LocalDate;
-import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -26,17 +25,36 @@ import org.jspecify.annotations.Nullable;
  */
 public record LlaveDeParametro(String tipo, @Nullable String clave, LocalDate vigenciaDesde) {
 
-    public LlaveDeParametro {
-        Objects.requireNonNull(tipo, "Todo parametro tiene tipo");
-        Objects.requireNonNull(
-                vigenciaDesde,
-                "Sin la fecha de vigencia la llave no distingue el valor de un ejercicio del de"
-                        + " otro");
-        tipo = tipo.strip();
-        if (tipo.isEmpty()) {
+    /**
+     * La llave, con el tipo recortado y la clave en blanco llevada a nulo.
+     *
+     * <p><b>Los nulos son {@link IllegalArgumentException}, no {@link NullPointerException}</b>
+     * (#59, ADR-0043 §6): la llave llega tambien por HTTP, en el cuerpo de {@code POST
+     * /conjuntos/{id}/parametros}, y el borde solo traduce el primero a 422. Con el {@code
+     * requireNonNull} de antes, un cuerpo sin {@code tipo} o sin {@code vigenciaDesde} salia como
+     * 500 con incidencia. El mensaje nombra el campo del cuerpo. El constructor se declara entero,
+     * y no compacto, para que sus parametros admitan nulo sin que lo admitan los componentes.
+     *
+     * @throws IllegalArgumentException si falta el tipo o la vigencia, o si el tipo va en blanco
+     */
+    public LlaveDeParametro(
+            @Nullable String tipo, @Nullable String clave, @Nullable LocalDate vigenciaDesde) {
+        if (tipo == null) {
+            throw new IllegalArgumentException(
+                    "Todo parametro tiene tipo, y la llave no trae ninguno ('tipo')");
+        }
+        if (vigenciaDesde == null) {
+            throw new IllegalArgumentException(
+                    "Sin la fecha de vigencia ('vigenciaDesde') la llave no distingue el valor de"
+                            + " un ejercicio del de otro");
+        }
+        String recortado = tipo.strip();
+        if (recortado.isEmpty()) {
             throw new IllegalArgumentException("El tipo de parametro no puede ir vacio");
         }
-        clave = clave == null || clave.isBlank() ? null : clave.strip();
+        this.tipo = recortado;
+        this.clave = clave == null || clave.isBlank() ? null : clave.strip();
+        this.vigenciaDesde = vigenciaDesde;
     }
 
     /**

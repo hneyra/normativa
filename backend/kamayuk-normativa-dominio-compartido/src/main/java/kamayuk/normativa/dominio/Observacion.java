@@ -1,6 +1,6 @@
 package kamayuk.normativa.dominio;
 
-import java.util.Objects;
+import org.jspecify.annotations.Nullable;
 
 /**
  * El «por que» de una escritura, escrito por quien la hace.
@@ -19,6 +19,18 @@ import java.util.Objects;
  * INSERT} a medio camino: al menos 5 caracteres una vez recortada —la restriccion {@code
  * auditoria_observacion_ck}— y como mucho 500, que es el ancho de las columnas {@code observacion
  * NOT NULL} del esquema.
+ *
+ * <h2>Un nulo es un 422, no un 500 (#59, ADR-0043 §6)</h2>
+ *
+ * <p>Hasta #59 el nulo se rechazaba con {@code Objects.requireNonNull}, o sea con un {@link
+ * NullPointerException}, y el borde solo traduce {@link IllegalArgumentException} a 422: una
+ * escritura por HTTP cuyo cuerpo no trajera {@code observacion} —o la trajera {@code null}— salia
+ * como <b>500 con incidencia</b>, que le dice al cliente que el servidor se rompio cuando lo que
+ * falta es su dato. Se arregla <b>aqui</b>, donde pasan todas las escrituras, y no con una
+ * comprobacion en cada controlador que el cuarto olvide: es lo que hizo {@code rentas} en su #30.
+ * El constructor canonico se declara entero —y no compacto— para que su parametro pueda ser
+ * {@code @Nullable} sin que lo sea el componente: una {@code Observacion} construida nunca lleva
+ * nulo.
  */
 public record Observacion(String texto) {
 
@@ -28,25 +40,36 @@ public record Observacion(String texto) {
     /** El ancho de {@code observacion varchar(500) NOT NULL} de las tablas de negocio. */
     private static final int LARGO_MAXIMO = 500;
 
-    public Observacion {
-        Objects.requireNonNull(texto, "Toda escritura exige una observacion (regla 10, ADR-0008)");
-        texto = texto.strip();
-        if (texto.length() < LARGO_MINIMO) {
+    /**
+     * La observacion, recortada.
+     *
+     * @throws IllegalArgumentException si falta, o si recortada tiene menos de 5 caracteres o mas
+     *     de 500; el mensaje nombra la observacion en los tres casos
+     */
+    public Observacion(@Nullable String texto) {
+        if (texto == null) {
+            throw new IllegalArgumentException(
+                    "Toda escritura exige una observacion que explique el cambio, y no llego"
+                            + " ninguna (regla 10, ADR-0008)");
+        }
+        String recortado = texto.strip();
+        if (recortado.length() < LARGO_MINIMO) {
             throw new IllegalArgumentException(
                     "La observacion debe explicar el cambio: al menos "
                             + LARGO_MINIMO
                             + " caracteres, y no espacios en blanco (ADR-0008)");
         }
-        if (texto.length() > LARGO_MAXIMO) {
+        if (recortado.length() > LARGO_MAXIMO) {
             throw new IllegalArgumentException(
                     "La observacion excede "
                             + LARGO_MAXIMO
                             + " caracteres, que es lo que admite la columna: "
-                            + texto.length());
+                            + recortado.length());
         }
+        this.texto = recortado;
     }
 
-    public static Observacion de(String texto) {
+    public static Observacion de(@Nullable String texto) {
         return new Observacion(texto);
     }
 

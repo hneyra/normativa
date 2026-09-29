@@ -47,8 +47,16 @@ class ObservacionTest {
     }
 
     @Test
-    @DisplayName("no admite un texto nulo")
+    @DisplayName("no admite un texto nulo, y lo rechaza como dato invalido y no como defecto")
     void noAdmiteUnTextoNulo() {
-        assertThatThrownBy(() -> new Observacion(null)).isInstanceOf(NullPointerException.class);
+        // #59, ADR-0043 §6: el borde traduce IllegalArgumentException a 422 y todo lo demas a 500.
+        // Con el NullPointerException de antes, una escritura por HTTP sin `observacion` en el
+        // cuerpo salia como incidencia del servidor, cuando lo que faltaba era el dato del cliente.
+        assertThatThrownBy(() -> new Observacion(null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("observacion");
+        assertThatThrownBy(() -> Observacion.de(null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("observacion");
     }
 }
