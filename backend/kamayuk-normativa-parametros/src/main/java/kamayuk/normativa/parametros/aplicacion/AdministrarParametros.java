@@ -409,6 +409,13 @@ public class AdministrarParametros {
      * detalle_de_conjunto_sellado_inmutable} con un {@code restrict_violation}. Ese rechazo, y
      * <b>solo</b> ese —por su {@code SQLState} y por la funcion que lo lanzo—, se traduce al mismo
      * 409; cualquier otro rechazo de la base sigue su camino hasta el 500 con incidencia.
+     *
+     * <p><b>Y el orden contrario tambien lo resuelve la base</b> (V4, revision de #100): si el
+     * detalle ya esta escrito cuando otro sella, el disparador tiene el conjunto tomado {@code FOR
+     * SHARE} y el {@code UPDATE} del sello <b>espera</b> a que esta transaccion confirme —con su
+     * auditoria—, asi que lo que se sella lleva el parametro dentro. Sin eso el sello confirmaba
+     * antes y el parametro llegaba a un conjunto ya sellado. Aqui no se toma ningun candado: la
+     * garantia es del disparador, que la da a quien escriba el detalle por cualquier camino.
      */
     private void incorporar(
             ConjuntoDeParametros conjunto, long parametroId, Observacion observacion) {

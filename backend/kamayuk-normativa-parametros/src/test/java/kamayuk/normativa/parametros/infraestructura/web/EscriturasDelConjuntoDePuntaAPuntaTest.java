@@ -24,6 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -95,9 +96,9 @@ import tools.jackson.databind.json.JsonMapper;
  * <p>Dos hilos que piden a la vez casi nunca se cruzan donde duele: uno termina antes de que el
  * otro empiece. Por eso el repositorio va envuelto en {@link RepositorioConPausas}, que detiene a
  * cada hilo <b>en el punto exacto</b> del caso de uso que la carrera necesita —despues de buscar la
- * clave, despues de calcular la version, antes de escribir el detalle, antes de sellar— hasta que
- * el otro llega o termina. Las pausas no cambian ni una sentencia: lo que se ejecuta es el
- * repositorio de verdad, en el orden que produciria una carrera real.
+ * clave, despues de calcular la version, antes y despues de escribir el detalle, antes de sellar—
+ * hasta que el otro llega o termina. Las pausas no cambian ni una sentencia: lo que se ejecuta es
+ * el repositorio de verdad, en el orden que produciria una carrera real.
  *
  * <p><b>Ninguna cifra tributaria aparece en esta prueba</b>: los parametros son ficticios y estan
  * marcados como tales.
@@ -574,6 +575,77 @@ class EscriturasDelConjuntoDePuntaAPuntaTest {
                     .as("y el conjunto sellado sigue con lo que tenia")
                     .isEqualTo(1);
         }
+
+        /**
+         * La otra mitad de la carrera, la que {@link #mientrasOtroSella} no produce: quien agrega
+         * ya <b>escribio</b> el detalle —el disparador ya vio {@code ABIERTO}— y todavia no
+         * confirmo, porque le falta su fila de auditoria. Si el sello no espera, confirma antes, y
+         * el agregado confirma despues: el conjunto queda {@code SELLADO} con un parametro que no
+         * estaba cuando se sello, y su snapshot y su {@code ETag} cambian despues de sellado
+         * (ADR-0007, ADR-0025). Lo que lo impide es que el disparador lea el conjunto {@code FOR
+         * SHARE} (V4).
+         */
+        @Test
+        @DisplayName(
+                "con el detalle escrito y sin confirmar, el sello espera: nunca queda SELLADO con un"
+                        + " parametro que no estaba al sellar")
+        void conElDetalleEscritoYSinConfirmar() throws Exception {
+            long id = abierto(2052);
+            agregar(municipalidadA, id, "E2E_A", "Para que no este vacio");
+            CountDownLatch escribio = new CountDownLatch(1);
+            CountDownLatch soltar = new CountDownLatch(1);
+            repositorio.pausarDespues(
+                    "agregarParametro",
+                    1,
+                    () -> {
+                        escribio.countDown();
+                        esperar(soltar);
+                    });
+
+            FutureTask<MvcResult> agrega =
+                    new FutureTask<>(
+                            () -> agregar(municipalidadA, id, "E2E_E", "Se agrega en vuelo"));
+            new Thread(agrega, "agrega").start();
+            esperar(escribio);
+            FutureTask<MvcResult> sella =
+                    new FutureTask<>(
+                            () ->
+                                    sellar(
+                                            municipalidadA,
+                                            id,
+                                            "SIN_CARGAR",
+                                            "Se sella con un detalle en vuelo"));
+            new Thread(sella, "sella").start();
+            boolean selloSinEsperar = terminaOSeQuedaEsperandoUnCandado(sella);
+            soltar.countDown();
+            int agregado = agrega.get(30, TimeUnit.SECONDS).getResponse().getStatus();
+            int sello = sella.get(30, TimeUnit.SECONDS).getResponse().getStatus();
+
+            String estado = texto("SELECT estado FROM conjunto_parametros WHERE id = " + id);
+            long detalles =
+                    contar(
+                            "SELECT count(*) FROM conjunto_parametro_detalle WHERE conjunto_id = "
+                                    + id);
+            String desenlace =
+                    "sello="
+                            + sello
+                            + " agrega="
+                            + agregado
+                            + (selloSinEsperar ? " (el sello NO espero)" : " (el sello espero)")
+                            + " estado="
+                            + estado
+                            + " detalles="
+                            + detalles;
+            assertThat(desenlace)
+                    .as(
+                            "lo sellado no gana un parametro despues de sellado (ADR-0007): o el sello"
+                                    + " espera a que el agregado confirme y sella con el dentro, o"
+                                    + " el agregado es 409")
+                    .isIn(
+                            "sello=200 agrega=201 (el sello espero) estado=SELLADO detalles=2",
+                            "sello=200 agrega=409 (el sello espero) estado=SELLADO detalles=1",
+                            "sello=200 agrega=409 (el sello NO espero) estado=SELLADO detalles=1");
+        }
     }
 
     // ------------------------------------------------------------------
@@ -861,6 +933,41 @@ class EscriturasDelConjuntoDePuntaAPuntaTest {
             Thread.currentThread().interrupt();
             throw new IllegalStateException(interrumpido);
         }
+    }
+
+    /**
+     * Espera a que el sello termine o a que se quede parado en un candado de fila, lo que pase
+     * primero, y devuelve si termino.
+     *
+     * <p>Es lo que hace determinista la carrera de {@code conElDetalleEscritoYSinConfirmar}: soltar
+     * a quien agrega antes de que el sello llegue a su {@code UPDATE} mediria otro orden. Lo que se
+     * mira es {@code pg_stat_activity}: un {@code UPDATE conjunto_parametros} con {@code
+     * wait_event_type = 'Lock'} es el sello parado en la fila que el disparador del detalle tiene
+     * tomada. Sin ese candado el sello no se para nunca, y lo que se ve es que termina.
+     */
+    private static boolean terminaOSeQuedaEsperandoUnCandado(FutureTask<MvcResult> sello)
+            throws SQLException, InterruptedException {
+        long limite = System.nanoTime() + TimeUnit.SECONDS.toNanos(20);
+        while (System.nanoTime() < limite) {
+            try {
+                sello.get(50, TimeUnit.MILLISECONDS);
+                return true;
+            } catch (ExecutionException fallo) {
+                return true;
+            } catch (TimeoutException todaviaNo) {
+                // Sigue en marcha: o no ha llegado a su UPDATE, o esta parado en el candado.
+            }
+            if (contar(
+                            "SELECT count(*) FROM pg_stat_activity"
+                                    + " WHERE datname = current_database()"
+                                    + "   AND wait_event_type = 'Lock'"
+                                    + "   AND query LIKE 'UPDATE conjunto_parametros%'")
+                    > 0) {
+                return false;
+            }
+        }
+        throw new IllegalStateException(
+                "El sello ni termino ni se quedo esperando un candado: la carrera no se produjo");
     }
 
     private static JsonNode cuerpo(MvcResult resultado) throws Exception {

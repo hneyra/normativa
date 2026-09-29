@@ -29,7 +29,12 @@ import org.junit.jupiter.api.Test;
  * el migrador corre sin contexto de tenant sobre una tabla con {@code FORCE ROW LEVEL SECURITY}.
  * Por eso aqui el motor se provisiona a mano, se migra con {@link Migrador#configuracion} hasta la
  * {@code V2} —la misma configuracion que usa el despliegue, con {@code target("2")}—, se siembra y
- * se sella un conjunto como lo haria la aplicacion, y solo entonces se aplica lo que falta.
+ * se sella un conjunto como lo haria la aplicacion, y solo entonces se aplica la {@code V3}.
+ *
+ * <p><b>Hasta la {@code V3} y no hasta la ultima</b>, con la misma configuracion y {@code
+ * target("3")}: lo que se mide es la {@code V3}, y una migracion posterior —la {@code V4} lo es—
+ * cambiaria cuantas se aplican y en que version queda la base sin que la {@code V3} hubiera
+ * cambiado en nada.
  *
  * <p>{@code DatosDePrueba} no sirve para esto: su conjunto queda {@code ABIERTO}, y la siembra ya
  * escribe la columna de la {@code V3}.
@@ -126,11 +131,15 @@ class LaV3SobreUnConjuntoSelladoTest {
         // causa, y no un initializationError que no dice que se estaba midiendo.
         try {
             aplicadas =
-                    Migrador.migrar(
-                            motor.url(),
-                            BaseDeDatosDePrueba.OWNER,
-                            claves.get(BaseDeDatosDePrueba.OWNER));
-        } catch (FlywayException | SQLException fallo) {
+                    Migrador.configuracion(
+                                    motor.url(),
+                                    BaseDeDatosDePrueba.OWNER,
+                                    claves.get(BaseDeDatosDePrueba.OWNER))
+                            .target("3")
+                            .load()
+                            .migrate()
+                            .migrationsExecuted;
+        } catch (FlywayException fallo) {
             falloDeLaV3 = fallo;
         }
     }
