@@ -219,8 +219,10 @@ class ParametrosControllerTest {
     }
 
     @Test
-    @DisplayName("el listado de conjuntos sigue exigiendo `parametros`: son dos publicos distintos")
-    void elListadoSigueExigiendoParametros() throws NoSuchMethodException {
+    @DisplayName(
+            "el listado de conjuntos sigue exigiendo una opcion del catalogo: son dos publicos"
+                    + " distintos")
+    void elListadoSigueExigiendoUnaOpcionDelCatalogo() throws NoSuchMethodException {
         Method metodo =
                 ParametrosController.class.getMethod("conjuntos", ParametrosDePaginacion.class);
         RequiereAcceso requisito =
@@ -229,9 +231,17 @@ class ParametrosControllerTest {
         assertThat(requisito).isNotNull();
         assertThat(requisito.acceso())
                 .as(
-                        "lo que #605 abre es si el ejercicio esta parametrizado, no los valores:"
-                                + " si esta prueba cae, la lectura de las cifras se abrio con ella")
-                .isEqualTo("parametros");
+                        "lo que #605 abre es si el ejercicio esta parametrizado, no los valores: si"
+                                + " esta lectura pasara a un centinela, la lista de conjuntos se"
+                                + " abriria con ella. Desde ADR-0043 §2 su opcion propia es"
+                                + " `conjuntos`, del modulo NORMATIVA")
+                .isEqualTo("conjuntos");
+        assertThat(requisito.oTambien())
+                .as(
+                        "y `parametros` se queda como alternativa (#53): quien la tiene hoy sigue"
+                                + " leyendo lo que leia, sin que nadie le conceda nada. El motivo"
+                                + " esta censado en AccesosCompartidosTest")
+                .containsExactly("parametros");
     }
 
     @Test

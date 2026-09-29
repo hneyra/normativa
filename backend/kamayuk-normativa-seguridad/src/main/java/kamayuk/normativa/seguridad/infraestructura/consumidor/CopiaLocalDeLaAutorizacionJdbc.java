@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.Locale;
 import kamayuk.normativa.autorizacion.Privilegio;
 import kamayuk.normativa.persistencia.RepositorioJdbc;
+import kamayuk.normativa.seguridad.dominio.CatalogoDelSistema;
 import kamayuk.normativa.seguridad.dominio.consumidor.CopiaLocalDeLaAutorizacion;
 import kamayuk.normativa.seguridad.dominio.consumidor.EventoRecibido;
 import kamayuk.normativa.seguridad.dominio.consumidor.TipoDeEventoDeIdentidad;
@@ -270,12 +271,7 @@ public class CopiaLocalDeLaAutorizacionJdbc extends RepositorioJdbc
             return Aplicacion.IGNORADO_POR_AJENO;
         }
         if (!hayAcceso(codigo)) {
-            throw new NoSePuedeAplicar(
-                    "el permiso es sobre la opcion «"
-                            + codigo
-                            + "» de `normativa`, y esta copia no tiene esa opcion en su catalogo:"
-                            + " no hay sobre que fijarlo. O el catalogo de `identidad` y el de"
-                            + " este sistema se separaron, o esta instalacion no se implanto");
+            throw sinLaOpcion(codigo);
         }
         String sujeto = texto(cuerpo, "sujeto").toUpperCase(Locale.ROOT);
         String sujetoNombre = texto(cuerpo, "sujetoNombre");
@@ -368,6 +364,50 @@ public class CopiaLocalDeLaAutorizacionJdbc extends RepositorioJdbc
                         .param("cuando", enLaBase(cuando))
                         .update();
         return escritas == 1;
+    }
+
+    /**
+     * Un permiso sobre una opcion que esta copia no tiene todavia: ¿se aparta o se pospone?
+     *
+     * <p><b>Lo decide el catalogo de ESTE sistema</b> (ADR-0043 §10 (a)), y la distincion es la
+     * salida 2 de {@code identidad}#21 aplicada al reves de donde se midio. Alli {@code rentas}
+     * posponia <b>siempre</b> y se atasco 20 horas con permisos sobre opciones que ya no declaraba;
+     * aqui se apartaba <b>siempre</b>, y eso pierde el permiso de una opcion que este sistema si
+     * declara y que su propio {@code Job} de implantacion va a sembrar minutos despues.
+     *
+     * <ul>
+     *   <li><b>La declara {@code CatalogoDelSistema} y la copia no la tiene</b>: es la carrera
+     *       entre el {@code CronJob} del consumidor y el {@code Job} que siembra, las dos con la
+     *       misma imagen. {@link DependenciaQueNoLlego}: no se acusa y no se aparta, y el buzon lo
+     *       vuelve a servir. Si la siembra no llegara nunca, la alerta de los 15 minutos grita, que
+     *       es el aviso que ese caso merece.
+     *   <li><b>No la declara</b>: el catalogo de {@code identidad} y el de este sistema se
+     *       separaron, y esperar no lo arregla. {@link NoSePuedeAplicar}, como hasta #53.
+     * </ul>
+     *
+     * <p>Y aqui esto no puede repetir el atasco de {@code identidad}#21, porque en {@code
+     * normativa} una opcion <b>no se retira nunca</b> (ADR-0043 §2): lo que se pospone es
+     * exactamente lo que la siembra de esa misma imagen va a crear.
+     */
+    private RuntimeException sinLaOpcion(String codigo) {
+        boolean laDeclaraEsteSistema =
+                CatalogoDelSistema.opciones().stream()
+                        .anyMatch(opcion -> opcion.codigo().equals(codigo));
+        if (laDeclaraEsteSistema) {
+            return new DependenciaQueNoLlego(
+                    "el permiso es sobre la opcion «"
+                            + codigo
+                            + "» de `normativa`, que este sistema SI declara en su catalogo y esta"
+                            + " copia todavia no tiene sembrada: la siembra va delante y llega con"
+                            + " esta misma version. Se pospone, no se aparta");
+        }
+        return new NoSePuedeAplicar(
+                "el permiso es sobre la opcion «"
+                        + codigo
+                        + "» de `normativa`, y esta copia no tiene esa opcion en su catalogo: no"
+                        + " hay sobre que fijarlo, y este sistema tampoco la declara. O el catalogo"
+                        + " de `identidad` y el de este sistema se separaron, o esta instalacion no"
+                        + " se implanto");
     }
 
     private boolean hayAcceso(String codigo) {

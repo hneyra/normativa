@@ -78,7 +78,7 @@ public class ContenidoDelConjuntoController {
      * que decide si la hoja ofrece agregar o solo mirar.
      */
     @GetMapping("/conjuntos/{id}/parametros")
-    @RequiereAcceso(acceso = "parametros", privilegio = Privilegio.LECTURA)
+    @RequiereAcceso(acceso = "conjuntos", oTambien = "parametros", privilegio = Privilegio.LECTURA)
     public ContenidoDelConjuntoResource contenido(@PathVariable long id) {
         return ContenidoDelConjuntoResource.de(administrar.contenidoDe(id));
     }
@@ -104,7 +104,7 @@ public class ContenidoDelConjuntoController {
      * copie a mano como hacia la V6.
      */
     @GetMapping("/parametros")
-    @RequiereAcceso(acceso = "parametros", privilegio = Privilegio.LECTURA)
+    @RequiereAcceso(acceso = "conjuntos", oTambien = "parametros", privilegio = Privilegio.LECTURA)
     public RespuestaPaginada<ParametroResource> publicados(ParametrosDePaginacion paginacion) {
         return RespuestaPaginada.de(
                 administrar.parametros(paginacion.aPaginacion("tipo")), ParametroResource::de);

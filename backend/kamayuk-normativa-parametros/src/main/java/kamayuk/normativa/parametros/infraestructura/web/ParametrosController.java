@@ -38,8 +38,17 @@ public class ParametrosController {
         this.administrar = administrar;
     }
 
+    /**
+     * Los conjuntos por ejercicio y su estado.
+     *
+     * <p><b>Desde ADR-0043 §2 la opcion propia es {@code conjuntos}</b> —del modulo {@code
+     * NORMATIVA}, del que cuelgan las cuatro hojas de la interfaz— y {@code parametros} se queda
+     * como alternativa. La ruta sigue colgando de {@code /seguridad} porque asi la declara el
+     * contrato, y quien hoy tiene {@code LECTURA} sobre {@code parametros} sigue leyendo esto sin
+     * que nadie le conceda nada: el motivo esta censado en {@code AccesosCompartidosTest}.
+     */
     @GetMapping
-    @RequiereAcceso(acceso = "parametros", privilegio = Privilegio.LECTURA)
+    @RequiereAcceso(acceso = "conjuntos", oTambien = "parametros", privilegio = Privilegio.LECTURA)
     public RespuestaPaginada<ConjuntoResource> conjuntos(ParametrosDePaginacion paginacion) {
         return RespuestaPaginada.de(
                 administrar.conjuntos(paginacion.aPaginacion("ejercicio")), ConjuntoResource::de);

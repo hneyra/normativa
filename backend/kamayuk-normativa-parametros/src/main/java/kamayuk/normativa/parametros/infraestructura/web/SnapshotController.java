@@ -82,9 +82,14 @@ public class SnapshotController {
      * <p>No lleva ni una fila: es la <b>identidad</b>, que es lo unico que hace falta para saber si
      * el snapshot que ya se tiene en cache sigue siendo el bueno. Pedir el snapshot entero para
      * comprobar eso seria descargar 54 000 filas para leer un numero.
+     *
+     * <p><b>La opcion propia es {@code conjuntos}</b> desde ADR-0043 §2, con {@code parametros}
+     * como alternativa: {@code rentas} reenvia aqui el {@code Authorization} de la persona que
+     * calcula, asi que retirar {@code parametros} le quitaria el snapshot a quien lo lee hoy. El
+     * motivo esta censado en {@code AccesosCompartidosTest}.
      */
     @GetMapping
-    @RequiereAcceso(acceso = "parametros", privilegio = Privilegio.LECTURA)
+    @RequiereAcceso(acceso = "conjuntos", oTambien = "parametros", privilegio = Privilegio.LECTURA)
     public ConjuntoVigenteResource vigente(@RequestParam int ejercicio) {
         try {
             // OBLIGACION y no «el mas barato»: da igual cual, porque de esta llamada solo se lee la
@@ -112,11 +117,14 @@ public class SnapshotController {
      * <b>dos</b> snapshots del <b>mismo</b> conjunto: la identidad es la misma y es lo que las dos
      * corridas comparan (ADR-0025 §Consecuencias).
      *
+     * <p>Misma reanotacion que {@link #vigente(int)}, y por el mismo motivo: la opcion propia es
+     * {@code conjuntos} y {@code parametros} sigue admitiendose (ADR-0043 §2).
+     *
      * @param ambito {@code VALUACION} para los dos cuadros que la valuacion necesita, {@code
      *     OBLIGACION} para los valores referenciales. Los parametros van en los dos
      */
     @GetMapping("/{id}/snapshot")
-    @RequiereAcceso(acceso = "parametros", privilegio = Privilegio.LECTURA)
+    @RequiereAcceso(acceso = "conjuntos", oTambien = "parametros", privilegio = Privilegio.LECTURA)
     public ResponseEntity<String> snapshot(@PathVariable long id, @RequestParam String ambito) {
 
         SnapshotDelConjunto snapshot;

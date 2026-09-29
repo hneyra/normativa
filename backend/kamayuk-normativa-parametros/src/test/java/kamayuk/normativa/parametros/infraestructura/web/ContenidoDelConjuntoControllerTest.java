@@ -290,12 +290,19 @@ class ContenidoDelConjuntoControllerTest {
         assertThat(delContenido.acceso())
                 .as(
                         "las dos leen el mismo recurso —un conjunto y lo que lleva dentro— asi que"
-                                + " exigen la misma opcion. ADR-0043 §2 la mueve a `conjuntos` con"
-                                + " `oTambien = parametros` cuando #53 declare el modulo NORMATIVA;"
-                                + " hasta entonces es la unica opcion que este sistema tiene, y"
-                                + " `CatalogoDelSistemaTest` no admite ninguna otra")
+                                + " exigen la misma opcion. Desde #53 es `conjuntos`, la del modulo"
+                                + " NORMATIVA que ADR-0043 §2 declara y del que cuelgan las cuatro"
+                                + " hojas: cuando esta prueba se escribio, `parametros` era la unica"
+                                + " que este sistema tenia")
                 .isEqualTo(delListado.acceso())
-                .isEqualTo("parametros");
+                .isEqualTo("conjuntos");
+        assertThat(delContenido.oTambien())
+                .as(
+                        "y `parametros` las sigue autorizando como alternativa, igual que a las"
+                                + " otras tres lecturas: quien la tiene hoy no pierde nada (#53,"
+                                + " censado en AccesosCompartidosTest)")
+                .containsExactly("parametros")
+                .isEqualTo(delListado.oTambien());
     }
 
     @Test
