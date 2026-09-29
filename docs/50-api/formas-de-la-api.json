@@ -167,5 +167,31 @@
     "<codigo>": [
       "texto"
     ]
+  },
+  "POST /conjuntos": {
+    "id": "entero",
+    "ejercicio": "entero",
+    "version": "entero",
+    "estado": "texto",
+    "fechaSellado": "instante",
+    "usuarioSellado": "texto"
+  },
+  "POST /conjuntos/{id}/parametros": {
+    "id": "entero",
+    "tipo": "texto",
+    "clave": "texto",
+    "valorNumerico": "texto",
+    "valorTexto": "texto",
+    "vigenciaDesde": "texto",
+    "vigenciaHasta": "texto",
+    "documentoFuente": "texto"
+  },
+  "POST /conjuntos/{id}/sellar": {
+    "id": "entero",
+    "ejercicio": "entero",
+    "version": "entero",
+    "estado": "texto",
+    "fechaSellado": "instante",
+    "usuarioSellado": "texto"
   }
 }
