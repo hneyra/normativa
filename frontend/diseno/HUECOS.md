@@ -301,6 +301,13 @@ Los dos son 404; lo que separa «ese ejercicio no está publicado» de «esa rut
 {"lectura":{"siFalla":[{"estado":404,"conExtension":"recursoQueFalta","como":"vacio"},{"estado":404,"como":"no-encontrado"}]}}
 ```
 
+**ATENDIDO el 2026-09-29, en hneyra/normativa#97, y no con la forma de arriba.** `ErrorDeLaApi` conserva
+`parametroQueFalta` desde `kamayuk-lib`#52 (mezcla `a6ea6fa`, 2026-09-22), y con eso basta: no hizo falta un
+`siFalla` en la gramática. `src/datos/sinPublicar.ts` lee el miembro —con el 404, y nunca el `mensaje`— y, cuando
+está, la lectura **contesta** en vez de fallar; el 404 de ruta sigue lanzando y la escalera lo dice `no-encontrado`.
+Es una decisión para las dos hojas, escrita una vez, y la miden `el-ejercicio-sin-publicar-es-una-respuesta.test.ts`
+y `e2e/el-ejercicio-sin-publicar.spec.ts` sirviendo los dos 404 con el mismo mensaje.
+
 ### H32b · `ejercicio-sin-publicar`
 
 **Hojas** `nor-cuadros`, `nor-publicacion` · **propio** · **Renace en** el punto de extensión de KL#44, en normativa#67 (y #66)
@@ -316,6 +323,13 @@ de por qué es 404 y no 422 nombran el ejercicio y el conjunto.
 ```json
 {"pieza":"ejercicioSinPublicar","clave":"normativa.ejercicio-sin-publicar"}
 ```
+
+**ATENDIDO A MEDIAS el 2026-09-29, en hneyra/normativa#97.** Sin pieza propia: la frase va en la AUSENCIA de la hoja,
+en `atencion`, y dice por qué es una respuesta y no una avería y qué hace falta —sellar un conjunto, en Ediciones—.
+El ejercicio que dijo el miembro va en un campo de DATO de cada hoja —el documento fuente de los tres cuadros, y
+«Ejercicio · versión» en Publicación—, porque la ausencia la traduce el intérprete y no admite un dato dentro. **Lo
+que NO está**: la insignia `404` y la explicación de «por qué 404 y no 422», que la gramática V8 no tiene dónde poner
+(la misma razón que H29a).
 
 ### H33 · `validar-el-ejercicio-antes-de-pedir`
 

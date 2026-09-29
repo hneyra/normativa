@@ -3,6 +3,7 @@ import { clavesDeLosCuadros } from '../datos/cuadros.ts';
 import { clavesDeEdiciones } from '../datos/ediciones.ts';
 import { clavesDelPanel } from '../datos/panel.ts';
 import { clavesDeLaPublicacion } from '../datos/publicacion.ts';
+import { clavesDelEjercicioSinPublicar } from '../datos/sinPublicar.ts';
 import { FRASES_DE_LA_MARCA } from '../marca.ts';
 import { ARBOL } from '../pantallas/arbol.ts';
 import { PANTALLAS } from '../pantallas/definiciones/index.ts';
@@ -154,6 +155,10 @@ export function catalogoDeClaves(): readonly string[] {
     // valor fuera del dominio de la base. Viajan por `valores` y por celdas, que el interprete no
     // traduce, asi que se traducen donde se componen.
     ...clavesDeLosCuadros(),
+    // Y lo que Cuadros y Publicacion dicen de un ejercicio sin conjunto sellado (#97): la ausencia
+    // de la hoja —que traduce el interprete— y la frase con el ejercicio del miembro, que se
+    // compone con `t()` donde se reparte. Es de las dos hojas y esta escrita una vez.
+    ...clavesDelEjercicioSinPublicar(),
     ...clavesDelMarco(),
     ...clavesDelInterprete(),
     ...clavesDelMando(),

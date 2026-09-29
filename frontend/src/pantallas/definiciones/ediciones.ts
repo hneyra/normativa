@@ -115,9 +115,10 @@ export const EDICIONES = {
           },
           // Los CUATRO de la lista blanca del backend —`OrdenSeguro.sobre("ejercicio", "version",
           // "estado", "id")`, publicada como `ordenarPorAdmitidos`— y ni uno más: otro campo es un
-          // 422 `ORDEN_NO_ADMITIDO`, que la escalera de hoy no distingue del otro 422. El primero
-          // es `ejercicio` porque es el orden por omisión del controlador
-          // (`ParametrosController:45`, `aPaginacion("ejercicio")`).
+          // 422 `ORDEN_NO_ADMITIDO`, que desde `kamayuk-lib`#52 (corregido el 2026-09-29, #97) la
+          // escalera dice como lo que es —el orden lo pidió la pantalla— y que quien está delante
+          // no puede corregir. El primero es `ejercicio` porque es el orden por omisión del
+          // controlador (`ParametrosController:45`, `aPaginacion("ejercicio")`).
           orden: {
             campos: [
               { valor: 'ejercicio', rotulo: 'Ejercicio' },

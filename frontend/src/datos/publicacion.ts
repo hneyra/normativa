@@ -1,4 +1,4 @@
-import { entregarAlNavegador } from '@kamayuk/api';
+import { entregarAlNavegador, type ParametroQueFalta } from '@kamayuk/api';
 import {
   avisar,
   coordenada,
@@ -12,6 +12,13 @@ import { cliente } from '../api/cliente.ts';
 import { t } from '../i18n/i18n.ts';
 import type { Conector, Reparto } from './conectores.ts';
 import { huellaAnunciada, sePuedeCalcularLaHuella, sha256DeLosBytes } from './huella.ts';
+import {
+  AUSENCIA_SIN_PUBLICAR,
+  elEjercicioSinPublicar,
+  esSinPublicar,
+  pedirElConjuntoVigente,
+  type EjercicioSinPublicar,
+} from './sinPublicar.ts';
 import {
   AMBITOS,
   CLAVE_DE_LAS_LISTAS,
@@ -74,13 +81,15 @@ import {
  *   ficha «La respuesta» y la descarga son las de {@link AMBITO_DE_LA_FICHA}, que es la opcion que
  *   el interprete deja seleccionada. No se arregla aqui con un estado propio: el selector tiene que
  *   pasar a ser un parametro de la lectura, y eso cambia tambien el artboard.
- * · **«Ese ejercicio no esta publicado» no se distingue de un 404 de ruta.** El discriminador es el
- *   miembro `parametroQueFalta` del `problem+json` —lo pone `FaltaPublicar.noEncontrado` y un 404
- *   de ruta no lo lleva—, y **`CuerpoDeProblema` de `@kamayuk/api` no lo conserva**: declara seis
- *   miembros y ese no esta (`kamayuk-lib@origin/main:paquetes/api/errores.ts:38-46`), asi que
- *   `ErrorDeLaApi` llega con los dos 404 marcados `codigo: 'NO_ENCONTRADO'` y son indistinguibles
- *   desde aqui. Leerlo del `mensaje` en castellano seria exactamente lo que el catalogo de errores
- *   prohibe. Lo pide `kamayuk-lib`#86.
+ *
+ * <h2>«Ese ejercicio no esta publicado» es una respuesta (AC 8, desde el 2026-09-29, #97)</h2>
+ *
+ * Hasta esa fecha aqui ponia que no se distinguia de un 404 de ruta porque `CuerpoDeProblema` no
+ * conservaba `parametroQueFalta`, y que lo pedia `kamayuk-lib`#86. Lo resolvio `kamayuk-lib`#52
+ * (mezcla `a6ea6fa`, 2026-09-22): `ErrorDeLaApi` guarda el miembro. La decision vive en
+ * `./sinPublicar.ts`, **la misma que usa Cuadros**; aqui solo se reparte: la frase de arriba en
+ * `atencion`, el ejercicio que dijo el miembro en «Ejercicio · version», ni una peticion de
+ * snapshot y nada que guardar, con el motivo en el boton.
  */
 
 /* ── Lo que se afirma de una descarga ──────────────────────────────────────────────────────── */
@@ -195,16 +204,28 @@ function interpretar(texto: string, ambito: Ambito): SnapshotResource {
   }
 }
 
-/** La identidad y las dos descargas, en ese orden: sin el `conjuntoId` no hay que pedir. */
-async function pedirLaPublicacion(senal: AbortSignal): Promise<LoDeLaPublicacion> {
-  const vigente = await cliente.solicitar<ConjuntoVigenteResource>(rutaDe(CONJUNTO_VIGENTE), {
-    senal,
-  });
+/**
+ * La identidad y las dos descargas, en ese orden: sin el `conjuntoId` no hay que pedir.
+ *
+ * Y si el ejercicio no tiene conjunto sellado, **esa es la respuesta** y no se descarga nada: ver
+ * `./sinPublicar.ts`. Lo descargado antes se olvida, para que guardar no entregue un archivo de
+ * otra respuesta.
+ */
+async function pedirLaPublicacion(
+  senal: AbortSignal,
+): Promise<LoDeLaPublicacion | EjercicioSinPublicar> {
+  const vigente = await pedirElConjuntoVigente(senal);
+  if (esSinPublicar(vigente)) {
+    loUltimoDescargado = new Map();
+    loQueFaltaba = vigente.sinPublicar;
+    return vigente;
+  }
   const descargas = await Promise.all(
     AMBITOS.map((ambito) => descargar(vigente.conjuntoId, ambito, senal)),
   );
   const porAmbito = new Map<Ambito, Descarga>(descargas.map((descarga) => [descarga.ambito, descarga]));
   loUltimoDescargado = porAmbito;
+  loQueFaltaba = null;
   return { vigente, porAmbito };
 }
 
@@ -225,6 +246,15 @@ async function pedirLaPublicacion(senal: AbortSignal): Promise<LoDeLaPublicacion
  */
 let loUltimoDescargado: ReadonlyMap<Ambito, Descarga> = new Map();
 
+/**
+ * Lo que falto publicar la ultima vez que se pregunto, o `null` si habia conjunto sellado.
+ *
+ * Por lo mismo que la variable de arriba: la accion del pie solo recibe la clave del destino, y el
+ * motivo de no guardar nada tiene que ser el de verdad —«ese ejercicio no tiene conjunto sellado»—
+ * y no «todavia no ha llegado», que mandaria a esperar algo que no va a llegar.
+ */
+let loQueFaltaba: ParametroQueFalta | null = null;
+
 /** La ultima descarga de un ambito, o `undefined` si todavia no se ha pedido ninguna. */
 export function loUltimoDe(ambito: Ambito): Descarga | undefined {
   return loUltimoDescargado.get(ambito);
@@ -233,6 +263,7 @@ export function loUltimoDe(ambito: Ambito): Descarga | undefined {
 /** Olvida lo descargado. Para una prueba que quiera el estado de antes de pedir nada. */
 export function olvidarLoDescargado(): void {
   loUltimoDescargado = new Map();
+  loQueFaltaba = null;
 }
 
 /**
@@ -297,7 +328,11 @@ export function guardarElSnapshot(): boolean {
  * huella mal, ahi salen las dos huellas.
  */
 function porQueNoSePuedeGuardar(descarga: Descarga | undefined): string | null {
-  if (descarga === undefined) return t(FRASES_DE_LA_PUBLICACION.todaviaNoLlego);
+  if (descarga === undefined) {
+    return loQueFaltaba === null
+      ? t(FRASES_DE_LA_PUBLICACION.todaviaNoLlego)
+      : elEjercicioSinPublicar(loQueFaltaba);
+  }
   if (descarga.veredicto.clase === 'verificada') return null;
   return `${t(FRASES_DE_LA_PUBLICACION.soloLoVerificado, {
     ambito: descarga.ambito,
@@ -708,7 +743,10 @@ export const PUBLICACION: Conector = {
   ],
 
   repartir: (llegado): Reparto => {
-    const lo = llegado.get(CLAVE_DE_LA_PUBLICACION) as LoDeLaPublicacion | undefined;
+    const lo = llegado.get(CLAVE_DE_LA_PUBLICACION) as
+      | LoDeLaPublicacion
+      | EjercicioSinPublicar
+      | undefined;
 
     const valores = new Map<Coordenada, string>();
     const ausenciaPorCampo = new Map<Coordenada, string>();
@@ -734,6 +772,17 @@ export const PUBLICACION: Conector = {
         ] as readonly CeldaDeLaTabla[],
       })),
     });
+
+    // El ejercicio no tiene conjunto sellado: la hoja CONTESTO, y lo que contesto es que no hay
+    // nada que descargar ni que comprobar. «Ejercicio · version» nombra el ejercicio que dijo el
+    // miembro; los demas campos y la tabla de listas dicen «sin conjunto sellado», y guardar sale
+    // impedido con ese mismo motivo. No es `lo === undefined`: eso es «se esta pidiendo o fallo».
+    if (esSinPublicar(lo)) {
+      const motivo = elEjercicioSinPublicar(lo.sinPublicar);
+      valores.set(EJERCICIO_Y_VERSION, motivo);
+      nombrados.set(DATO_DEL_IMPEDIMENTO, motivo);
+      return { valores, tablas, ausenciaPorCampo, nombrados, ausencia: AUSENCIA_SIN_PUBLICAR };
+    }
 
     if (lo === undefined) {
       nombrados.set(DATO_DEL_IMPEDIMENTO, t(FRASES_DE_LA_PUBLICACION.todaviaNoLlego));
