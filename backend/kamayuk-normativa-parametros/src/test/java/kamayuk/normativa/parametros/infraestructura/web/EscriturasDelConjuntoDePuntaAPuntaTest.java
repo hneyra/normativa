@@ -59,6 +59,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.aop.framework.ProxyFactory;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
@@ -121,6 +123,12 @@ class EscriturasDelConjuntoDePuntaAPuntaTest {
     private static final String VALOR_FICTICIO = "1.000000";
 
     private static final LocalDate DESDE = LocalDate.of(2026, 1, 1);
+
+    /**
+     * El caracter nulo como viaja en un cuerpo JSON: la barra invertida y su codigo de cuatro
+     * cifras. Jackson lo lee como {@code U+0000}, y PostgreSQL no lo guarda en ningun texto.
+     */
+    private static final String NULO_EN_JSON = "\\u0000";
 
     private static final JsonMapper JSON = JsonMapper.builder().build();
 
@@ -814,6 +822,102 @@ class EscriturasDelConjuntoDePuntaAPuntaTest {
     }
 
     // ------------------------------------------------------------------
+    //  Lo que Java acepta y PostgreSQL no guarda (revision de #100)
+    // ------------------------------------------------------------------
+
+    /**
+     * Dos cosas que llegan como JSON valido, pasan por Jackson y por las comprobaciones de siempre,
+     * y que la base rechaza: el caracter nulo en un texto ({@code 22021 invalid byte sequence for
+     * encoding "UTF8": 0x00}) y un ano que el tipo {@code date} no tiene ({@code 22008 date out of
+     * range}). Hasta la revision de #100 las dos salian <b>500 con incidencia</b> y deshacian la
+     * escritura. Se miden aqui, contra PostgreSQL, porque el 500 lo producia la base; en {@code
+     * EscriturasDelConjuntoControllerTest} el repositorio revienta si se le llama, y lo que alli se
+     * ve es que ya no se le llama.
+     */
+    @Nested
+    @DisplayName("lo que la base no puede guardar es 422 nombrando el campo, y no 500")
+    class LoQueLaBaseNoGuarda {
+
+        @Test
+        @DisplayName("abrir con el caracter nulo en la observacion: 422, y no abre nada")
+        void abrirConElNulo() throws Exception {
+            MvcResult resultado =
+                    abrir(municipalidadA, "nulo-2053", 2053, "Se abre" + NULO_EN_JSON + " el 2053");
+
+            esUn422QueNombra(resultado, "observacion");
+            assertThat(contar("SELECT count(*) FROM conjunto_parametros WHERE ejercicio = 2053"))
+                    .isZero();
+        }
+
+        @Test
+        @DisplayName("agregar con el caracter nulo en la observacion: 422, y no agrega")
+        void agregarConElNulo() throws Exception {
+            long id = abierto(2054);
+
+            MvcResult resultado =
+                    agregar(municipalidadA, id, "E2E_F", "Se agrega" + NULO_EN_JSON + " E2E_F");
+
+            esUn422QueNombra(resultado, "observacion");
+            assertThat(
+                            contar(
+                                    "SELECT count(*) FROM conjunto_parametro_detalle WHERE conjunto_id = "
+                                            + id))
+                    .isZero();
+        }
+
+        @Test
+        @DisplayName("sellar con el caracter nulo en la observacion: 422, y sigue ABIERTO")
+        void sellarConElNulo() throws Exception {
+            long id = abierto(2055);
+            agregar(municipalidadA, id, "E2E_A", "Se agrega el primero");
+
+            MvcResult resultado =
+                    sellar(
+                            municipalidadA,
+                            id,
+                            "SIN_CARGAR",
+                            "Se sella" + NULO_EN_JSON + " el 2055");
+
+            esUn422QueNombra(resultado, "observacion");
+            assertThat(texto("SELECT estado FROM conjunto_parametros WHERE id = " + id))
+                    .isEqualTo("ABIERTO");
+        }
+
+        @ParameterizedTest(name = "en «{0}»")
+        @ValueSource(strings = {"tipo", "clave"})
+        @DisplayName("agregar con el caracter nulo en la llave: 422 nombrando el campo")
+        void laLlaveConElNulo(String campo) throws Exception {
+            long id = abierto(2056);
+
+            MvcResult resultado =
+                    agregarConLaLlave(
+                            id,
+                            "FICTICIO" + ("tipo".equals(campo) ? NULO_EN_JSON : ""),
+                            "E2E_A" + ("clave".equals(campo) ? NULO_EN_JSON : ""),
+                            DESDE.toString());
+
+            esUn422QueNombra(resultado, "'" + campo + "'");
+            assertThat(
+                            contar(
+                                    "SELECT count(*) FROM conjunto_parametro_detalle WHERE conjunto_id = "
+                                            + id))
+                    .isZero();
+        }
+
+        @ParameterizedTest(name = "«{0}»")
+        @ValueSource(strings = {"+5874898-01-01", "-4714-01-01"})
+        @DisplayName("agregar con una vigencia que el tipo date no tiene: 422 nombrandola")
+        void unaVigenciaQueLaBaseNoTiene(String vigenciaDesde) throws Exception {
+            long id = abierto(2056);
+
+            MvcResult resultado = agregarConLaLlave(id, "FICTICIO", "E2E_A", vigenciaDesde);
+
+            esUn422QueNombra(resultado, "'vigenciaDesde'");
+            assertThat(mensaje(resultado)).contains(vigenciaDesde);
+        }
+    }
+
+    // ------------------------------------------------------------------
 
     private static MvcResult abrir(long municipalidad, String clave, int ejercicio, String porque)
             throws Exception {
@@ -861,6 +965,33 @@ class EscriturasDelConjuntoDePuntaAPuntaTest {
                                 + "\",\"observacion\":\""
                                 + porque
                                 + "\"}");
+    }
+
+    /** Agregar con la llave escrita a mano, para mandar lo que {@link #agregar} no manda. */
+    private static MvcResult agregarConLaLlave(
+            long conjunto, String tipo, String clave, String vigenciaDesde) throws Exception {
+        return pedir(
+                municipalidadA,
+                JEFE,
+                post(RAIZ + "/conjuntos/" + conjunto + "/parametros")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(
+                                "{\"tipo\":\""
+                                        + tipo
+                                        + "\",\"clave\":\""
+                                        + clave
+                                        + "\",\"vigenciaDesde\":\""
+                                        + vigenciaDesde
+                                        + "\",\"observacion\":\"Se agrega con esta llave\"}"));
+    }
+
+    /** 422 de validacion con el campo nombrado, y sin incidencia: el dato era del cliente. */
+    private static void esUn422QueNombra(MvcResult resultado, String campo) throws Exception {
+        String cuerpo = resultado.getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertThat(resultado.getResponse().getStatus())
+                .as("lo que la base no puede guardar es un dato del cliente. Contesto: %s", cuerpo)
+                .isEqualTo(422);
+        assertThat(cuerpo).contains("VALIDACION").contains(campo).doesNotContain("incidencia");
     }
 
     private static MockHttpServletRequestBuilder cuerpoDeSellar(

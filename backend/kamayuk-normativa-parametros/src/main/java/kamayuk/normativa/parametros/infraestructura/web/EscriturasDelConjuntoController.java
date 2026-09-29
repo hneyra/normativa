@@ -75,6 +75,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping(Api.RAIZ)
 public class EscriturasDelConjuntoController {
 
+    /** El unico caracter que PostgreSQL no admite en un texto. */
+    private static final char NULO = (char) 0;
+
     private final EscriturasDelConjunto escrituras;
 
     public EscriturasDelConjuntoController(EscriturasDelConjunto escrituras) {
@@ -152,12 +155,40 @@ public class EscriturasDelConjuntoController {
      * La observacion del cuerpo. La ausencia se contesta aqui, con el nombre del campo; lo que
      * llega y no vale —en blanco, corta o larga— lo rechaza el constructor de {@link Observacion}
      * con el suyo.
+     *
+     * <h2>El caracter nulo, aqui y no en {@link Observacion} (revision de #100)</h2>
+     *
+     * <p>Una observacion con el caracter cero en medio —en el cuerpo, la barra invertida seguida de
+     * {@code u0000}— es JSON valido y pasa los 5 a 500 caracteres, y PostgreSQL rechaza el {@code
+     * INSERT} de la auditoria con {@code 22021 invalid byte sequence for encoding "UTF8": 0x00}: la
+     * escritura entera se deshacia y salia <b>500 con incidencia</b>, en las tres rutas. Es un dato
+     * del cliente que la base no puede guardar, y es un 422 que nombra la observacion.
+     *
+     * <p>El sitio natural seria el constructor de {@link Observacion}, por el mismo motivo que el
+     * nulo (ADR-0043 §6). <b>No se pone alli</b> porque {@code dominio-compartido} es una copia
+     * declarada de {@code rentas} (P5B §7.1) y la vigila {@code lo-que-los-cinco-comparten} en
+     * {@code infrastructure}, que compara las cinco copias de {@code Observacion.java} y exige
+     * declarar cada divergencia: cambiar su codigo en una sola copia es exactamente lo que esa
+     * guarda existe para impedir, y el arreglo de las cinco a la vez no es de este PR. Aqui pasan
+     * <b>todas</b> las observaciones que llegan por HTTP a este sistema —no hay otra ruta que
+     * reciba una—, y los otros dos caminos no pueden traer un nulo: la del {@code batch} sale de
+     * una variable de entorno y la de la implantacion es un literal.
+     *
+     * <p><b>Solo el nulo, y no los demas caracteres de control.</b> El nulo es el unico que la base
+     * no puede guardar; un tabulador, un salto de linea o un {@code U+001B} se guardan tal cual, y
+     * la observacion es lo que quien escribe dijo (regla 10): decidir que caracteres puede decir es
+     * una politica de contenido de las cinco copias, no el arreglo de un 500.
      */
     private static Observacion observacionDe(@Nullable String texto) {
         if (texto == null) {
             throw new IllegalArgumentException(
                     "Toda escritura exige decir por que se hace (regla 10, ADR-0008): falta"
                             + " «observacion»");
+        }
+        if (texto.indexOf(NULO) >= 0) {
+            throw new IllegalArgumentException(
+                    "La observacion lleva el caracter nulo (U+0000), que PostgreSQL no guarda en un"
+                            + " texto: 'observacion' tiene que ser texto sin el");
         }
         return Observacion.de(texto);
     }

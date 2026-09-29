@@ -126,5 +126,91 @@ class LoQueLlegaEnElCuerpoTest {
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("vacio");
         }
+
+        /**
+         * La arroba de cada caso marca donde va el caracter nulo. Con el nulo escrito en el caso,
+         * el nombre de la prueba lo llevaria dentro, y el informe XML de la prueba no puede: XML
+         * 1.0 no admite {@code U+0000} en ningun sitio.
+         */
+        private static String conElNulo(String caso) {
+            return caso.replace('@', (char) 0);
+        }
+
+        @ParameterizedTest(name = "«{0}», con el nulo donde va la arroba")
+        @ValueSource(strings = {"@", "FICTICIO@", "FICT@ICIO"})
+        @DisplayName("el caracter nulo en el tipo, que PostgreSQL no guarda (22021): nombra 'tipo'")
+        void elNuloEnElTipo(String caso) {
+            // Revision de #100: ni strip() lo quita ni isBlank() lo ve, y llegaba a `publicados`.
+            String tipo = conElNulo(caso);
+
+            assertThatThrownBy(() -> new LlaveDeParametro(tipo, "A", LocalDate.of(2026, 1, 1)))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("'tipo'")
+                    .hasMessageContaining("U+0000");
+        }
+
+        @ParameterizedTest(name = "«{0}», con el nulo donde va la arroba")
+        @ValueSource(strings = {"@", "A@", "@A"})
+        @DisplayName(
+                "el caracter nulo en la clave: nombra 'clave', y no se lleva a nulo como blanco")
+        void elNuloEnLaClave(String caso) {
+            String clave = conElNulo(caso);
+
+            assertThatThrownBy(
+                            () -> new LlaveDeParametro("FICTICIO", clave, LocalDate.of(2026, 1, 1)))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("'clave'")
+                    .hasMessageContaining("U+0000");
+        }
+
+        @Test
+        @DisplayName(
+                "los demas caracteres de control se admiten: PostgreSQL los guarda, y sin fila"
+                        + " publicada la respuesta es el 404 de siempre")
+        void losDemasControlesSeAdmiten() {
+            // La decision escrita en el javadoc de LlaveDeParametro: solo el nulo rompe la base.
+            assertThat(
+                            new LlaveDeParametro("FICTICIO", "A\u001bB", LocalDate.of(2026, 1, 1))
+                                    .clave())
+                    .isEqualTo("A\u001bB");
+            assertThat(
+                            new LlaveDeParametro("FICTI\u0001CIO", null, LocalDate.of(2026, 1, 1))
+                                    .tipo())
+                    .isEqualTo("FICTI\u0001CIO");
+        }
+
+        @ParameterizedTest(name = "«{0}»")
+        @ValueSource(strings = {"+5874898-01-01", "-4714-01-01", "+10000-01-01", "0000-12-31"})
+        @DisplayName(
+                "una vigencia fuera de 0001-01-01 a 9999-12-31 nombra 'vigenciaDesde', aunque"
+                        + " LocalDate.parse la lea")
+        void unaVigenciaFueraDeAaaaMmDd(String texto) {
+            // Las dos primeras son las de la revision de #100: PostgreSQL contesta 22008. Las dos
+            // ultimas si caben en el tipo date, pero ya no vuelven como aaaa-mm-dd: son las cotas.
+            LocalDate vigencia = LocalDate.parse(texto);
+
+            assertThatThrownBy(() -> new LlaveDeParametro("FICTICIO", "A", vigencia))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("'vigenciaDesde'")
+                    .hasMessageContaining(vigencia.toString());
+        }
+
+        @Test
+        @DisplayName(
+                "admite las dos cotas, y una vigencia anterior a 1990: no es un ejercicio sino el"
+                        + " dia en que empezo a regir la norma")
+        void admiteLasCotasYLoAnteriorA1990() {
+            assertThat(new LlaveDeParametro("FICTICIO", "A", LocalDate.of(1, 1, 1)).vigenciaDesde())
+                    .isEqualTo(LocalDate.of(1, 1, 1));
+            assertThat(
+                            new LlaveDeParametro("FICTICIO", "A", LocalDate.of(9999, 12, 31))
+                                    .vigenciaDesde())
+                    .isEqualTo(LocalDate.of(9999, 12, 31));
+            assertThat(
+                            new LlaveDeParametro("FICTICIO", "A", LocalDate.of(1985, 6, 1))
+                                    .vigenciaDesde())
+                    .as("el rango de Ejercicio (1990-2100) la rechazaria, y es publicable")
+                    .isEqualTo(LocalDate.of(1985, 6, 1));
+        }
     }
 }

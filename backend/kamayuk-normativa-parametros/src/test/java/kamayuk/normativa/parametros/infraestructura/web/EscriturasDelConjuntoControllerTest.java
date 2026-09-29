@@ -63,13 +63,17 @@ import tools.jackson.databind.json.JsonMapper;
  * {@code EscriturasDelConjuntoDePuntaAPuntaTest}, porque lo deciden los indices y los disparadores
  * de la base.
  *
- * <h2>La observacion, en las tres rutas y de las cinco maneras (AC 4)</h2>
+ * <h2>La observacion, en las tres rutas y de las seis maneras (AC 4)</h2>
  *
- * <p>Ausente, nula, en blanco, corta y larga, en cada una de las tres rutas: quince peticiones, y
- * las quince tienen que salir 422 con {@code observacion} en el mensaje. Es la prueba que {@code
- * rentas} escribio en su #30 ({@code NingunaEscrituraSeRompePorLaObservacionTest}), y la razon es
- * la misma: con el {@code Objects.requireNonNull} que {@code Observacion} tenia hasta #59, la
- * ausente y la nula salian 500 con incidencia.
+ * <p>Ausente, nula, en blanco, corta, larga y con el caracter nulo, en cada una de las tres rutas:
+ * dieciocho peticiones, y las dieciocho tienen que salir 422 con {@code observacion} en el mensaje.
+ * Es la prueba que {@code rentas} escribio en su #30 ({@code
+ * NingunaEscrituraSeRompePorLaObservacionTest}), y la razon es la misma: con el {@code
+ * Objects.requireNonNull} que {@code Observacion} tenia hasta #59, la ausente y la nula salian 500
+ * con incidencia. La sexta la trajo la revision de #100: el caracter nulo pasa los 5 a 500
+ * caracteres y PostgreSQL no lo guarda —{@code 22021}—, asi que llegaba a la base y salia 500. Aqui
+ * se mide que ya no llega; el 500 que daba se mide contra PostgreSQL en {@code
+ * EscriturasDelConjuntoDePuntaAPuntaTest$LoQueLaBaseNoGuarda}.
  */
 @DisplayName("#59 — Capa web: las tres escrituras contestan 422, y no 500, a lo mal formado")
 class EscriturasDelConjuntoControllerTest {
@@ -127,7 +131,8 @@ class EscriturasDelConjuntoControllerTest {
                     List.of("nula", "\"observacion\":null"),
                     List.of("en blanco", "\"observacion\":\"     \""),
                     List.of("de 4 caracteres", "\"observacion\":\"abcd\""),
-                    List.of("de 501 caracteres", "\"observacion\":\"" + "a".repeat(501) + "\""));
+                    List.of("de 501 caracteres", "\"observacion\":\"" + "a".repeat(501) + "\""),
+                    List.of("con el caracter nulo", "\"observacion\":\"Se abre\\u0000 el 2027\""));
 
     static Stream<Arguments> lasTresRutasPorLasCincoObservaciones() {
         List<Arguments> casos = new ArrayList<>();
@@ -156,7 +161,8 @@ class EscriturasDelConjuntoControllerTest {
 
     @ParameterizedTest(name = "{0} con la observacion {1}")
     @MethodSource("lasTresRutasPorLasCincoObservaciones")
-    @DisplayName("ausente, nula, en blanco, corta o larga: 422 nombrando la observacion")
+    @DisplayName(
+            "ausente, nula, en blanco, corta, larga o con el nulo: 422 nombrando la observacion")
     void laObservacionNuncaDa500(String ruta, String caso, MockHttpServletRequestBuilder peticion)
             throws Exception {
         MvcResult resultado = mvc.perform(peticion).andReturn();
@@ -272,6 +278,38 @@ class EscriturasDelConjuntoControllerTest {
         assertThat(fechaMala.getResponse().getContentAsString())
                 .contains("vigenciaDesde")
                 .contains("2026-13-01");
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @ValueSource(
+            strings = {
+                "'tipo'|\"tipo\":\"FICTICIO\\u0000\",\"vigenciaDesde\":\"2026-01-01\"",
+                "'clave'|\"tipo\":\"FICTICIO\",\"clave\":\"A\\u0000\",\"vigenciaDesde\":\"2026-01-01\"",
+                "'vigenciaDesde'|\"tipo\":\"FICTICIO\",\"vigenciaDesde\":\"+5874898-01-01\"",
+                "'vigenciaDesde'|\"tipo\":\"FICTICIO\",\"vigenciaDesde\":\"-4714-01-01\""
+            })
+    @DisplayName(
+            "agregar con lo que PostgreSQL no guarda en la llave es 422 nombrando el campo, antes de"
+                    + " la base")
+    void agregarConLoQueLaBaseNoGuarda(String caso) throws Exception {
+        // Revision de #100: el caracter nulo en el tipo o la clave (22021) y un ano que el tipo
+        // `date` no tiene (22008) llegaban a `publicados` y salian 500. LocalDate.parse lee los
+        // dos anos de aqui; la llave los rechaza. Las cotas exactas se miden en
+        // LoQueLlegaEnElCuerpoTest.
+        String campo = caso.substring(0, caso.indexOf('|'));
+        String llave = caso.substring(caso.indexOf('|') + 1);
+
+        MvcResult resultado =
+                mvc.perform(agregar(llave, "\"observacion\":\"Se agrega el parametro\""))
+                        .andReturn();
+
+        assertThat(resultado.getResponse().getStatus())
+                .as("Contesto: %s", resultado.getResponse().getContentAsString())
+                .isEqualTo(422);
+        assertThat(resultado.getResponse().getContentAsString())
+                .contains("VALIDACION")
+                .contains(campo)
+                .doesNotContain("incidencia");
     }
 
     @ParameterizedTest(name = "«{0}»")
