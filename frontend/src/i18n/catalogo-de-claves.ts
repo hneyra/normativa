@@ -2,6 +2,7 @@ import { FRASES_DE_LAS_ACCIONES } from '../acciones.ts';
 import { clavesDeLosCuadros } from '../datos/cuadros.ts';
 import { clavesDeEdiciones } from '../datos/ediciones.ts';
 import { clavesDelPanel } from '../datos/panel.ts';
+import { clavesDelCatalogo } from '../datos/useCatalogoPermitido.ts';
 import { clavesDeLaPublicacion } from '../datos/publicacion.ts';
 import { FRASES_DE_LA_MARCA } from '../marca.ts';
 import { ARBOL } from '../pantallas/arbol.ts';
@@ -154,6 +155,10 @@ export function catalogoDeClaves(): readonly string[] {
     // valor fuera del dominio de la base. Viajan por `valores` y por celdas, que el interprete no
     // traduce, asi que se traducen donde se componen.
     ...clavesDeLosCuadros(),
+    // Y lo que se dice mientras no hay armazon (#64): averiguando, el fallo de las tres lecturas de
+    // `/seguridad`, la respuesta rota y la cuenta que no puede nada. Viajan como `porQue` y
+    // `detalle` de `EsperaDelCatalogo`, y se traducen en el gancho que las compone.
+    ...clavesDelCatalogo(),
     ...clavesDelMarco(),
     ...clavesDelInterprete(),
     ...clavesDelMando(),

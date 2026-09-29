@@ -24,7 +24,7 @@ import { describe, expect, it } from 'vitest';
  *
  * <h2>Las tres cosas que se exigen, y por que cada una</h2>
  *
- * 1. **Solo importa de `@kamayuk/*`, de `react` y de las ocho costuras.** Un `import` de
+ * 1. **Solo importa de `@kamayuk/*`, de `react` y de las costuras.** Un `import` de
  *    cualquier otro sitio es codigo de un issue posterior que entro por aqui: el cliente de la
  *    API (#57), una definicion de pantalla (#58), el `i18next` (#60).
  * 2. **Exporta `Aplicacion`.** Es lo que `main.tsx` monta. Sin esto, las otras dos se cumplirian
@@ -53,16 +53,23 @@ const FRONTEND = join(AQUI, '..');
 const LA_COSTURA = 'src/aplicacion.tsx';
 
 /**
- * Las ocho costuras, con el issue que llena cada una. La tabla del AC 3 de #55, como dato.
+ * Las costuras, con el issue que llena cada una. La tabla del AC 3 de #55, como dato.
  *
  * La lista se escribe entera y no se cuenta: anadir una costura exige decir cual y de quien es, y
  * este rojo es la unica senal de que la superficie que `aplicacion.tsx` toca acaba de crecer.
+ *
+ * **Y crecio una vez, con #64**: `./datos/useCatalogoPermitido.ts`, las cinco lecturas de
+ * `/seguridad`. Iba a entrar por `./sesion.ts` o por `./catalogo.ts`, y las dos salidas estan
+ * medidas en rojo —un ciclo de carga con el cliente de la API por la primera, y las guardas sin DOM
+ * que leen el catalogo muertas por `window` por la segunda—; los dos rojos, en la cabecera de ese
+ * archivo.
  */
 const COSTURAS: readonly { readonly modulo: string; readonly duenio: string }[] = [
   { modulo: './acciones.ts', duenio: '#58, #67, #68' },
   { modulo: './arranque.ts', duenio: '#57 — lo importa `main.tsx`, no este archivo' },
   { modulo: './catalogo.ts', duenio: '#58, #64' },
   { modulo: './datos/proveedor.tsx', duenio: '#63' },
+  { modulo: './datos/useCatalogoPermitido.ts', duenio: '#64' },
   { modulo: './i18n/armazon.ts', duenio: '#60' },
   { modulo: './marca.ts', duenio: '#58, tras G2' },
   { modulo: './pantallas/index.ts', duenio: '#58' },
@@ -118,7 +125,7 @@ describe('src/aplicacion.tsx es la costura, y la lista de costuras es la del iss
 
     // 2) La lista de costuras dice algo. Sin esto, todo lo de abajo pasaria sobre el conjunto
     //    vacio el dia que alguien la vaciara, que es como una guarda se queda sin sujeto.
-    expect(COSTURAS.length, 'COSTURAS esta vacia: la guarda no permitiria ningun import').toBe(8);
+    expect(COSTURAS.length, 'COSTURAS esta vacia: la guarda no permitiria ningun import').toBe(9);
 
     // 3) Y LAS MUESTRAS: el extractor tiene que ver lo que se prohibe y dejar pasar lo que no.
     //    Escritas a mano aqui y no en `muestras/`, porque lo que se ejercita no es una regla de
@@ -139,7 +146,7 @@ describe('src/aplicacion.tsx es la costura, y la lista de costuras es la del iss
     expect(esTextoVisible('kamayuk.normativa')).toBe(false);
   });
 
-  it('solo importa de `@kamayuk/*`, de react y de las ocho costuras', () => {
+  it('solo importa de `@kamayuk/*`, de react y de las nueve costuras', () => {
     const fuente = readFileSync(join(FRONTEND, LA_COSTURA), 'utf8');
     const permitidas = new Set(COSTURAS.map((c) => c.modulo));
     const ajenos = importesDe(fuente).filter((e) => !permitidas.has(e) && !ADEMAS(e));

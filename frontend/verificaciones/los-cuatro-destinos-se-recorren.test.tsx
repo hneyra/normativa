@@ -1,11 +1,13 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Aplicacion } from '../src/aplicacion.tsx';
 import { CATALOGO } from '../src/catalogo.ts';
+import { CONSULTAS } from '../src/datos/proveedor.tsx';
 import { pantallaDe } from '../src/pantallas/definiciones/index.ts';
 import type { ClaveDeHoja } from '../src/pantallas/arbol.ts';
 import { artboardDeclarado } from './artboards.ts';
+import { contestarLaSeguridad, type Contestacion } from './la-seguridad-contestada.ts';
 
 /**
  * **Los cuatro destinos se abren, en la aplicacion de verdad** (#58, AC 7).
@@ -24,10 +26,10 @@ import { artboardDeclarado } from './artboards.ts';
  *
  * <h2>Lo que NO entra, y de quien es</h2>
  *
- * **Los permisos.** La de `rentas` contesta a las tres de seguridad con `seguridadMedida.ts` y mide
- * que lo que la cuenta no puede abrir no se abre ni por su hash. Aqui el catalogo **no se filtra
- * todavia**: es #64, y `src/sesion.ts` no tiene sesion que consultar. Cuando llegue, esa mitad se
- * anade aqui.
+ * **Los permisos llegaron con #64, y esa mitad esta aqui.** Como la de `rentas`, esta prueba
+ * contesta las cinco de `/seguridad` con las capturas del backend (`la-seguridad-contestada.ts`) y
+ * mide las dos direcciones: con la cuenta de la captura se recorren los cuatro destinos, y con una
+ * que no lee `conjuntos` **no se abre ninguno, ni por su hash**.
  *
  * **Y desde #63 las hojas SI piden**, asi que aqui hay que decir lo que esta prueba NO dobla: el
  * `fetch`. Las dos lecturas del Panel salen, fallan —no hay backend— y su bloque dibuja el fallo en
@@ -59,17 +61,38 @@ beforeAll(() => {
   })) as typeof matchMedia;
 });
 
+beforeEach(() => {
+  // La cache es de MODULO: sin limpiarla, cada prueba leeria el catalogo que compuso la anterior.
+  CONSULTAS.clear();
+});
+
 afterEach(() => {
   cleanup();
+  vi.unstubAllGlobals();
   document.documentElement.removeAttribute('data-tema');
   document.documentElement.removeAttribute('data-modo');
   window.location.hash = '';
 });
 
-/** Monta la aplicacion con el hash ya puesto, que es como se llega por un enlace. */
-function abrir(slug: string): void {
+/**
+ * Monta la aplicacion con el hash ya puesto, que es como se llega por un enlace, y espera a que el
+ * catalogo este compuesto: hasta entonces no hay armazon (#64).
+ */
+async function abrir(
+  slug: string,
+  seguridad: Parameters<typeof contestarLaSeguridad>[0] = {},
+): Promise<void> {
   window.location.hash = `#/${slug}`;
+  contestarLaSeguridad(seguridad);
   render(<Aplicacion />);
+  // O el armazon, o la espera diciendo por que no lo hay; «averiguando» todavia no es ninguna.
+  await vi.waitFor(() => {
+    expect(
+      document.querySelector(
+        '[data-slot="barra-global"], [data-slot="espera-del-catalogo"]:not([data-estado="pidiendo"])',
+      ),
+    ).not.toBeNull();
+  });
 }
 
 /**
@@ -102,8 +125,8 @@ describe('los cuatro destinos se recorren, en la aplicacion montada', () => {
     expect(DESTINOS).toHaveLength(cuentas?.hojas ?? 0);
   });
 
-  it.each(DESTINOS)('«$destino.clave» — $destino.rotulo', ({ destino }) => {
-    abrir(destino.slug ?? destino.clave);
+  it.each(DESTINOS)('«$destino.clave» — $destino.rotulo', async ({ destino }) => {
+    await abrir(destino.slug ?? destino.clave);
     const definicion = pantallaDe(destino.clave as ClaveDeHoja);
 
     expect(
@@ -122,30 +145,30 @@ describe('los cuatro destinos se recorren, en la aplicacion montada', () => {
     }
   });
 
-  it('un hash que no es de ningun destino NO abre una pantalla, y el armazon LO DICE', () => {
+  it('un hash que no es de ningun destino NO abre una pantalla, y el armazon LO DICE', async () => {
     // La otra direccion. Un enrutador que cayera en la primera pantalla ante cualquier hash
     // desconocido pasaria las cuatro de arriba y ofreceria pantallas que nadie pidio.
-    abrir('no-existe-este-destino');
+    await abrir('no-existe-este-destino');
     // Se mira el titulo de un bloque de VERDAD y no «cualquier h2»: el armazon usa un h2 para su
     // propio estado vacio, y prohibirlos todos mediria el marco en vez de la pantalla.
     expect(screen.queryByRole('heading', { level: 2, name: 'Estado del ejercicio' })).toBeNull();
     expect(elArmazonLoDice()).toBe(true);
   });
 
-  it('y la clave con el prefijo del modulo tampoco abre: el slug es el del artboard', () => {
+  it('y la clave con el prefijo del modulo tampoco abre: el slug es el del artboard', async () => {
     // `#/nor-panel` es la CLAVE, no el slug. Sin esta prueba, un catalogo que no declarara `slug`
     // pasaria el recorrido de arriba —`destino.slug ?? destino.clave` caeria en la clave— y los
     // enlaces de la barra de direcciones serian otros.
-    abrir('nor-panel');
+    await abrir('nor-panel');
     expect(screen.queryByRole('heading', { level: 1, name: 'Panel' })).toBeNull();
     expect(elArmazonLoDice()).toBe(true);
   });
 
-  it('el modulo del destino abierto viene YA desplegado, con sus cuatro hojas', () => {
+  it('el modulo del destino abierto viene YA desplegado, con sus cuatro hojas', async () => {
     // Abrir por hash tiene que desplegar su modulo: si no, quien llega por un enlace ve su pantalla
     // y **el arbol cerrado**, sin pista de donde esta. Y por eso no se pulsa nada aqui — pulsar el
     // modulo lo CERRARIA.
-    abrir('panel');
+    await abrir('panel');
     const modulo = CATALOGO[0];
     if (modulo === undefined) throw new Error('el catalogo vino vacio');
     expect(
@@ -160,14 +183,46 @@ describe('los cuatro destinos se recorren, en la aplicacion montada', () => {
     }
   });
 
-  it('y desde una hoja se llega a otra pulsando en el arbol', () => {
+  it('y desde una hoja se llega a otra pulsando en el arbol', async () => {
     // El recorrido de arriba llega por el hash, que es como se llega desde fuera. Esta mide el
     // camino de dentro, que es el que usa quien ya esta trabajando — y es ademas el que hace que
     // una hoja se sustituya por otra en el mismo sitio, que es de lo que habla
     // `la-hoja-no-hereda-lo-tecleado`.
-    abrir('panel');
+    await abrir('panel');
     fireEvent.click(screen.getByRole('button', { name: 'Ediciones' }));
     expect(screen.getByRole('heading', { level: 1, name: 'Ediciones' })).toBeTruthy();
     expect(screen.queryByRole('heading', { level: 1, name: 'Panel' })).toBeNull();
+  });
+});
+
+/**
+ * **La mitad de los permisos** (#64, AC 2): lo que la cuenta no puede abrir no se ofrece, y **no se
+ * abre ni por su hash** — el armazon ni se monta, y lo que se lee es por que.
+ *
+ * Por modulo y no por hoja: una cuenta que solo lee `parametros` no abre NINGUNA de las cuatro,
+ * aunque el estado del ejercicio del Panel se lea con `SESION_PROPIA`.
+ */
+describe('y lo que la cuenta NO puede abrir no se abre, ni por su hash', () => {
+  const NO_PUEDE: Readonly<Record<string, Contestacion>> = {
+    'solo lee `parametros`': { estado: 200, cuerpo: { parametros: ['lectura'] } },
+    'no lee nada': { estado: 200, cuerpo: {} },
+  };
+
+  it.each(Object.entries(NO_PUEDE))('una cuenta que %s', async (_, permisos) => {
+    for (const destino of DESTINOS) {
+      cleanup();
+      CONSULTAS.clear();
+      await abrir(destino.destino.slug ?? destino.destino.clave, {
+        'GET /seguridad/sesion/permisos': permisos,
+      });
+      expect(
+        screen.queryByRole('heading', { level: 1, name: destino.destino.rotulo }),
+        `«${destino.destino.clave}» se abrio por su hash a una cuenta que no puede`,
+      ).toBeNull();
+      expect(document.querySelector('[data-slot="barra-global"]')).toBeNull();
+      expect(
+        document.querySelector('[data-slot="espera-del-catalogo"]')?.getAttribute('data-estado'),
+      ).toBe('sin-permiso');
+    }
   });
 });

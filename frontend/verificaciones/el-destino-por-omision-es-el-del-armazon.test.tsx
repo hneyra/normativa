@@ -13,7 +13,13 @@ import { render, screen } from '@testing-library/react';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import { CATALOGO } from '../src/catalogo.ts';
-import { CLAVE_DEL_PANEL, CUENTA, DESTINO_POR_OMISION, SLUG_DEL_PANEL } from '../src/sesion.ts';
+import {
+  CLAVE_DEL_PANEL,
+  DESTINO_POR_OMISION,
+  SLUG_DEL_PANEL,
+  cuentaDe,
+  entidadDe,
+} from '../src/sesion.ts';
 
 /**
  * **El `destinoPorOmision` de la puerta ES el hash con que el armazon abre el Panel** (#57, AC 3).
@@ -98,9 +104,9 @@ function montarEn(hash: string) {
   render(
     <Armazon
       titulo="Normativa"
-      entidad="Sin sesión"
+      entidad={entidadDe({ estado: 'pidiendo' })}
       catalogo={CATALOGO_DE_PRUEBA}
-      cuenta={CUENTA}
+      cuenta={cuentaDe({ estado: 'pidiendo' })}
       opcionesDeSesion={[]}
       pantalla={(hoja) => {
         abierta = hoja;

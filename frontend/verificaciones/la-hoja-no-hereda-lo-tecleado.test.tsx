@@ -5,6 +5,9 @@ import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import type { ClaveDeHoja } from '../src/pantallas/arbol.ts';
 import { crearPantalla } from '../src/pantallas/index.ts';
 import type { Pantalla } from '../src/pantallas/tipos.ts';
+// La barra de la prueba es la de «mientras se pide»: las mismas frases que la aplicacion, y ningun
+// nombre de persona ni de municipalidad escrito aqui (G2, #64).
+import { cuentaDe, entidadDe } from '../src/sesion.ts';
 
 /**
  * **Lo tecleado en una hoja no aparece en la siguiente** (#58, AC 5).
@@ -197,9 +200,9 @@ describe('la hoja no hereda lo tecleado en la anterior', () => {
     render(
       <Armazon
         titulo="Titulo de la prueba"
-        entidad="Sin sesión"
+        entidad={entidadDe({ estado: 'pidiendo' })}
         catalogo={CATALOGO_DE_DOS}
-        cuenta={{ nombre: 'Sin sesión', iniciales: '··' }}
+        cuenta={cuentaDe({ estado: 'pidiendo' })}
         opcionesDeSesion={[]}
         pantalla={pantalla}
       />,

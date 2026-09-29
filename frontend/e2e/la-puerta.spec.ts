@@ -2,7 +2,13 @@ import { createHash } from 'node:crypto';
 
 import { expect, test, type Page } from '@playwright/test';
 
-import { AUTORIZACION, CANJE, DESCUBRIMIENTO, REALM_POR_OMISION } from './instalacion.ts';
+import {
+  AUTORIZACION,
+  CANJE,
+  DESCUBRIMIENTO,
+  REALM_POR_OMISION,
+  conLaSeguridadMedida,
+} from './instalacion.ts';
 
 /**
  * **La puerta de identidad, en un navegador de verdad y SIN emisor falso** (#61, AC 3).
@@ -136,6 +142,9 @@ test('tras el canje el token NO aparece en localStorage ni en sessionStorage', a
     }),
   );
 
+  // El armazon no se monta hasta saber que puede abrir la cuenta (#64): se contestan las cinco de
+  // `/seguridad` con las capturas, como en el resto del arnes.
+  await conLaSeguridadMedida(page);
   await page.goto(`./?code=un-codigo-cualquiera&state=${encodeURIComponent(estado ?? '')}`);
   await page.locator('[data-slot="barra-global"]').first().waitFor({ timeout: 15_000 });
 

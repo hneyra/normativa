@@ -14,6 +14,9 @@
     // que devuelve otra cosa de la que se lee no lo dice nadie hasta que el camino sale rojo por
     // el motivo equivocado.
     "e2e/**/*.ts",
+    // La siembra de desarrollo y sus capturas (#64): fuera de `src/` porque no se sirven, pero se
+    // compilan igual — un `setQueryData` con la forma equivocada es un menu vacio en `yarn dev`.
+    "desarrollo/**/*.ts",
     "eslint.prohibiciones.mjs",
     "vitest.setup.ts",
     "*.config.ts"

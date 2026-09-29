@@ -1,9 +1,10 @@
-import { crearIdentidad } from '@kamayuk/sesion';
+import { crearIdentidad, peldanoDe } from '@kamayuk/sesion';
 import { ubicacionDe, type CuentaEnLaBarra, type OpcionDeSesion } from '@kamayuk/shell';
 import { createElement, type ReactNode } from 'react';
 
 import { configuracion } from './configuracion.ts';
-import { alCambiarElIdioma, t } from './i18n/i18n.ts';
+import type { MunicipalidadResource, SesionResource } from './datos/lecturas.ts';
+import { t } from './i18n/i18n.ts';
 import {
   abrirLasPreferencias,
   cerrarLasPreferencias,
@@ -36,17 +37,26 @@ import { porQueNoSeEntro } from './puerta/falla.ts';
  * Distrital de Catacaos» en su marco hasta su I-1, y la habria visto cualquier municipalidad que no
  * fuera Catacaos sin que ninguna prueba sobre los valores lo notara.
  *
- * <h2>Lo que este issue SI enciende, y lo que deja para #54 y #64</h2>
+ * <h2>De donde sale cada una desde #64: de `/seguridad`, y no de los claims</h2>
  *
- * Enciende la puerta entera —la ida, el canje, los dos frenos, salir— y las cuatro opciones del
- * menu de sesion. **No** enciende el nombre de quien entro ni el de la municipalidad, y no por
- * falta de ganas: `Identidad` guarda el `id_token` y **no publica sus claims** —solo lo usa para
- * `id_token_hint` al salir—, asi que la interfaz no puede leer de el ni un nombre. Esta pedido en
- * la libreria, con la leccion citada, en
- * [`kamayuk-lib`#70](https://github.com/hneyra/kamayuk-lib/issues/70) (AC 8 de este issue), y lo
- * que lo cierra de verdad aqui es `GET /seguridad/sesion` (#54), leido por #64.
+ * #57 encendio la puerta entera —la ida, el canje, los dos frenos, salir— y las cuatro opciones del
+ * menu, y dejo la cuenta y la entidad como dos marcadores porque `Identidad` no publicaba los claims
+ * del `id_token`. **Eso ya no es asi**: [`kamayuk-lib`#70](https://github.com/hneyra/kamayuk-lib/issues/70)
+ * se cerro y `identidad.quienEntro()` devuelve `{ nombre, usuario, municipalidad }` leidos de ese
+ * token. #64 lee las dos de la API igualmente, por dos motivos medidos:
  *
- * Hasta entonces los dos marcadores de abajo, que **no son el nombre de nadie**.
+ *   · **la entidad no esta en el token**: el claim `municipalidad_id` es un IDENTIFICADOR, y el
+ *     nombre de la municipalidad solo lo publica `GET /seguridad/sesion/municipalidad`, que lo
+ *     resuelve por su UBIGEO (G2). Esa lectura hace falta de todos modos;
+ *   · **la cuenta, la del backend y no la del emisor**: `GET /seguridad/sesion` resuelve la cuenta
+ *     del token a SU fila de `usuario` en esta municipalidad —la misma cuenta son dos filas en dos
+ *     municipalidades, medido en `LecturasDeSeguridadDePuntaAPuntaTest`— y contesta 404 si no es
+ *     usuario de aqui. El claim `name` diria un nombre aunque la cuenta no tuviera alta.
+ *
+ * Aqui vive COMO se dicen —{@link cuentaDe} y {@link entidadDe}, funciones puras— y no QUIEN las
+ * pide: lo que las pide usa el cliente de la API, y el cliente lee `identidad` de este archivo al
+ * cargarse. El ciclo, y lo que costaba, esta medido en `src/datos/useCatalogoPermitido.ts`, que es
+ * la costura por donde entran.
  */
 
 /** La clave del destino del Panel en el catalogo de #58. Ver {@link DESTINO_POR_OMISION}. */
@@ -116,21 +126,18 @@ export const identidad = crearIdentidad({
  * su `t()` obligaria a acordarse de listarlo a mano, y el olvido no produce ningun rojo.
  *
  * **Ninguna nombra a una municipalidad ni a una persona**, que es la decision G2 (#52): eso es dato
- * de la sesion y no hay de donde leerlo todavia. Lo que hay son dos marcadores que dicen que no lo
- * hay.
+ * de la sesion y se PIDE. Lo que hay son las dos frases de mientras se pide, que dicen eso mismo.
  */
 export const FRASES_DE_LA_SESION = {
   /**
-   * La entidad de la barra: la municipalidad de la sesion.
+   * La entidad de la barra **mientras se pide** la municipalidad de la sesion.
    *
-   * Hoy no hay de donde sacarla —`GET /seguridad/sesion/municipalidad` es de #54 y leerlo es de
-   * #64—, asi que dice que no la hay. **No es el nombre de ninguna municipalidad**, y ese es el
-   * punto: el dia que alguien escriba uno aqui, la interfaz de las veinte instalaciones dira el de
-   * la primera.
+   * **No es el nombre de ninguna municipalidad**, y ese es el punto: el dia que alguien escriba uno
+   * aqui, la interfaz de las veinte instalaciones dira el de la primera.
    */
-  entidad: 'Sin sesión',
-  /** Y quien entro. Misma cadena y misma clave, por el mismo motivo. */
-  cuenta: 'Sin sesión',
+  averiguandoLaEntidad: 'Averiguando la municipalidad de la sesión…',
+  /** Y quien entro, mientras se pide. Por el mismo motivo. */
+  averiguandoLaCuenta: 'Averiguando quién entró…',
   miPerfil: 'Mi perfil',
   cambiarLaContrasena: 'Cambiar la contrasena',
   preferencias: 'Preferencias',
@@ -138,38 +145,94 @@ export const FRASES_DE_LA_SESION = {
 } as const;
 
 /**
- * La entidad de la barra, ya traducida. Ver {@link FRASES_DE_LA_SESION.entidad}.
+ * **Como esta una de las dos lecturas de la barra**: pidiendo, fallo o lista.
  *
- * `let` por lo mismo que `TITULO` en `src/marca.ts`: `src/aplicacion.tsx` la consume como una cadena
- * suelta y una cadena exportada no se traduce al leerla. Se rehace al cambiar el idioma.
+ * Es la forma minima de lo que TanStack Query sabe de una consulta, y se declara aqui y no se
+ * importa de alli: {@link cuentaDe} y {@link entidadDe} son funciones puras, se prueban sin montar
+ * nada, y no tienen por que saber quien pide.
  */
-export let ENTIDAD: string = FRASES_DE_LA_SESION.entidad;
-
-alCambiarElIdioma(() => {
-  ENTIDAD = t(FRASES_DE_LA_SESION.entidad);
-});
+export type LecturaDeLaSesion<T> =
+  | { readonly estado: 'pidiendo' }
+  | { readonly estado: 'fallo'; readonly error: unknown }
+  | { readonly estado: 'lista'; readonly dato: T };
 
 /**
- * Quien entro. Hoy, nadie que la interfaz pueda nombrar.
+ * El circulo de la cuenta cuando **no hay de quien** dibujar iniciales: mientras se pide, o si fallo.
  *
- * No es que no haya sesion —con la puerta encendida la hay— sino que **no hay de donde leer el
- * nombre**: `Identidad` no publica los claims del `id_token` (`kamayuk-lib`#70) y
- * `GET /seguridad/sesion` es de #54.
- *
- * `iniciales` son dos puntos medios y no dos letras: cualquier par de letras seria las iniciales de
- * alguien, y el circulo de la barra las dibuja como si fueran las suyas. La V6 escribia
- * «H. Neyra Alama» (`c01fe9a:src/marco/BarraGlobal.tsx:70-76`), y eso no vuelve.
- *
- * `nombre` es un CAPTADOR desde #60: aqui si se puede, porque lo que `aplicacion.tsx` pasa es el
- * objeto y quien lee la propiedad es el marco, en la pintada. `iniciales` no pasa por `t()` y no
- * debe: dos puntos medios no son una palabra, y traducirlos no significa nada.
+ * Dos puntos medios y no dos letras: cualquier par de letras seria las iniciales de alguien, y el
+ * circulo las dibuja como si fueran las suyas. La V6 escribia «H. Neyra Alama»
+ * (`c01fe9a:src/marco/BarraGlobal.tsx:70-76`), y eso no vuelve. No pasa por `t()` y no debe: dos
+ * puntos medios no son una palabra.
  */
-export const CUENTA: CuentaEnLaBarra = {
-  get nombre() {
-    return t(FRASES_DE_LA_SESION.cuenta);
-  },
-  iniciales: '··',
-};
+export const SIN_INICIALES = '··';
+
+/**
+ * Las dos letras del circulo: la primera de las dos primeras palabras del nombre, en mayuscula.
+ *
+ * Nombre y primer apellido, que es como `rentas` hacia `JC` de «J. Cardenas Vega». Un nombre de una
+ * sola palabra da una letra, y uno vacio, {@link SIN_INICIALES}. (El ejemplo no es el de la captura
+ * a proposito: lo que viaja en el `.map` lleva los comentarios, y la captura no viaja.)
+ * `Array.from` y no `[0]`: una letra con tilde puede llegar descompuesta en dos unidades de codigo.
+ */
+export function inicialesDe(nombre: string): string {
+  const letras = nombre
+    .trim()
+    .split(/\s+/)
+    .filter((palabra) => palabra !== '')
+    .slice(0, 2)
+    .map((palabra) => (Array.from(palabra)[0] ?? '').toLocaleUpperCase('es'));
+  return letras.join('') === '' ? SIN_INICIALES : letras.join('');
+}
+
+/**
+ * **Quien entro, como lo dibuja la barra**, a partir de `GET /seguridad/sesion` (#64, AC 5).
+ *
+ *   · **pidiendo** — la frase de mientras se pide, como CAPTADOR: quien lee la propiedad es el
+ *     marco al pintar, y resolverla aqui la congelaria en el idioma del arranque;
+ *   · **fallo** — lo que dice la escalera de `@kamayuk/sesion`, su titulo y su detalle, **sin
+ *     traduccion paralela** (la misma regla que las hojas, #63). Nunca un nombre de ejemplo;
+ *   · **lista** — el nombre de la fila de `usuario` y, debajo, la cuenta con que se entro. Los dos
+ *     son DATO y no pasan por `t()`: un nombre de persona no se traduce.
+ */
+export function cuentaDe(quien: LecturaDeLaSesion<SesionResource>): CuentaEnLaBarra {
+  switch (quien.estado) {
+    case 'pidiendo':
+      return {
+        get nombre() {
+          return t(FRASES_DE_LA_SESION.averiguandoLaCuenta);
+        },
+        iniciales: SIN_INICIALES,
+      };
+    case 'fallo': {
+      const peldano = peldanoDe(quien.error);
+      return { nombre: peldano.titulo, iniciales: SIN_INICIALES, nota: peldano.detalle };
+    }
+    case 'lista': {
+      // Un nombre en blanco no es un nombre: se dice la cuenta, que el token siempre trae.
+      const nombre = quien.dato.nombre.trim() === '' ? quien.dato.cuenta : quien.dato.nombre;
+      return { nombre, iniciales: inicialesDe(nombre), nota: quien.dato.cuenta };
+    }
+  }
+}
+
+/**
+ * **La entidad de la barra**: la municipalidad de la sesion, de `GET /seguridad/sesion/municipalidad`
+ * (#64, AC 5, y G2 de #52). Nunca un literal.
+ *
+ * Mientras se pide, la frase que lo dice; si fallo, el titulo del peldano de la escalera —«si la
+ * ruta falla, la barra lo dice con la escalera de errores y no pone un nombre de ejemplo», que es
+ * lo que G2 fija—; y lista, el nombre que el backend resolvio por su UBIGEO.
+ */
+export function entidadDe(donde: LecturaDeLaSesion<MunicipalidadResource>): string {
+  switch (donde.estado) {
+    case 'pidiendo':
+      return t(FRASES_DE_LA_SESION.averiguandoLaEntidad);
+    case 'fallo':
+      return peldanoDe(donde.error).titulo;
+    case 'lista':
+      return donde.dato.nombre;
+  }
+}
 
 /**
  * **Las cuatro opciones del menu de sesion**, las mismas y en el mismo orden que

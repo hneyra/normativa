@@ -9,6 +9,7 @@
   },
   "scripts": {
     "dev": "vite",
+    "dev:con-plataforma": "VITE_KAMAYUK_SIN_PLATAFORMA=false vite",
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint .",
@@ -17,6 +18,7 @@
     "test:watch": "vitest",
     "i18n": "i18next-cli status",
     "i18n:regenerar": "KAMAYUK_REGENERAR=1 vitest run verificaciones/el-locale-esta-completo.test.ts",
+    "capturas:regenerar": "KAMAYUK_REGENERAR=1 vitest run verificaciones/las-capturas-son-las-de-docs.test.ts",
     "verificar": "yarn lint && yarn typecheck && yarn i18n && yarn test",
     "e2e": "node puerto-del-arnes.mjs && playwright test",
     "e2e:navegador": "playwright install chromium"

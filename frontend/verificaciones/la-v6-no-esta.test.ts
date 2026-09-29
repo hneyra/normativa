@@ -123,6 +123,17 @@ const ESTA: readonly string[] = [
   'src/puerta/AvisoDeLaPuerta.tsx',
   'src/preferencias/cajon.ts',
   'src/preferencias/MandoDeTema.tsx',
+  // Lo que #64 puso en su sitio: el menu compuesto con las lecturas de `/seguridad`, lo que se ve
+  // mientras tanto, y la siembra de `yarn dev` con sus capturas GENERADAS de `docs/50-api/`. La V6
+  // no filtraba nada —`c01fe9a:src/marco/arbol.ts` dibujaba el producto entero— y su cuenta era un
+  // literal; ninguna de estas piezas se llama como una suya.
+  'src/permisos.ts',
+  'src/datos/useCatalogoPermitido.ts',
+  'src/datos/EsperaDelCatalogo.tsx',
+  'src/datos/seguridadMedida.ts',
+  '.env.development',
+  'desarrollo/sembrarElCatalogo.ts',
+  'desarrollo/sesionMedida.ts',
 ];
 
 /**

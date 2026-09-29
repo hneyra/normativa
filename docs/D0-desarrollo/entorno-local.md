@@ -175,6 +175,36 @@ cd ../infrastructure/despliegue && ./levantar-todo.sh normativa
 > se lee como desactualizada — se lee como instrucciones, y manda a `infrastructure` a buscar una
 > forma que ya está aquí.
 
+### La interfaz: dos niveles, y el primero no necesita nada levantado
+
+Desde [#64](https://github.com/hneyra/normativa/issues/64) el menú de `normativa-web` se compone
+con lo que contestan `GET /seguridad/{modulos,accesos}` y `/seguridad/sesion/permisos`: sin backend
+no hay ni un destino que abrir, y la pantalla dice «No se pudo saber qué módulos puede abrir esta
+cuenta…». Para **mirar** la interfaz eso no hace falta, y por eso hay dos niveles:
+
+| Orden | Qué levanta | Qué se ve |
+|---|---|---|
+| `yarn dev` | Nada más que Vite | Las cuatro hojas. El catálogo, la cuenta y la municipalidad salen **sembrados** de las capturas de `docs/50-api/seguridad/`, y la puerta de identidad se esquiva. Las hojas piden sus datos y **fallan de verdad**: no se siembra ninguno |
+| `yarn dev:con-plataforma` | Vite contra la plataforma (forma C) y el backend | Lo que conteste el backend, con la puerta de Keycloak |
+
+Lo decide la bandera `VITE_KAMAYUK_SIN_PLATAFORMA`: la enciende `frontend/.env.development` y la
+apaga `yarn dev:con-plataforma`. La consola lo avisa con un `console.warn` cada vez que siembra,
+porque una interfaz que se ve entera sin nada levantado se confunde fácil con «el backend contestó».
+
+**No viaja a la imagen**, y hay tres vallas: `import.meta.env.DEV` delante de la condición en
+`frontend/src/arranque.ts` —en `yarn build` se pliega y el `import()` de la siembra se cae del
+paquete—, `ENV VITE_KAMAYUK_SIN_PLATAFORMA=false` en el `Dockerfile`, y `.env.*` en el
+`.dockerignore`. Que no viaja lo mide `e2e/la-siembra-no-viaja-al-bundle.spec.ts` sobre el `dist/`.
+
+Las capturas se **generan**, no se escriben: cuando el backend cambia la forma de una de las cinco
+lecturas, `LecturasDeSeguridadDePuntaAPuntaTest` regenera su JSON y en el frontend
+
+```bash
+cd frontend && yarn capturas:regenerar
+```
+
+reescribe `src/datos/seguridadMedida.ts` y `desarrollo/sesionMedida.ts`.
+
 ## 4. Puertos
 
 | Puerto | Quién | Cuándo |
