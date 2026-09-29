@@ -160,13 +160,24 @@ class LecturasDeSeguridadDePuntaAPuntaTest {
 
         // Y lo que en produccion llega por el buzon de `identidad`, escrito con SQL: lo que esta
         // clase mide es la LECTURA, y montar el buzon para poblar la copia mediria otra cosa.
+        //
+        // El grupo de la A lee LAS DOS opciones del catalogo, y no solo `parametros` (#64): es lo
+        // que tiene en produccion el grupo de administracion, al que la implantacion de `identidad`
+        // fija los siete privilegios sobre cada opcion (ADR-0043 §2). Con `parametros` a secas la
+        // captura describia una cuenta que no puede abrir NADA de la interfaz —el menu filtra por
+        // `conjuntos`, del modulo NORMATIVA—, y la siembra de desarrollo que se hace con ella
+        // dejaria `yarn dev` sin un solo destino que recorrer. La cuenta que solo lee `parametros`
+        // la prueba la interfaz por su cuenta, quitando `conjuntos` de esta misma matriz.
         TransactionTemplate transaccion = new TransactionTemplate(gestor);
         enLa(
                 municipalidadA,
                 transaccion,
                 () -> {
                     usuario(jdbc, "Juan Perez Castillo");
-                    grupo(jdbc, "Parametros del sistema", Map.of("parametros", "lectura"));
+                    grupo(
+                            jdbc,
+                            "Parametros del sistema",
+                            Map.of("conjuntos", "lectura", "parametros", "lectura"));
                 });
         enLa(
                 municipalidadB,
@@ -291,9 +302,10 @@ class LecturasDeSeguridadDePuntaAPuntaTest {
         void losPermisos() throws Exception {
             assertThat(leer(municipalidadA, PERMISOS))
                     .as(
-                            "«jperez» de A solo tiene LECTURA sobre parametros; los permisos de"
-                                    + " «jperez» de B —la opcion de la B, y la impresion— no son suyos")
-                    .isEqualTo("{\"parametros\":[\"lectura\"]}");
+                            "«jperez» de A solo tiene LECTURA sobre las dos opciones de este sistema,"
+                                    + " en orden de codigo; los permisos de «jperez» de B —la opcion"
+                                    + " de la B, y la impresion— no son suyos")
+                    .isEqualTo("{\"conjuntos\":[\"lectura\"],\"parametros\":[\"lectura\"]}");
             assertThat(leer(municipalidadB, PERMISOS))
                     .isEqualTo(
                             "{\"parametros\":[\"lectura\",\"impresion\"],"
