@@ -10,6 +10,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Map;
+import org.flywaydb.core.api.FlywayException;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -129,7 +130,7 @@ class LaV3SobreUnConjuntoSelladoTest {
                             motor.url(),
                             BaseDeDatosDePrueba.OWNER,
                             claves.get(BaseDeDatosDePrueba.OWNER));
-        } catch (RuntimeException | SQLException fallo) {
+        } catch (FlywayException | SQLException fallo) {
             falloDeLaV3 = fallo;
         }
     }

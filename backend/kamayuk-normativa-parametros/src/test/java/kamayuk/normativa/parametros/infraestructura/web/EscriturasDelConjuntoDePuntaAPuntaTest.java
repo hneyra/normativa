@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -25,7 +26,9 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 import kamayuk.normativa.auditoria.AuditoriaJdbc;
 import kamayuk.normativa.autorizacion.ComprobadorDeAcceso;
 import kamayuk.normativa.autorizacion.GuardiaDeAcceso;
@@ -840,7 +843,10 @@ class EscriturasDelConjuntoDePuntaAPuntaTest {
     private static void esperar(CyclicBarrier barrera) {
         try {
             barrera.await(20, TimeUnit.SECONDS);
-        } catch (Exception noLlego) {
+        } catch (InterruptedException interrumpido) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException(interrumpido);
+        } catch (BrokenBarrierException | TimeoutException noLlego) {
             throw new IllegalStateException(
                     "El otro hilo no llego a la pausa: la carrera no se produjo", noLlego);
         }
@@ -981,16 +987,9 @@ class EscriturasDelConjuntoDePuntaAPuntaTest {
             despues.clear();
         }
 
-        private <T> T en(String metodo, Callable<T> llamada) {
+        private <T> T en(String metodo, Supplier<T> llamada) {
             Optional.ofNullable(antes.get(metodo)).ifPresent(Pausa::pasar);
-            T resultado;
-            try {
-                resultado = llamada.call();
-            } catch (RuntimeException propia) {
-                throw propia;
-            } catch (Exception otra) {
-                throw new IllegalStateException(otra);
-            }
+            T resultado = llamada.get();
             Optional.ofNullable(despues.get(metodo)).ifPresent(Pausa::pasar);
             return resultado;
         }
