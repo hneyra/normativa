@@ -14,6 +14,10 @@ import { EJERCICIO_DE_TRABAJO } from './ejercicio.ts';
  * Asi que las cuatro operaciones publicadas estan declaradas. Lo que queda por conectar es una hoja
  * —Ediciones (#65)— y una forma de dibujar —las tablas de los cuadros (#66)—, no una operacion.
  *
+ * **Y desde #64, las cinco de `/seguridad`** que publico #54 —los modulos, los accesos, la matriz de
+ * permisos, quien es la sesion y de que municipalidad—: con las tres primeras se compone el menu, y
+ * con las dos ultimas la barra. Van al final del archivo, con sus testigos.
+ *
  * <h2>Por que una peticion es un DATO y no una cadena compuesta al vuelo</h2>
  *
  * Porque el borde del backend rechaza con **422 `VALIDACION`** todo parametro que la operacion no
@@ -689,6 +693,164 @@ export const CAMPOS_DEL_CONTENIDO = {
   parametros: [],
 } satisfies Record<keyof ContenidoDelConjuntoResource, unknown>;
 
+/* ── Las cinco lecturas de `/seguridad` (#64) ──────────────────────────────────────────────── */
+
+/**
+ * Un modulo del catalogo de seguridad — `Recursos.ModuloResource` de `GET /seguridad/modulos`.
+ *
+ * `orden` decide en que orden se ensenan, y lo decide el BACKEND: hoy los dos modulos de este
+ * sistema llegan con `orden: 0`, y el orden estable de la lista es el que queda.
+ */
+export interface ModuloDelSistema {
+  readonly id: number;
+  readonly codigo: string;
+  readonly nombre: string;
+  readonly orden: number;
+  readonly activo: boolean;
+}
+
+/** Las llaves de un modulo, como dato. Ver «Los TESTIGOS». */
+export const CAMPOS_DEL_MODULO = {
+  id: 0,
+  codigo: '',
+  nombre: '',
+  orden: 0,
+  activo: false,
+} satisfies Record<keyof ModuloDelSistema, unknown>;
+
+/**
+ * Una opcion del catalogo — `Recursos.AccesoResource` de `GET /seguridad/accesos`.
+ *
+ * **`moduloId` es la unica relacion que el backend publica entre un permiso y un modulo**, y por
+ * eso hace falta pedir los accesos: la matriz de permisos es una bolsa de codigos planos
+ * —`conjuntos`, `parametros`— que no dice de que rama del arbol es cada uno.
+ */
+export interface AccesoDelSistema {
+  readonly id: number;
+  readonly moduloId: number;
+  readonly tipo: string;
+  readonly codigo: string;
+  readonly nombre: string;
+  readonly activo: boolean;
+}
+
+/** Las llaves de un acceso, como dato. */
+export const CAMPOS_DEL_ACCESO = {
+  id: 0,
+  moduloId: 0,
+  tipo: '',
+  codigo: '',
+  nombre: '',
+  activo: false,
+} satisfies Record<keyof AccesoDelSistema, unknown>;
+
+/**
+ * Lo que la cuenta puede, como la contesta `GET /seguridad/sesion/permisos`:
+ * `{"<opcion>": ["lectura", …]}`, en minuscula y solo con las opciones sobre las que tiene algo.
+ *
+ * Es un mapa y no un `record` con campos, y por eso el contrato lo publica como `{"<codigo>":
+ * ["texto"]}`: no hay testigo de campos que comparar, y lo que se compara es esa forma.
+ */
+export type PermisosDeLaSesion = Readonly<Record<string, readonly string[]>>;
+
+/**
+ * Quien es la sesion — `Recursos.IdentidadResource` de `GET /seguridad/sesion`.
+ *
+ * `ejercicioDeTrabajo` llega **nulo siempre** en este sistema: `sesion` es una tabla que nadie
+ * escribe (`SesionController.java`, AC-5 de #54). No es un cero.
+ */
+export interface SesionResource {
+  readonly usuarioId: number;
+  readonly cuenta: string;
+  readonly nombre: string;
+  readonly ejercicioDeTrabajo: number | null;
+}
+
+/** Las llaves de la sesion, como dato. */
+export const CAMPOS_DE_LA_SESION = {
+  usuarioId: 0,
+  cuenta: '',
+  nombre: '',
+  ejercicioDeTrabajo: null,
+} satisfies Record<keyof SesionResource, unknown>;
+
+/**
+ * De que municipalidad es la sesion — `Recursos.MunicipalidadResource` de
+ * `GET /seguridad/sesion/municipalidad`.
+ *
+ * Es lo UNICO de donde sale el nombre de la entidad de la barra (G2, #52): el emisor manda en el
+ * token el identificador de la municipalidad, no su nombre.
+ */
+export interface MunicipalidadResource {
+  readonly id: number;
+  readonly ubigeo: string;
+  readonly nombre: string;
+  readonly tipo: string;
+}
+
+/** Las llaves de la municipalidad, como dato. */
+export const CAMPOS_DE_LA_MUNICIPALIDAD = {
+  id: 0,
+  ubigeo: '',
+  nombre: '',
+  tipo: '',
+} satisfies Record<keyof MunicipalidadResource, unknown>;
+
+/**
+ * **Cuantas filas se piden de los dos listados del catalogo: el tope que publica el contrato.**
+ *
+ * Por omision la paginacion da veinte, y el catalogo de este sistema tiene hoy dos modulos y dos
+ * opciones. No se pide lo justo porque lo que no llega **no se ofrece**: un acceso en la pagina
+ * que no se pidio dejaria su modulo fuera del menu sin ningun error. El tope es `tamanoMaximo`, y
+ * la guarda lo cruza contra el contrato de las dos operaciones.
+ */
+export const TAMANO_DEL_CATALOGO = 500;
+
+/**
+ * `GET /seguridad/modulos` — que modulos existen, con que rotulo, en que orden y si estan activos.
+ *
+ * Las cinco de esta seccion van con **`SESION_PROPIA`** (ADR-0043 §3): ninguna exige una opcion
+ * del catalogo, porque exigir `modulos` o `accesos` —que aqui no existen— dejaria el menu vacio
+ * para todo el mundo.
+ */
+export const MODULOS_DEL_SISTEMA: PeticionDeclarada = {
+  operacion: 'GET /seguridad/modulos',
+  parametros: { tamano: String(TAMANO_DEL_CATALOGO) },
+};
+
+/** `GET /seguridad/accesos` — que se puede abrir dentro de cada modulo, con su `moduloId`. */
+export const ACCESOS_DEL_SISTEMA: PeticionDeclarada = {
+  operacion: 'GET /seguridad/accesos',
+  parametros: { tamano: String(TAMANO_DEL_CATALOGO) },
+};
+
+/** `GET /seguridad/sesion/permisos` — que puede esta cuenta, opcion a opcion. */
+export const PERMISOS_DE_LA_SESION: PeticionDeclarada = {
+  operacion: 'GET /seguridad/sesion/permisos',
+  parametros: {},
+};
+
+/** `GET /seguridad/sesion` — quien entro: la cuenta del token, resuelta a su fila de `usuario`. */
+export const QUIEN_ES_LA_SESION: PeticionDeclarada = {
+  operacion: 'GET /seguridad/sesion',
+  parametros: {},
+};
+
+/** `GET /seguridad/sesion/municipalidad` — la municipalidad de la sesion, con su nombre. */
+export const MUNICIPALIDAD_DE_LA_SESION: PeticionDeclarada = {
+  operacion: 'GET /seguridad/sesion/municipalidad',
+  parametros: {},
+};
+
+/** Las cinco, en el orden en que la interfaz las necesita: lo que se puede abrir, y quien y donde. */
+export const LECTURAS_DE_SEGURIDAD: readonly PeticionDeclarada[] = [
+  MODULOS_DEL_SISTEMA,
+  ACCESOS_DEL_SISTEMA,
+  PERMISOS_DE_LA_SESION,
+  QUIEN_ES_LA_SESION,
+  MUNICIPALIDAD_DE_LA_SESION,
+];
+
 /** Las peticiones que este sistema compone hoy. La guarda las recorre una a una. */
 export const PETICIONES: readonly PeticionDeclarada[] = [
   LISTADO_DE_CONJUNTOS,
@@ -697,6 +859,7 @@ export const PETICIONES: readonly PeticionDeclarada[] = [
   ...AMBITOS.map((ambito) => SNAPSHOT_POR_AMBITO[ambito]),
   LISTADO_DE_EDICIONES,
   CONTENIDO_DEL_CONJUNTO,
+  ...LECTURAS_DE_SEGURIDAD,
 ];
 
 /** La consulta de una peticion, o `''`. En el orden en que se declaro: un diff se lee mejor. */

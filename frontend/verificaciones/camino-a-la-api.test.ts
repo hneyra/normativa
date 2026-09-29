@@ -10,7 +10,12 @@ import { describe, expect, it } from 'vitest';
 
 import { EJERCICIO_DE_TRABAJO } from '../src/datos/ejercicio.ts';
 import {
+  ACCESOS_DEL_SISTEMA,
   AMBITOS,
+  CAMPOS_DEL_ACCESO,
+  CAMPOS_DEL_MODULO,
+  CAMPOS_DE_LA_MUNICIPALIDAD,
+  CAMPOS_DE_LA_SESION,
   CAMPOS_DEL_CONJUNTO,
   CAMPOS_DEL_CONJUNTO_VIGENTE,
   CAMPOS_DEL_CONTENIDO,
@@ -35,10 +40,13 @@ import {
   DIRECCION_DEL_LISTADO,
   OPERACION_DE_GUARDAR,
   ESTADO_DEL_EJERCICIO,
+  LECTURAS_DE_SEGURIDAD,
   LISTADO_DE_CONJUNTOS,
+  MODULOS_DEL_SISTEMA,
   ORDEN_DEL_LISTADO,
   PETICIONES,
   SNAPSHOT_POR_AMBITO,
+  TAMANO_DEL_CATALOGO,
   TAMANO_DEL_LISTADO,
   rutaDe,
 } from '../src/datos/lecturas.ts';
@@ -169,9 +177,13 @@ describe('AC 3 — lo que se pide es una operacion del contrato', () => {
     // fundirlos haria que el Panel cambiara de pagina cuando alguien pagina en Ediciones. La
     // cuenta no es el numero de operaciones publicadas sino el de peticiones que este sistema
     // compone.
+    //
+    // **Y cinco mas desde #64**: las de `/seguridad`, con las que se compone el menu y la barra.
+    // Con ellas, las once operaciones publicadas tienen quien las pida.
     expect(PETICIONES.length, '`PETICIONES` esta vacia: esta guarda se quedaria sin sujeto').toBe(
-      2 + 1 + AMBITOS.length + 2,
+      2 + 1 + AMBITOS.length + 2 + LECTURAS_DE_SEGURIDAD.length,
     );
+    expect(LECTURAS_DE_SEGURIDAD).toHaveLength(5);
   });
 
   it.each(PETICIONES.map((p) => p.operacion))('«%s» es una operacion del contrato', (operacion) => {
@@ -302,6 +314,53 @@ describe('AC 3 — todo parametro que se compone lo admite esa operacion', () =>
 });
 
 /* ── 3 — las respuestas, campo a campo ─────────────────────────────────────────────────────── */
+
+describe('#64 — las cinco de `/seguridad`: lo que el menu y la barra leen es lo que se publica', () => {
+  it('los dos listados del catalogo publican la pagina y sus filas, campo a campo', () => {
+    // Un campo que falte en una fila no da error: da `undefined`, y `componer` declararia rota una
+    // respuesta que el backend considera buena — el menu vacio, sin saber por que.
+    const listados = [
+      ['GET /seguridad/modulos', CAMPOS_DEL_MODULO],
+      ['GET /seguridad/accesos', CAMPOS_DEL_ACCESO],
+    ] as const;
+    for (const [operacion, testigo] of listados) {
+      const forma = formas()[operacion] as Record<string, unknown>;
+      expect(Object.keys(forma).sort(), `el envoltorio de «${operacion}»`).toEqual(
+        Object.keys(CAMPOS_DEL_PAGINADO).sort(),
+      );
+      const fila = (forma['contenido'] as readonly unknown[])[0] as object;
+      expect(Object.keys(fila).sort(), `la fila de «${operacion}»`).toEqual(Object.keys(testigo).sort());
+    }
+  });
+
+  it('y piden el TOPE de la pagina: lo que no llega no se ofrece, y no da ningun error', () => {
+    for (const peticion of [MODULOS_DEL_SISTEMA, ACCESOS_DEL_SISTEMA]) {
+      const tope = parametros()[peticion.operacion]?.['tamanoMaximo'];
+      expect(typeof tope, `el contrato no publica \`tamanoMaximo\` para «${peticion.operacion}»`).toBe(
+        'number',
+      );
+      expect(TAMANO_DEL_CATALOGO).toBeLessThanOrEqual(tope as number);
+      expect(peticion.parametros['tamano']).toBe(String(TAMANO_DEL_CATALOGO));
+    }
+    expect(rutaDe(MODULOS_DEL_SISTEMA)).toBe(`/seguridad/modulos?tamano=${String(TAMANO_DEL_CATALOGO)}`);
+  });
+
+  it('quien es la sesion y de que municipalidad: los campos que la barra lee', () => {
+    expect(Object.keys(formas()['GET /seguridad/sesion'] as object).sort()).toEqual(
+      Object.keys(CAMPOS_DE_LA_SESION).sort(),
+    );
+    expect(Object.keys(formas()['GET /seguridad/sesion/municipalidad'] as object).sort()).toEqual(
+      Object.keys(CAMPOS_DE_LA_MUNICIPALIDAD).sort(),
+    );
+  });
+
+  it('y la matriz de permisos es un MAPA de listas de texto, no un objeto con campos', () => {
+    // `componer` recorre sus llaves y mira si la lista trae «lectura». Si el contrato la publicara
+    // como un `record` —o como «objeto» a secas, que es lo que le paso a la de `rentas`— esa
+    // lectura no tendria de que fiarse.
+    expect(formas()['GET /seguridad/sesion/permisos']).toEqual({ '<codigo>': ['texto'] });
+  });
+});
 
 describe('AC 3 — lo que la interfaz LEE es lo que el backend publica, campo a campo', () => {
   it('`GET /seguridad/parametros` publica la pagina, y el envoltorio es el que se lee', () => {

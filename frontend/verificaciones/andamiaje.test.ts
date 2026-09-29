@@ -143,9 +143,14 @@ describe('«yarn verificar» encadena las cuatro comprobaciones', () => {
     // **Y `e2e` y `e2e:navegador` con #61**, el arnes de Playwright. Que hace cada uno —y por que
     // la comprobacion del puerto va DELANTE de `playwright test` y no dentro del `webServer`— lo
     // mide `el-puerto-del-arnes-sale-del-arbol.test.ts`.
+    //
+    // **Y `capturas:regenerar` con #64**, que no esta en `rentas` porque alli las capturas se
+    // copiaron de un `curl`: aqui se GENERAN de `docs/50-api/seguridad/` y regenerarlas es, como el
+    // locale, un acto deliberado que deja un diff.
     expect(Object.keys(scripts).sort()).toEqual(
       [
         'build',
+        'capturas:regenerar',
         'dev',
         'e2e',
         'e2e:navegador',
